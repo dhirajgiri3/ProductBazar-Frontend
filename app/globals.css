@@ -1,0 +1,199 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f5f5ff; /* Light mode base */
+  --foreground: #6e6e6e;
+  --primary: #7c3aed; /* violet-600 */
+  --secondary: #a78bfa; /* violet-400 */
+  --accent: #8b5cf6; /* violet-500 */
+  --accent-dark: #6d28d9; /* violet-700 */
+  --border: #d8b4fe; /* violet-200 */
+  --radius: 0.75rem; /* Softer, futuristic curves */
+  --dark: #1e1b4b; /* indigo-950 for dark mode */
+  --para: #c4b5fd; /* violet-300 */
+  --white: #ffffff;
+  --light: #ede9fe; /* violet-100 */
+  --black: #000000;
+  --violet-glow: #8b5cf6; /* violet-500 */
+  --violet-glow-dark: #7c3aed; /* violet-600 */
+  --sm: 0.9rem;
+  --nm: 1rem;
+  --md: 1.2rem;
+  --lg: 1.6rem;
+  --xl: 2rem;
+  --xxl: 2.4rem;
+  --xxxl: 3.2rem;
+  --xxxxl: 4rem;
+
+}
+
+.dark {
+  --background: #1e1b4b; /* Deep indigo/violet dark mode */
+  --foreground: #e9d5ff; /* violet-200 for text */
+  --border: #6d28d9; /* violet-700 */
+  --radius: 0.5rem;
+}
+
+@layer base {
+  /* Applying the background and foreground colors */
+  body {
+    @apply bg-background text-foreground;
+  }
+  .bg-background {
+    background-color: var(--background);
+  }
+  .text-foreground {
+    color: var(--foreground);
+  }
+  /* Define other classes as needed */
+}
+
+/* Animations */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animation-delay-150 {
+  animation-delay: 150ms;
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.6s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Keyframes for Shimmer Effect */
+@keyframes shimmer {
+  0% { background-position: -100% 0; }
+  100% { background-position: 100% 0; }
+}
+
+.skeleton-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    theme('colors.gray.200/50') 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: inherit; /* Ensure shimmer respects parent's border-radius */
+}
+
+.dark .skeleton-shimmer::before {
+   background: linear-gradient(
+    to right,
+    transparent 0%,
+    theme('colors.gray.600/50') 50%,
+    transparent 100%
+  );
+   background-size: 200% 100%; /* Re-apply size for dark */
+}
+
+/* Pulsating Glow Effect */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 5px var(--violet-glow), 0 0 15px rgba(139, 92, 246, 0.5); }
+  50% { box-shadow: 0 0 20px var(--violet-glow), 0 0 40px rgba(139, 92, 246, 0.8); }
+}
+
+/* Floating Particle Effect */
+@keyframes floatParticle {
+  0% { transform: translate(0, 0) scale(1); opacity: 0.8; }
+  50% { transform: translate(20px, -30px) scale(1.2); opacity: 0.4; }
+  100% { transform: translate(-10px, 10px) scale(0.8); opacity: 0; }
+}
+
+/* 3D Flip Effect */
+@keyframes flip3D {
+  0% { transform: perspective(600px) rotateY(0deg); }
+  50% { transform: perspective(600px) rotateY(180deg); }
+  100% { transform: perspective(600px) rotateY(360deg); }
+}
+
+/* Neon Wave Effect */
+@keyframes neonWave {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Dynamic Burst */
+@keyframes burst {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* Apply to elements */
+.glow-pulse {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+.float-particle {
+  animation: floatParticle 5s infinite ease-in-out;
+}
+
+.flip-3d {
+  animation: flip3D 4s infinite ease-in-out;
+}
+
+.neon-wave-bg {
+  background: linear-gradient(90deg, var(--violet-glow), var(--accent-dark), var(--violet-glow));
+  background-size: 200% 200%;
+  animation: neonWave 6s infinite ease-in-out;
+}
+
+.burst-effect {
+  animation: burst 0.5s ease-out forwards;
+}
