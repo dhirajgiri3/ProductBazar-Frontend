@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Product Bazar Frontend
+
+This is the frontend application for Product Bazar, a platform where makers can showcase their innovative products and users can discover, upvote, and provide feedback on these creations.
+
+## Features
+
+- **User Authentication**: Register, log in, and manage user profiles
+- **Product Discovery**: Browse latest products in a feed format
+- **Product Details**: View comprehensive information about each product
+- **Interaction**: Upvote products and leave comments
+- **Product Submission**: Makers can submit their products with details
+- **AI Recommendations**: Discover products based on your interests and interactions
+
+## Technologies Used
+
+- **React.js**: Frontend library for building the user interface
+- **React Router**: For navigation between different components
+- **Redux/Context API**: For state management
+- **Axios**: For API requests to the backend
+- **CSS/SCSS**: For styling components
+- **React Hook Form**: For form handling and validation
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js (v14.0.0 or later)
+- npm (v6.0.0 or later)
+
+### Installation
+
+1. Clone the repository
+    ```bash
+    git clone https://github.com/yourusername/product-bazar.git
+    cd product-bazar/frontend
+    ```
+
+2. Install dependencies
+    ```bash
+    npm install
+    ```
+
+3. Create a `.env` file in the frontend directory with the following:
+    ```
+    REACT_APP_API_URL=http://localhost:5000/api
+    ```
+
+### Running the Application
+
+Start the development server:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The application will open in your browser at `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+```
+frontend/
+├── public/               # Public assets
+├── src/                  # Source files
+│   ├── assets/           # Images, fonts, etc.
+│   ├── components/       # Reusable components
+│   ├── context/          # Context API files
+│   ├── pages/            # Page components
+│   ├── services/         # API service files
+│   ├── utils/            # Utility functions
+│   ├── App.js            # Main App component
+│   └── index.js          # Entry point
+├── .env                  # Environment variables
+└── package.json          # Dependencies and scripts
+```
 
-## Learn More
+## Building for Production
 
-To learn more about Next.js, take a look at the following resources:
+To create a production build:
+```bash
+npm run build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Testing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+Run tests:
+```bash
+npm test
+```
 
-## Deploy on Vercel
+## Contributing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+## License
+
+This project is licensed under the MIT License.
