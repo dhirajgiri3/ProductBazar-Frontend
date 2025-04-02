@@ -8,7 +8,7 @@ import {
   IconSearch,
 } from "@tabler/icons-react";
 import { gsap } from "gsap";
-import { AnimatedTooltipPreview } from "../../Tooltip/Tooltip";
+import { AnimatedTooltipPreview } from "../../Components/UI/Tooltip/Tooltip";
 import Image from "next/image";
 
 const HeroContainer = styled.section`

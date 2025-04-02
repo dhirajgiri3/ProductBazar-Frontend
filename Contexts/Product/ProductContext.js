@@ -99,7 +99,6 @@ export const ProductProvider = ({ children }) => {
       });
       if (!response.data.success)
         throw new Error(response.data.message || "Failed to create product");
-      router.push(`/products/${response.data.data.slug}`);
       return response.data.data;
     } catch (err) {
       setError(err.message);

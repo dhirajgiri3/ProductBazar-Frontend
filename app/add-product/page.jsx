@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import AddProductForm from "../../Components/Product/AddProductForm/AddProductForm";
+import AddProductForm from "./AddProductForm/AddProductForm";
 import { useAuth } from "../../Contexts/Auth/AuthContext";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";

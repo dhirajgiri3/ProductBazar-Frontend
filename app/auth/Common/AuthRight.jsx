@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { AnimatedTooltipPreview } from "../../../Tooltip/Tooltip";
+import { AnimatedTooltip } from "../../../Components/UI/Tooltip/ui/animated-tooltip";
 import { motion } from "framer-motion"; // Assuming framer-motion is installed
 
 function AuthRight({ title, description }) {
