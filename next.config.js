@@ -12,6 +12,26 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'res.cloudinary.com'
+      },
+      {
+        protocol: 'https',
+        hostname: 'media.graphassets.com'
+      },
+      {
+        protocol: 'http',
+        hostname: '*'
+      },
+      {
+        protocol: 'https',
+        hostname: '*'
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com'
+      },
+      {
+        protocol: 'https',
         hostname: 'cdn.pixabay.com'
       },
       {

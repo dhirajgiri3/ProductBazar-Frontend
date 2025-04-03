@@ -7,7 +7,7 @@ import { useProduct } from "../../../Contexts/Product/ProductContext.js";
 import { useAuth } from "../../../Contexts/Auth/AuthContext.js";
 import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext.js";
 import { useToast } from "../../../Contexts/Toast/ToastContext";
-import LoaderComponent from "../../../Components/UI/LoaderComponent.jsx";
+import LoaderComponent from "../../../Components/ui/LoaderComponent.jsx";
 import ViewTracker from "../../../Components/View/ViewTracker.js";
 import {
   FiArrowUp,
@@ -15,16 +15,20 @@ import {
   FiExternalLink,
   FiGithub,
   FiPlayCircle,
+  FiEye,
+  FiMessageSquare,
+  FiCalendar,
+  FiChevronLeft,
 } from "react-icons/fi";
 import { formatDistanceToNow } from "date-fns";
 import ProductGallery from "./Components/ProductGallery.jsx";
 import ProductTabs from "./Components/ProductTabs.jsx";
-import SimilarProducts from "./Components/SimilarProducts.jsx";
 import CommentSection from "./Components/Comment/CommentSection.jsx";
 import ActionButtons from "./Components/ActionButtons.jsx";
 import ShareButton from "../../../Components/common/ShareButton.jsx";
+import SimilarProductsSection from "./Components/SimilarProductsSection.jsx";
 
-export default function ProductDetailPage({ params }) {
+const ProductDetailPage = ({ params }) => {
   const { slug } = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -39,19 +43,18 @@ export default function ProductDetailPage({ params }) {
   } = useProduct();
 
   // Get recommendation context for enhanced similarity recommendations
-  const { getSimilarProducts, recordInteraction } = useRecommendation();
+  const { recordInteraction } = useRecommendation();
 
-  const { showToast, dismissToast } = useToast();
+  const { showToast } = useToast();
 
   const [product, setProduct] = useState(null);
-  const [similarProducts, setSimilarProducts] = useState([]);
   const [hasUpvoted, setHasUpvoted] = useState(false);
   const [hasBookmarked, setHasBookmarked] = useState(false);
   const [upvoteCount, setUpvoteCount] = useState(0);
   const [isUpvoting, setIsUpvoting] = useState(false);
   const [isBookmarking, setIsBookmarking] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false); // Track if initial load is complete
-  const [source, setSource] = useState("direct"); // Track referral source for view analytics
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [source, setSource] = useState("direct");
 
   // Extract source from URL params when available
   useEffect(() => {
@@ -62,27 +65,6 @@ export default function ProductDetailPage({ params }) {
     }
   }, [searchParams]);
 
-  // Load similar products based on view data
-  const loadSimilarProducts = useCallback(
-    async (productId) => {
-      try {
-        const recommendations = await getSimilarProducts(productId);
-        // Extract the product array from the nested response
-        const products =
-          recommendations?.data?.data?.map((item) => item.product) || [];
-        if (products.length > 0) {
-          setSimilarProducts(products);
-        } else {
-          setSimilarProducts([]); // Reset to empty array if no products
-        }
-      } catch (err) {
-        console.error("Error fetching similar products:", err);
-        setSimilarProducts([]); // Reset on error to avoid stale data
-      }
-    },
-    [getSimilarProducts, setSimilarProducts] // Ensure setSimilarProducts is in dependencies if defined outside
-  );
-
   // Memoized loadProduct function
   const loadProduct = useCallback(async () => {
     try {
@@ -92,21 +74,21 @@ export default function ProductDetailPage({ params }) {
         return;
       }
       setProduct(data);
-      setUpvoteCount(data.upvotes?.count || 0);
-
-      // Check if similarProducts are already included in the response
-      if (data.similarProducts && data.similarProducts.length > 0) {
-        setSimilarProducts(data.similarProducts);
-      } else if (data._id) {
-        // Otherwise fetch them separately
-        loadSimilarProducts(data._id);
-      }
-
+      
+      // Make sure we get the correct upvote count from the data
+      const upvoteCount = data.upvotes?.count || 0;
+      setUpvoteCount(upvoteCount);
+      
       if (isAuthenticated && user) {
         setHasUpvoted(data.upvotes?.userHasUpvoted || false);
         setHasBookmarked(data.bookmarks?.userHasBookmarked || false);
       }
       setIsLoaded(true);
+
+      // Record view interaction for recommendation engine
+      if (data._id) {
+        recordInteraction(data._id, "view", { source });
+      }
     } catch (err) {
       showToast("error", "Failed to load product details");
       console.error("Error loading product:", err);
@@ -118,7 +100,9 @@ export default function ProductDetailPage({ params }) {
     isAuthenticated,
     user,
     isLoaded,
-    loadSimilarProducts,
+    showToast,
+    recordInteraction,
+    source,
   ]);
 
   // Load product only once on mount or when slug changes
@@ -129,18 +113,14 @@ export default function ProductDetailPage({ params }) {
     return () => {
       clearError();
     };
-  }, [slug, loadProduct, clearError]); // Only runs when slug changes
+  }, [slug, loadProduct, clearError]);
 
-  // Record product interaction and update recommendations
+  // Record product interaction
   const handleInteraction = async (type) => {
     if (!product || !product._id) return;
 
     try {
       await recordInteraction(product._id, type);
-      // For significant interactions, refresh recommendations
-      if (type === "upvote" || type === "bookmark") {
-        loadSimilarProducts(product._id);
-      }
     } catch (err) {
       console.error(`Error recording ${type} interaction:`, err);
     }
@@ -163,25 +143,39 @@ export default function ProductDetailPage({ params }) {
     const prevUpvoted = hasUpvoted;
     const prevCount = upvoteCount;
 
+    // Optimistically update UI
     setHasUpvoted(!hasUpvoted);
     setUpvoteCount((prev) => (hasUpvoted ? prev - 1 : prev + 1));
 
     try {
       const result = await toggleUpvote(slug);
-      if (!result.success) {
+      
+      if (result && result.success) {
+        // Update with actual server values
+        setHasUpvoted(result.upvoted);
+        setUpvoteCount(result.upvoteCount);
+        
+        // Record upvote interaction for recommendation system
+        if (result.upvoted && !prevUpvoted) {
+          handleInteraction("upvote");
+          
+          // Show success message
+          showToast("success", "Product upvoted successfully");
+        } else if (!result.upvoted && prevUpvoted) {
+          showToast("info", "Upvote removed");
+        }
+      } else {
+        // Revert optimistic update if API call failed
         setHasUpvoted(prevUpvoted);
         setUpvoteCount(prevCount);
-        showToast("error", "Failed to update vote");
-      } else {
-        // Record upvote interaction for recommendation system
-        if (!prevUpvoted) {
-          handleInteraction("upvote");
-        }
+        showToast("error", result?.message || "Failed to update vote");
       }
     } catch (error) {
+      // Revert optimistic update if an exception occurred
       setHasUpvoted(prevUpvoted);
       setUpvoteCount(prevCount);
       showToast("error", "Something went wrong");
+      console.error("Upvote error:", error);
     } finally {
       setIsUpvoting(false);
     }
@@ -230,7 +224,7 @@ export default function ProductDetailPage({ params }) {
   if (loading && !product) {
     return (
       <div className="container mx-auto px-4 py-8 min-h-screen flex items-center justify-center">
-        <LoaderComponent />
+        <LoaderComponent message="Loading product details..." />
       </div>
     );
   }
@@ -276,7 +270,7 @@ export default function ProductDetailPage({ params }) {
     isAuthenticated && user && product && user._id === product.maker._id;
 
   return (
-    <>
+    <div className="bg-gray-50 min-h-screen pb-12">
       {/* Silent view tracking component */}
       {product && <ViewTracker productId={product._id} source={source} />}
 
@@ -285,25 +279,13 @@ export default function ProductDetailPage({ params }) {
           onClick={handleBackClick}
           className="mb-6 flex items-center text-gray-600 hover:text-violet-700 transition-colors"
         >
-          <svg
-            className="w-5 h-5 mr-1"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
+          <FiChevronLeft className="w-5 h-5 mr-1" />
           Back
         </button>
 
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
           <div className="md:flex">
-            <div className="md:w-1/2 relative h-72 md:h-auto">
+            <div className="md:w-1/2 relative h-80 md:h-auto">
               <Image
                 src={thumbnailUrl}
                 alt={product.name}
@@ -317,7 +299,14 @@ export default function ProductDetailPage({ params }) {
                 </div>
               )}
               {product.featured && (
-                <div className="absolute top-4 left-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white py-1 px-3 rounded-full text-sm font-medium">
+                <div className="absolute top-4 left-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white py-1 px-3 rounded-full text-sm font-medium flex items-center">
+                  <svg
+                    className="w-4 h-4 mr-1"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                  </svg>
                   Featured
                 </div>
               )}
@@ -326,16 +315,17 @@ export default function ProductDetailPage({ params }) {
             <div className="md:w-1/2 p-6 md:p-8">
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="mb-3 flex items-center">
-                    <span className="px-3 py-1 bg-violet-100 text-violet-800 rounded-full text-sm font-medium mr-2">
+                  <div className="mb-3 flex items-center flex-wrap gap-2">
+                    <span className="px-3 py-1 bg-violet-100 text-violet-800 rounded-full text-sm font-medium">
                       {product.categoryName || "General"}
                     </span>
-                    <span className="text-sm text-gray-500">
+                    <span className="flex items-center text-sm text-gray-500">
+                      <FiCalendar className="mr-1 text-gray-400" size={14} />
                       {formattedDate}
                     </span>
                   </div>
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                    {product.name} {product?._id} {product?.slug}
+                    {product.name} {product.slug} {product._id}
                   </h1>
                   <p className="text-lg text-gray-600 mb-6">
                     {product.tagline}
@@ -420,8 +410,8 @@ export default function ProductDetailPage({ params }) {
               )}
 
               {product.maker && (
-                <div className="flex items-center mb-6">
-                  <div className="w-10 h-10 rounded-full overflow-hidden mr-3">
+                <div className="flex items-center mb-6 p-4 bg-gray-50 rounded-xl">
+                  <div className="w-12 h-12 rounded-full overflow-hidden mr-4 border-2 border-white shadow-sm">
                     {product.maker.profilePicture?.url ? (
                       <Image
                         src={product.maker.profilePicture.url}
@@ -431,8 +421,8 @@ export default function ProductDetailPage({ params }) {
                         title={`${product.maker.firstName || ""} ${
                           product.maker.lastName || ""
                         }`}
-                        width={40}
-                        height={40}
+                        width={48}
+                        height={48}
                         className="object-cover"
                       />
                     ) : (
@@ -493,12 +483,14 @@ export default function ProductDetailPage({ params }) {
                     <span>{hasBookmarked ? "Saved" : "Save"}</span>
                   </button>
                 </div>
-                <div className="text-sm text-gray-500">
-                  <span className="mr-3">
-                    <strong>{product.views?.count || 0}</strong> views
+                <div className="flex items-center space-x-4 text-sm text-gray-500">
+                  <span className="flex items-center">
+                    <FiEye className="mr-1 text-gray-400" />
+                    <strong>{product.views?.count || 0}</strong>
                   </span>
-                  <span>
-                    <strong>{product.comments?.length || 0}</strong> comments
+                  <span className="flex items-center">
+                    <FiMessageSquare className="mr-1 text-gray-400" />
+                    <strong>{product.comments?.length || 0}</strong>
                   </span>
                 </div>
               </div>
@@ -523,10 +515,8 @@ export default function ProductDetailPage({ params }) {
           </div>
         </div>
 
-        {similarProducts && similarProducts.length > 0 && (
-          <div className="mt-12">
-            <SimilarProducts products={similarProducts} />
-          </div>
+        {product && product._id && (
+          <SimilarProductsSection productId={product._id} limit={3} />
         )}
 
         <div className="mt-10">
@@ -537,12 +527,8 @@ export default function ProductDetailPage({ params }) {
           />
         </div>
       </div>
-
-      <ViewTracker
-        productId={product._id}
-        source={router.query?.source || "direct"} // Track referral source
-        position={0} // Single product view
-      />
-    </>
+    </div>
   );
-}
+};
+
+export default ProductDetailPage;

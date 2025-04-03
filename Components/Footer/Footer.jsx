@@ -11,6 +11,8 @@ const FooterContainer = styled.footer`
   padding: 4rem 1rem;
   font-family: 'clash', sans-serif;
   width: 100%;
+  position: relative;
+  z-index: 10;
 
   @media (min-width: 480px) {
     padding: 4rem 2rem;

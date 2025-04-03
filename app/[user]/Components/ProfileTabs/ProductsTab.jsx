@@ -9,7 +9,7 @@ import ProfileProductCard from "../../../../Components/Product/ProfileProductCar
 import Pagination from "../../../../Components/common/Pagination";
 import EmptyState from "../../../../Components/common/EmptyState";
 import Tabs from "../../../../Components/common/Tabs";
-import LoadingSpinner from "../../../../Components/Common/LoadingSpinner";
+import LoaderComponent from "../../../../Components/ui/LoaderComponent";
 
 export default function ProductsTab({
   products,
@@ -70,7 +70,7 @@ export default function ProductsTab({
 
   // Loading state
   if (isLoading && !products.length) {
-    return <LoadingSpinner message="Loading products..." />;
+    return <LoaderComponent message="Loading products..." />;
   }
 
   // Empty state
@@ -168,7 +168,7 @@ export default function ProductsTab({
 
         {isLoading && products.length > 0 && (
           <div className="flex justify-center my-4">
-            <LoadingSpinner size="sm" />
+            <LoaderComponent message="Loading products..." />
           </div>
         )}
 

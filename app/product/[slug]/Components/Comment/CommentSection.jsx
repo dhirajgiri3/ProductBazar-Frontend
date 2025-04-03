@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "../../../../../Contexts/Auth/AuthContext";
 import { useProduct } from "../../../../../Contexts/Product/ProductContext";
 import { useToast } from "../../../../../Contexts/Toast/ToastContext";
-import LoaderComponent from "../../../../../Components/UI/LoaderComponent";
+import LoaderComponent from "../../../../../Components/ui/LoaderComponent";
 import DeleteCommentModal from "../../../../../Components/Modal/Comment/DeleteCommentModal";
 import LoginPrompt from "../../../../../Components/common/Auth/LoginPrompt";
 import CommentForm from "./Components/CommentForm";
@@ -127,7 +127,7 @@ const LoadMoreButton = ({ onClick, isLoading }) => {
     >
       {isLoading ? (
         <span className="flex items-center gap-2">
-          <LoaderComponent size="sm" />
+          <LoaderComponent size="small" />
           <span>Loading more comments...</span>
         </span>
       ) : (

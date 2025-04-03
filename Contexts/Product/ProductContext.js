@@ -1,3 +1,5 @@
+// file: frontend/Contexts/Product/ProductContext.js
+
 "use client";
 
 import React, { createContext, useContext, useState, useCallback } from "react";
@@ -23,17 +25,19 @@ export const ProductProvider = ({ children }) => {
     setLoading(true);
     try {
       const response = await api.get(`/products/${slug}`);
-      if (!response.data.success)
+      if (!response.data.success) {
         throw new Error(response.data.message || "Failed to fetch product");
-      const product = response.data.data;
+      }
+      const productData = response.data.data;
       return {
-        ...product,
+        ...productData,
         upvotes: {
-          count: product.upvotes?.length || 0,
-          userHasUpvoted: product.userInteractions?.hasUpvoted || false,
+          count: productData.upvotes?.count || 0,
+          userHasUpvoted: response.data.userInteractions?.hasUpvoted || false,
         },
         bookmarks: {
-          userHasBookmarked: product.userInteractions?.hasBookmarked || false,
+          userHasBookmarked:
+            response.data.userInteractions?.hasBookmarked || false,
         },
       };
     } catch (err) {
@@ -81,18 +85,39 @@ export const ProductProvider = ({ children }) => {
     []
   );
 
-  // Create a product
+  const validateProductUrl = useCallback(async (url) => {
+    try {
+      const response = await api.post("/products/validate-url", { url });
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to validate URL");
+      }
+      return response.data.data;
+    } catch (err) {
+      setError(err.message);
+      logger.error("Error validating URL:", err);
+      return null;
+    }
+  }, []);
+
+  // Update createProduct to include productUrl
   const createProduct = async (productData) => {
     setLoading(true);
     try {
       const formData = new FormData();
       Object.entries(productData).forEach(([key, value]) => {
-        if (value && key !== "thumbnail") {
+        if (value && key !== "thumbnail" && key !== "galleryImages") {
           formData.append(key, Array.isArray(value) ? value.join(",") : value);
         }
       });
       if (productData.thumbnail instanceof File)
         formData.append("thumbnail", productData.thumbnail);
+      if (productData.galleryImages) {
+        productData.galleryImages.forEach((image, index) => {
+          if (image instanceof File) {
+            formData.append(`galleryImages[${index}]`, image);
+          }
+        });
+      }
 
       const response = await api.post("/products", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -160,54 +185,74 @@ export const ProductProvider = ({ children }) => {
   const toggleUpvote = useCallback(async (slug) => {
     try {
       const response = await api.post(`/products/${slug}/upvote`);
-      if (!response.data.success)
+      if (!response.data.success) {
         throw new Error(response.data.message || "Failed to toggle upvote");
+      }
+      const { data } = response.data;
       return {
-        upvoted: response.data.data.upvoted,
-        count: response.data.data.upvoteCount,
+        success: true,
+        upvoted: data.upvoted,
+        count: data.upvoteCount,
+        recommendations: data.recommendations,
+        message: response.data.message,
       };
     } catch (err) {
       logger.error(`Error toggling upvote for ${slug}:`, err);
-      return null;
+      return {
+        success: false,
+        message: err.message || "Failed to toggle upvote",
+      };
     }
   }, []);
 
-  // Toggle bookmark
   const toggleBookmark = useCallback(async (slug) => {
     try {
       const response = await api.post(`/products/${slug}/bookmark`);
-      if (!response.data.success)
+      if (!response.data.success) {
         throw new Error(response.data.message || "Failed to toggle bookmark");
-      return { bookmarked: response.data.data.bookmarked };
+      }
+      return {
+        success: true,
+        bookmarked: response.data.data.bookmarked,
+        message: response.data.message,
+      };
     } catch (err) {
       logger.error(`Error toggling bookmark for ${slug}:`, err);
-      return null;
+      return {
+        success: false,
+        message: err.message || "Failed to toggle bookmark",
+      };
     }
   }, []);
 
   // Fetch trending products
-  const getTrendingProducts = useCallback(async (limit = 10, timeRange = '7d') => {
-    setLoading(true);
-    try {
-      const response = await api.get(`/products/trending`, {
-        params: { 
-          limit, 
-          timeRange 
-        }
-      });
-      
-      if (!response.data.success)
-        throw new Error(response.data.message || "Failed to fetch trending products");
-      
-      return normalizeProducts(response.data.data);
-    } catch (err) {
-      setError(err.message);
-      logger.error("Error fetching trending products:", err);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const getTrendingProducts = useCallback(
+    async (limit = 10, timeRange = "7d") => {
+      setLoading(true);
+      try {
+        const response = await api.get(`/products/trending`, {
+          params: {
+            limit,
+            timeRange,
+          },
+        });
+
+        if (!response.data.success)
+          throw new Error(
+            response.data.message || "Failed to fetch trending products"
+          );
+
+        return normalizeProducts(response.data.data);
+      } catch (err) {
+        setError(err.message);
+        logger.error("Error fetching trending products:", err);
+        return [];
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   // Fetch featured products
   const getFeaturedProducts = useCallback(async (limit = 6) => {
@@ -658,6 +703,7 @@ export const ProductProvider = ({ children }) => {
     clearError,
     getProductBySlug,
     getAllProducts,
+    validateProductUrl,
     createProduct,
     updateProduct,
     deleteProduct,

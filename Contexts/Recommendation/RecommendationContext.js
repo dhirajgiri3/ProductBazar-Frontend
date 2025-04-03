@@ -1,3 +1,5 @@
+// File: RecommendationContext.js
+
 "use client";
 
 import React, {
@@ -240,23 +242,35 @@ export const RecommendationProvider = ({ children }) => {
     [isCacheValid, getCachedRecommendations, cacheRecommendations]
   );
 
-  // Fetch similar products
+  // Fetch similar products - updated to use recommendation API endpoint
   const getSimilarProducts = useCallback(
     async (productId, limit = 5, refresh = false) => {
-      if (!productId) return [];
-      if (!refresh && isCacheValid("similar", productId))
-        return getCachedRecommendations("similar", productId).slice(0, limit);
+      if (!productId) return { data: [] };
+      
+      const cacheKey = `similar_${productId}`;
+      if (!refresh && isCacheValid("similar", productId)) {
+        return {
+          data: getCachedRecommendations("similar", productId).slice(0, limit),
+          source: "client-cache"
+        };
+      }
 
       try {
+        // Use the recommendation service endpoint for similar products
         const response = await api.get(
           `/recommendations/similar/${productId}`,
-          { params: { limit } }
+          { params: { limit, similarityType: "mixed" } }
         );
-        // Return the full response object; let the caller handle extraction
+        
+        if (response.data.success && response.data.data) {
+          cacheRecommendations("similar", response.data.data, productId);
+        }
+        
+        // Return the response data
         return response.data;
       } catch (err) {
         logger.error("Error fetching similar products:", err);
-        return { data: { data: [] } }; // Return empty structure on error
+        return { data: [] };
       }
     },
     [isCacheValid, getCachedRecommendations, cacheRecommendations]
@@ -266,24 +280,42 @@ export const RecommendationProvider = ({ children }) => {
   const recordInteraction = useCallback(
     async (productId, interactionType, metadata = {}) => {
       if (!isAuthenticated || !productId || !interactionType) return false;
+      
       try {
+        // First try the dedicated recommendation interaction endpoint
         const response = await api.post("/recommendations/interaction", {
           productId,
-          interactionType:
-            interactionType === "impression" ? "view" : interactionType, // Map "impression" to "view" or adjust per backend spec
+          interactionType: interactionType === "impression" ? "view" : interactionType,
           metadata,
         });
-        if (!response.data.success)
-          throw new Error(
-            response.data.message || "Failed to record interaction"
-          );
+        
+        if (!response.data.success) {
+          throw new Error(response.data.message || "Failed to record interaction");
+        }
+        
+        // Clear appropriate caches based on interaction type
         clearCache("personalized");
-        clearCache("feed");
-        if (["upvote", "bookmark"].includes(interactionType))
+        
+        if (interactionType === "view") {
+          clearCache("history");
+        } else if (["upvote", "bookmark"].includes(interactionType)) {
           clearCache("trending");
+        }
+        
         return true;
       } catch (err) {
         logger.error(`Error recording ${interactionType} interaction:`, err);
+        
+        // Fallback to product-specific interaction (for upvotes, bookmarks)
+        if (["upvote", "bookmark"].includes(interactionType)) {
+          try {
+            await api.post(`/products/${productId}/${interactionType}`);
+            return true;
+          } catch (fallbackErr) {
+            logger.error(`Fallback ${interactionType} also failed:`, fallbackErr);
+          }
+        }
+        
         return false;
       }
     },

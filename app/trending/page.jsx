@@ -8,7 +8,7 @@ import TrendingHeader from "./components/TrendingHeader";
 import TrendingFilters from "./components/TrendingFilters";
 import ProductCard from "./components/ProductCard";
 import TrendingStats from "./components/TrendingStats";
-import LoadingSpinner from "../../Components/UI/LoadingSpinner";
+import LoaderComponent from "../../Components/ui/LoaderComponent";
 import { demoProducts, demoStats } from "./data/demoData";
 import { useAuth } from "../../Contexts/Auth/AuthContext";
 
@@ -298,7 +298,7 @@ const LoadingState = () => (
     exit={{ opacity: 0 }}
     className="flex flex-col items-center justify-center min-h-[400px]"
   >
-    <LoadingSpinner size="lg" />
+    <LoaderComponent />
     <p className="mt-4 text-gray-600 animate-pulse">
       Discovering trending products...
     </p>

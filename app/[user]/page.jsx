@@ -15,7 +15,7 @@ import ActivityTab from "./Components/ProfileTabs/ActivityTab";
 import SkillsTab from "./Components/ProfileTabs/SkillsTab";
 import SocialTab from "./Components/ProfileTabs/SocialTab";
 import logger from "../../Utils/logger";
-import LoaderComponent from "../../Components/UI/LoaderComponent.jsx";
+import LoaderComponent from "../../Components/ui/LoaderComponent.jsx";
 import { normalizeProducts } from "../../Utils/Product/productUtils.js";
 
 // Role-based badge configuration
