@@ -36,7 +36,7 @@ const ProductCard = ({
           src={product.thumbnail}
           alt={product.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          onError={(e) => (e.target.src = "/images/placeholder-product.jpg")}
+          onError={(e) => (e.target.src = "https://images.unsplash.com/photo-1742277666303-bbba7fa3fecf?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-gray-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
@@ -152,7 +152,7 @@ const SimilarProductsSection = ({ productId, limit = 3 }) => {
             id: product._id,
             name: product.name || "Unnamed Product",
             slug: product.slug || "",
-            thumbnail: product.thumbnail || "/images/placeholder-product.jpg",
+            thumbnail: product.thumbnail || "https://images.unsplash.com/photo-1742277666303-bbba7fa3fecf?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
             tagline: product.tagline || "",
             createdAt: product.createdAt || new Date().toISOString(),
             upvotes: product.views?.count || 0,

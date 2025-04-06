@@ -426,12 +426,12 @@ const Header = () => {
                       <img
                         src={
                           user?.profilePicture?.url ||
-                          "/images/default-avatar.png"
+                          "https://images.unsplash.com/photo-1664575602554-2087b04935a5?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                         }
                         alt={`${user?.firstName || "User"}'s profile`}
                         className="w-8 h-8 object-cover rounded-full"
                         onError={(e) => {
-                          e.target.src = "/images/default-avatar.png";
+                          e.target.src = "https://images.unsplash.com/photo-1664575602554-2087b04935a5?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
                         }}
                       />
                     </div>

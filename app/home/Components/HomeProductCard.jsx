@@ -37,7 +37,7 @@ const HomeProductCard = ({
   };
 
   // Ensure fallbacks for required fields
-  const imageUrl = product.thumbnail || "/images/placeholder-product.jpg";
+  const imageUrl = product.thumbnail || "https://images.unsplash.com/photo-1742277666303-bbba7fa3fecf?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
   const productName = product.name || "Product";
   const tagline =
     product.tagline || product.description || "No description available";
@@ -60,7 +60,7 @@ const HomeProductCard = ({
     "General";
   const makerName = product.maker?.fullName || "Unknown Maker";
   const makerImage =
-    product.maker?.profilePicture?.url || "/images/default-avatar.png";
+    product.maker?.profilePicture?.url || "https://images.unsplash.com/photo-1664575602554-2087b04935a5?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
   const daysSinceCreation =
     product.metrics?.daysSinceCreation ||
     (product.createdAt
@@ -135,7 +135,7 @@ const HomeProductCard = ({
                 style={{ objectFit: "cover" }}
                 className="transition-all duration-300"
                 onError={(e) => {
-                  e.target.src = "/images/placeholder-product.jpg";
+                  e.target.src = "https://images.unsplash.com/photo-1742277666303-bbba7fa3fecf?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
                 }}
               />
             </motion.div>
