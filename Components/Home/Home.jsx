@@ -144,7 +144,7 @@ const Home = () => {
   } = useProduct();
 
   const {
-    getDiversifiedFeed,
+    getFeedRecommendations,
     getNewProductRecommendations,
     recordInteraction,
   } = useRecommendation();
@@ -338,7 +338,7 @@ const Home = () => {
           getTrendingProducts(10),
           getFeaturedProducts(6),
           getNewProductRecommendations(6),
-          isAuthenticated() ? getDiversifiedFeed(8) : Promise.resolve([])
+          isAuthenticated() ? getFeedRecommendations(8) : Promise.resolve([])
         ]);
 
         // Handle results safely
@@ -368,7 +368,7 @@ const Home = () => {
     getTrendingProducts,
     getFeaturedProducts,
     getNewProductRecommendations,
-    getDiversifiedFeed,
+    getFeedRecommendations,
     isAuthenticated,
   ]);
 
@@ -419,7 +419,7 @@ const Home = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {personalizedProducts.slice(0, 6).map((product) => (
               <ProductCard
-                key={product.id || product._id || product.slug}
+                key={product._id || product.slug || Math.random().toString(36)} // Add safer unique key
                 product={product}
                 onUpvote={handleUpvote}
                 onBookmark={handleBookmark}

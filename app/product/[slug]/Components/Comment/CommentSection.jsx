@@ -4,13 +4,14 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "../../../../../Contexts/Auth/AuthContext";
 import { useProduct } from "../../../../../Contexts/Product/ProductContext";
 import { useToast } from "../../../../../Contexts/Toast/ToastContext";
-import LoaderComponent from "../../../../../Components/ui/LoaderComponent";
+import LoaderComponent from "../../../../../Components/UI/LoaderComponent";
 import DeleteCommentModal from "../../../../../Components/Modal/Comment/DeleteCommentModal";
 import LoginPrompt from "../../../../../Components/common/Auth/LoginPrompt";
 import CommentForm from "./Components/CommentForm";
 import CommentItem from "./Components/CommentItem";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaComments, FaLightbulb } from "react-icons/fa";
+import { useRecommendation } from "../../../../../Contexts/Recommendation/RecommendationContext";
 
 // Comment counter component with minimal animation
 const CommentCounter = ({ count = 0 }) => {
@@ -154,6 +155,7 @@ const CommentSection = ({ productSlug, productId }) => {
     deleteReply,
   } = useProduct();
   const { showToast } = useToast();
+  const { recordInteraction } = useRecommendation();
 
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -351,31 +353,31 @@ const CommentSection = ({ productSlug, productId }) => {
   }, []);
 
   const handleEditSubmit = useCallback(
-    async (parentId, itemId, content) => {
+    async (parentId, itemId, content, isReply = false) => {
       requireAuth(async () => {
         if (!content.trim()) {
-          showToast("error", "Comment cannot be empty");
+          showToast("error", "Content cannot be empty");
           return;
         }
+
         setSubmitting(true);
         try {
-          const apiCall = parentId ? editReply : editComment;
-          const args = parentId
-            ? [productSlug, parentId, itemId, content]
-            : [productSlug, itemId, content];
-
-          const result = await apiCall(...args);
+          let result;
+          if (isReply) {
+            // Handle reply edit
+            result = await editReply(productSlug, parentId, itemId, content);
+          } else {
+            // Handle comment edit
+            result = await editComment(productSlug, itemId, content);
+          }
 
           if (result.success && result.data) {
-            // Find the comment/reply and update it immutably
             setComments((prev) =>
               findAndUpdate(prev, itemId, (item) => ({
                 ...result.data,
-                // Preserve replies if the API doesn't return them on edit
                 replies: result.data.replies || item.replies,
               }))
             );
-
             showToast("success", "Update successful!");
             handleCancelEdit();
           } else {
@@ -383,7 +385,7 @@ const CommentSection = ({ productSlug, productId }) => {
           }
         } catch (error) {
           console.error("Error updating item:", error);
-          showToast("error", "Failed to update item");
+          showToast("error", "Failed to update");
         } finally {
           setSubmitting(false);
         }
@@ -477,7 +479,12 @@ const CommentSection = ({ productSlug, productId }) => {
         );
 
         try {
-          const result = await toggleCommentLike(productSlug, itemId);
+          const result = await toggleCommentLike(
+            productSlug,
+            itemId,
+            isNestedReply,
+            parentId
+          );
 
           if (result.success && result.data) {
             // Update with server data
@@ -490,6 +497,12 @@ const CommentSection = ({ productSlug, productId }) => {
                 },
               }))
             );
+
+            // Track interaction for recommendations
+            await recordInteraction(productSlug, isNestedReply ? "reply_like" : "comment_like", {
+              commentId: itemId,
+              parentId: parentId,
+            });
           } else {
             // Revert optimistic update on failure
             setComments((prev) =>
@@ -523,7 +536,7 @@ const CommentSection = ({ productSlug, productId }) => {
         }
       });
     },
-    [productSlug, requireAuth, toggleCommentLike, showToast]
+    [productSlug, requireAuth, toggleCommentLike, showToast, recordInteraction]
   );
 
   // Reply Actions

@@ -1,5 +1,5 @@
 import api from '../Utils/api';
-import { useEffect } from 'react';
+import logger from '../Utils/logger';
 
 /**
  * Record a product view 
@@ -25,56 +25,50 @@ export const recordProductView = async (productId, viewData = {}) => {
     return response.data;
   } catch (error) {
     console.error('Error recording product view:', error);
-    // Don't throw the error - recording a view shouldn't break the user experience
+    // Silent fail - don't interrupt user experience for tracking errors
     return { success: false, error: error.message };
   }
 };
 
 /**
- * Update view duration for a product
- * @param {string} productId - The ID of the product being viewed
- * @param {number} viewDuration - Duration of the view in seconds
- * @param {string} exitPage - Where the user navigated to after viewing
+ * Update view duration and engagement metrics after a user leaves the page
+ * @param {string} productId - The ID of the product viewed
+ * @param {number} startTime - The timestamp when the view started
+ * @param {Object} engagementData - Additional engagement data
  * @returns {Promise} Promise object representing the API response
  */
-export const updateViewDuration = async (productId, viewDuration, exitPage = null) => {
+export const updateViewDuration = async (productId, startTime, engagementData = {}) => {
   try {
-    // Avoid updating for very short views
-    if (viewDuration < 2) return;
+    if (!productId || !startTime) return;
     
-    const payload = { viewDuration, exitPage };
+    const viewDuration = Math.floor((Date.now() - startTime) / 1000); // duration in seconds
+    if (viewDuration < 1) return; // Ignore very short views
     
-    // Use sendBeacon for reliability if this is called during page unload
-    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-      try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5004/api/v1';
-        const url = `${baseUrl}/views/product/${productId}`;
-        navigator.sendBeacon(url, new Blob([JSON.stringify(payload)], { type: 'application/json' }));
-        return { success: true };
-      } catch (e) {
-        // Fallback to regular API call if sendBeacon fails
-        console.error('SendBeacon failed:', e);
-      }
-    }
+    const payload = {
+      viewDuration,
+      ...engagementData
+    };
     
-    // Regular API call
-    const response = await api.put(`/views/product/${productId}`, payload);
+    const response = await api.post(`/views/product/${productId}/duration`, payload);
     return response.data;
   } catch (error) {
     console.error('Error updating view duration:', error);
-    // Don't throw the error - this shouldn't break the user experience
+    // Silent fail - likely happens during page unload
     return { success: false, error: error.message };
   }
 };
 
 /**
  * Record view duration when user leaves the page
- * @param {string} productId - The ID of the product being viewed
- * @param {number} startTime - Timestamp when view started
- * @param {string} exitPage - The page the user is navigating to
+ * @param {string} productId - The ID of the product
+ * @param {number} startTime - The timestamp when the view started
+ * @param {string} exitPage - The page the user navigated to
+ * @returns {Promise} Promise object representing the API response
  */
 export const recordViewDuration = async (productId, startTime, exitPage = null) => {
   try {
+    if (!productId || !startTime) return;
+    
     const viewDuration = Math.floor((Date.now() - startTime) / 1000); // duration in seconds
     
     if (viewDuration < 1) return; // Ignore very short views
@@ -128,57 +122,77 @@ export const getProductViewStats = async (productId, options = {}) => {
       console.error('Invalid product ID provided to getProductViewStats:', productId);
       throw new Error('Invalid product ID');
     }
-
-    // Format the days parameter properly
-    const days = options.days || 7;
     
-    const response = await api.get(`/views/product/${productId}/stats?days=${days}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching product view stats:', error);
+    // Build query string for options
+    const params = new URLSearchParams();
+    if (options.days) params.append('days', options.days);
     
-    // Check for specific error types and provide more helpful messages
-    if (error.response) {
-      if (error.response.status === 404) {
-        throw new Error('Product not found or you may not have permission to view these statistics');
-      } else if (error.response.status === 403) {
-        throw new Error('You do not have permission to view these statistics');
-      }
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const response = await api.get(`/views/product/${productId}/stats${queryString}`);
+    
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Failed to fetch view statistics');
     }
     
-    throw error;
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching view stats for product ${productId}:`, error);
+    // Return a structured error response instead of throwing
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch view statistics',
+      stats: {
+        // Provide fallback empty data structure
+        totals: { totalViews: 0, uniqueViewers: 0 },
+        dailyViews: [],
+        devices: [],
+        sources: [],
+        referrers: [],
+        engagementMetrics: {
+          totalViews: 0,
+          uniqueViewers: 0,
+          averageViewDuration: 0
+        },
+        insights: {
+          summary: ['No data available.'],
+          recommendations: []
+        }
+      }
+    };
   }
 };
 
 /**
- * Get product device analytics (for product owners)
+ * Get device analytics for a product
  * @param {string} productId - The ID of the product
- * @param {number} days - Number of days to include in the analytics
+ * @param {Object} options - Options for fetching analytics
+ * @param {number} options.days - Number of days to include in the analytics
  * @returns {Promise} Promise object representing the API response
  */
-export const getProductDeviceAnalytics = async (productId, days = 30) => {
+export const getProductDeviceAnalytics = async (productId, options = {}) => {
   try {
-    const response = await api.get(`/views/product/${productId}/devices?days=${days}`);
+    const params = new URLSearchParams();
+    if (options.days) params.append('days', options.days);
+    
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const response = await api.get(`/views/product/${productId}/devices${queryString}`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching product device analytics:', error);
+    console.error(`Error fetching device analytics for product ${productId}:`, error);
     throw error;
   }
 };
 
 /**
  * Get user engagement metrics
- * @param {string} userId - The ID of the user (optional, uses current user if not provided)
+ * @param {string} userId - The ID of the user (optional - defaults to current user)
  * @param {number} days - Number of days to include in the metrics
  * @returns {Promise} Promise object representing the API response
  */
 export const getUserEngagementMetrics = async (userId = null, days = 30) => {
   try {
-    const url = userId 
-      ? `/views/user/${userId}/engagement?days=${days}`
-      : `/views/user/engagement?days=${days}`;
-      
-    const response = await api.get(url);
+    const endpoint = userId ? `/views/user/${userId}/engagement` : '/views/engagement';
+    const response = await api.get(`${endpoint}?days=${days}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching user engagement metrics:', error);
@@ -187,12 +201,12 @@ export const getUserEngagementMetrics = async (userId = null, days = 30) => {
 };
 
 /**
- * Clear user's view history
+ * Clear user view history
  * @returns {Promise} Promise object representing the API response
  */
 export const clearUserViewHistory = async () => {
   try {
-    const response = await api.delete(`/views/history`);
+    const response = await api.delete('/views/history');
     return response.data;
   } catch (error) {
     console.error('Error clearing view history:', error);
@@ -201,9 +215,9 @@ export const clearUserViewHistory = async () => {
 };
 
 /**
- * Get popular products
+ * Get popular products based on views
  * @param {number} limit - Number of products to return
- * @param {string} period - Time period for popularity (day, week, month, year)
+ * @param {string} period - Time period ('day', 'week', 'month', 'year')
  * @returns {Promise} Promise object representing the API response
  */
 export const getPopularProducts = async (limit = 10, period = 'week') => {
@@ -217,9 +231,9 @@ export const getPopularProducts = async (limit = 10, period = 'week') => {
 };
 
 /**
- * Get related products based on view history
- * @param {string} productId - The ID of the product to find related items for
- * @param {number} limit - Number of related products to return
+ * Get related products based on co-viewing patterns
+ * @param {string} productId - The ID of the product
+ * @param {number} limit - Number of products to return
  * @returns {Promise} Promise object representing the API response
  */
 export const getRelatedProducts = async (productId, limit = 5) => {
@@ -234,8 +248,8 @@ export const getRelatedProducts = async (productId, limit = 5) => {
 
 /**
  * Get admin daily analytics
- * @param {string} startDate - Start date in YYYY-MM-DD format
- * @param {string} endDate - End date in YYYY-MM-DD format
+ * @param {string} startDate - Start date (YYYY-MM-DD)
+ * @param {string} endDate - End date (YYYY-MM-DD)
  * @returns {Promise} Promise object representing the API response
  */
 export const getAdminDailyAnalytics = async (startDate, endDate) => {
@@ -249,7 +263,7 @@ export const getAdminDailyAnalytics = async (startDate, endDate) => {
 };
 
 /**
- * Calculate engagement metrics for a product
+ * Get product engagement metrics
  * @param {string} productId - The ID of the product
  * @param {number} days - Number of days to include in the metrics
  * @returns {Promise} Promise object representing the API response

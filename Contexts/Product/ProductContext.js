@@ -57,6 +57,7 @@ export const ProductProvider = ({ children }) => {
       sort = "newest",
       category,
       status,
+      bypassCache = false,
     } = {}) => {
       setLoading(true);
       try {
@@ -66,12 +67,24 @@ export const ProductProvider = ({ children }) => {
           sort,
           ...(category && { category }),
           ...(status && { status }),
+          ...(bypassCache && { _t: Date.now() }), // Cache buster
         });
-        const response = await api.get(`/products?${params}`);
+        
+        const response = await api.get(`/products?${params}`, {
+          headers: bypassCache ? {
+            'Cache-Control': 'no-cache, no-store',
+            'Pragma': 'no-cache'
+          } : {}
+        });
+        
         if (!response.data.success)
           throw new Error(response.data.message || "Failed to fetch products");
+        
+        // Validate products to make sure they still exist
+        const products = normalizeProducts(response.data.data).filter(product => product && product._id);
+        
         return {
-          products: normalizeProducts(response.data.data),
+          products,
           pagination: response.data.pagination,
         };
       } catch (err) {
@@ -135,39 +148,71 @@ export const ProductProvider = ({ children }) => {
   };
 
   // Update a product
-  const updateProduct = useCallback(async (slug, productData) => {
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      Object.entries(productData).forEach(([key, value]) => {
-        if (value && key !== "thumbnail") formData.append(key, value);
-      });
-      if (productData.thumbnail instanceof File)
-        formData.append("thumbnail", productData.thumbnail);
+  const updateProduct = useCallback(
+    async (slug, productData) => {
+      setLoading(true);
+      try {
+        let formData = new FormData();
+        Object.entries(productData).forEach(([key, value]) => {
+          if (value !== undefined && key !== "gallery" && key !== "thumbnail") {
+            // Don't stringify an already stringified object
+            if (key === "links" && typeof value === "string") {
+              formData.append(key, value);
+            } else if (Array.isArray(value)) {
+              formData.append(key, value.join(","));
+            } else if (typeof value === "object" && value !== null) {
+              formData.append(key, JSON.stringify(value));
+            } else {
+              formData.append(key, value);
+            }
+          }
+        });
+        
+        if (productData.thumbnail instanceof File) {
+          formData.append("thumbnail", productData.thumbnail);
+        }
+        
+        const response = await api.put(`/products/${slug}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
 
-      const response = await api.put(`/products/${slug}`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      if (!response.data.success)
-        throw new Error(response.data.message || "Failed to update product");
-      return response.data.data;
-    } catch (err) {
-      setError(err.message);
-      logger.error("Error updating product:", err);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+        if (!response.data.success)
+          throw new Error(response.data.message || "Failed to update product");
+
+        return response.data;
+      } catch (err) {
+        setError(err.message);
+        logger.error("Error updating product:", err);
+        return { success: false, message: err.message };
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   // Delete a product
   const deleteProduct = useCallback(
     async (slug) => {
       setLoading(true);
       try {
-        const response = await api.delete(`/products/${slug}`);
+        const response = await api.post(`/products/${slug}`, {
+          _method: 'DELETE', // Some APIs use this pattern for DELETE with payload
+          timestamp: Date.now() // Add timestamp to prevent caching
+        }, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'X-Cache-Invalidate': 'true' // Custom header for cache invalidation
+          }
+        });
+        
         if (!response.data.success)
           throw new Error(response.data.message || "Failed to delete product");
+        
+        // Clear local product data from any in-memory caches
+        clearProductFromLocalCache(slug);
+        
         router.push("/products");
         return true;
       } catch (err) {
@@ -180,6 +225,51 @@ export const ProductProvider = ({ children }) => {
     },
     [router]
   );
+
+  // Add a function to clear product from local cache sources
+  const clearProductFromLocalCache = (slug) => {
+    // Clear any React Query caches if you're using it
+    // queryClient.invalidateQueries(['product', slug]);
+    // queryClient.invalidateQueries('products');
+    
+    // Remove from localStorage if you're caching there
+    try {
+      const cachedProductsKey = 'cached_products';
+      const cachedProducts = JSON.parse(localStorage.getItem(cachedProductsKey) || '{}');
+      if (cachedProducts[slug]) {
+        delete cachedProducts[slug];
+        localStorage.setItem(cachedProductsKey, JSON.stringify(cachedProducts));
+      }
+      
+      // Clear any other product listings from localStorage
+      localStorage.removeItem('product_list_cache');
+      localStorage.removeItem('trending_products');
+      localStorage.removeItem('featured_products');
+    } catch (error) {
+      logger.error('Error clearing local product cache:', error);
+    }
+    
+    // Force refresh of browser cache for this product
+    if (typeof window !== 'undefined') {
+      const productUrl = `/products/${slug}`;
+      const cachedUrls = [productUrl, '/products', '/'];
+      
+      // If the Cache API is available, use it to delete cached responses
+      if ('caches' in window) {
+        caches.keys().then(cacheNames => {
+          cacheNames.forEach(cacheName => {
+            caches.open(cacheName).then(cache => {
+              cachedUrls.forEach(url => {
+                cache.delete(url).then(() => {
+                  logger.debug(`Cleared cache for ${url}`);
+                });
+              });
+            });
+          });
+        });
+      }
+    }
+  };
 
   // Toggle upvote
   const toggleUpvote = useCallback(async (slug) => {
@@ -445,20 +535,19 @@ export const ProductProvider = ({ children }) => {
 
   // Edit a comment
   const editComment = useCallback(async (productSlug, commentId, content) => {
-    if (!productSlug) {
-      logger.error("Missing productSlug in editComment call");
+    if (!productSlug || !commentId) {
+      logger.error("Missing required parameters in editComment call");
       return {
         success: false,
-        message: "Product slug is required",
+        message: "Product slug and comment ID are required",
       };
     }
 
     try {
+      // Use the correct endpoint for comments (not replies)
       const response = await api.put(
         `/products/${productSlug}/comments/${commentId}`,
-        {
-          content,
-        }
+        { content }
       );
 
       if (!response.data.success) {
@@ -629,42 +718,37 @@ export const ProductProvider = ({ children }) => {
   );
 
   // Edit reply
-  const editReply = useCallback(
-    async (productSlug, commentId, replyId, content) => {
-      if (!productSlug) {
-        logger.error("Missing productSlug in editReply call");
-        return {
-          success: false,
-          message: "Product slug is required",
-        };
+  const editReply = useCallback(async (productSlug, parentId, replyId, content) => {
+    if (!productSlug || !parentId || !replyId) {
+      logger.error("Missing required parameters in editReply call");
+      return {
+        success: false,
+        message: "Product slug, parent ID, and reply ID are required",
+      };
+    }
+
+    try {
+      const response = await api.put(
+        `/products/${productSlug}/comments/${parentId}/replies/${replyId}`,
+        { content }
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to update reply");
       }
 
-      try {
-        const response = await api.put(
-          `/products/${productSlug}/comments/${commentId}/replies/${replyId}`,
-          {
-            content,
-          }
-        );
-
-        if (!response.data.success) {
-          throw new Error(response.data.message || "Failed to update reply");
-        }
-
-        return {
-          success: true,
-          data: response.data.data,
-        };
-      } catch (err) {
-        logger.error(`Error updating reply for ${productSlug}:`, err);
-        return {
-          success: false,
-          message: err.message || "Failed to update reply",
-        };
-      }
-    },
-    []
-  );
+      return {
+        success: true,
+        data: response.data.data,
+      };
+    } catch (err) {
+      logger.error(`Error updating reply for ${productSlug}:`, err);
+      return {
+        success: false,
+        message: err.message || "Failed to update reply",
+      };
+    }
+  }, []);
 
   // Delete reply
   const deleteReply = useCallback(async (productSlug, commentId, replyId) => {

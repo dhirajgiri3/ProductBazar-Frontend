@@ -9,7 +9,7 @@ import ProfileProductCard from "../../../../Components/Product/ProfileProductCar
 import Pagination from "../../../../Components/common/Pagination";
 import EmptyState from "../../../../Components/common/EmptyState";
 import Tabs from "../../../../Components/common/Tabs";
-import LoaderComponent from "../../../../Components/ui/LoaderComponent";
+import LoaderComponent from "../../../../Components/UI/LoaderComponent";
 
 export default function ProductsTab({
   products,

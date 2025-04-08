@@ -6,6 +6,7 @@ import React from "react";
 import Dashboard from "./Components/Dashboard";
 import { useParams } from "next/navigation";
 import UserViewHistory from "../../../../Components/View/UserViewHistory";
+// import EnhancedViewStats from "../../../../Components/View/EnhancedViewStats";
 
 function page() {
     const { productId } = useParams();
@@ -14,6 +15,7 @@ function page() {
         <>
             <Dashboard productId={productId} />
             <UserViewHistory />
+            {/* <EnhancedViewStats productId={productId} /> */}
         </>
     );
 }

@@ -101,9 +101,9 @@ const CommentItem = ({
 
   const handleLike = useCallback(() => {
     const parentId = isReply ? parentComment?._id : null;
-    const isNestedReply = depth > 0;
+    const isNestedReply = !!parentComment;
     onLike(comment._id, isNestedReply, parentId);
-  }, [onLike, comment._id, isReply, parentComment?._id, depth]);
+  }, [onLike, comment._id, isReply, parentComment]);
 
   const handleStartReply = useCallback(() => {
     // If this is user's own comment, this shouldn't be called
@@ -132,9 +132,15 @@ const CommentItem = ({
 
   const handleSubmitLocalEdit = useCallback(
     (content) => {
-      onSubmitEdit(effectiveParentComment._id, comment._id, content);
+      const isReply = !!parentComment;
+      onSubmitEdit(
+        isReply ? parentComment._id : null,
+        comment._id,
+        content,
+        isReply
+      );
     },
-    [onSubmitEdit, effectiveParentComment._id, comment._id]
+    [onSubmitEdit, comment._id, parentComment]
   );
 
   const hasNestedReplies = comment.replies && comment.replies.length > 0;
@@ -204,8 +210,9 @@ const CommentItem = ({
               onCancel={onCancelEdit}
               isSubmitting={isSubmitting}
               submitLabel="Save"
-              placeholder="Edit your comment..."
+              placeholder={comment.parent ? "Edit your reply..." : "Edit your comment..."}
               autoFocus={true}
+              maxLength={comment.parent ? 500 : 1000} // Different limits for comments vs replies
             />
           ) : (
             <p className="text-sm text-gray-700 dark:text-gray-300 mt-2 break-words leading-relaxed">

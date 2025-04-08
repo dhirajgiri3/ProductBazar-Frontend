@@ -8,37 +8,51 @@ import { useAuth } from "../../../Contexts/Auth/AuthContext";
 
 const PersonalizedSection = () => {
   const { isAuthenticated } = useAuth();
-  const { getUserRecommendations } = useRecommendation();
+  const { getPersonalizedRecommendations } = useRecommendation();
   const [isLoading, setIsLoading] = useState(true);
-  const [recommendations, setRecommendations] = useState([]);
+  const [personalized, setPersonalized] = useState([]);
 
   useEffect(() => {
     const fetchRecommendations = async () => {
+      if (!isAuthenticated) {
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
-        if (isAuthenticated) {
-          const results = await getUserRecommendations(6);
-          setRecommendations(results.map((item) => item.product || item));
-        }
+        // Use the updated getPersonalizedRecommendations from context
+        const results = await getPersonalizedRecommendations(6);
+        setPersonalized(results);
       } catch (error) {
         console.error("Failed to fetch personalized recommendations:", error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchRecommendations();
-  }, [isAuthenticated, getUserRecommendations]);
 
-  if (!isAuthenticated && !isLoading) return null;
+    fetchRecommendations();
+  }, [isAuthenticated, getPersonalizedRecommendations]);
+
+  if (!isAuthenticated) return null;
 
   return (
-    <section className="mt-12">
+    <section className="mt-10">
       <div className="flex items-center mb-6">
-        <Lightbulb className="w-6 h-6 text-violet-600 mr-2" />
+        <div className="bg-violet-100 p-2 rounded-md mr-3">
+          <Lightbulb className="w-5 h-5 text-violet-600" />
+        </div>
         <h2 className="text-2xl font-bold text-gray-900">Just For You</h2>
       </div>
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <ProductCardList products={recommendations} isLoading={isLoading} emptyMessage="We're working on your personalized recommendations! Explore more products to get tailored suggestions." viewAllLink="/recommendations" />
+
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <ProductCardList
+          products={personalized}
+          isLoading={isLoading}
+          emptyMessage="We're working on your personalized recommendations! Explore more products to get tailored suggestions."
+          viewAllLink="/recommendations"
+          recommendationType="personalized"
+        />
       </div>
     </section>
   );

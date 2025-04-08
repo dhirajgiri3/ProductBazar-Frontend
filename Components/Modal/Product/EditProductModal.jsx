@@ -26,10 +26,12 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
   const [galleryPreviews, setGalleryPreviews] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [isImageUploading, setIsImageUploading] = useState(false);
   
   // Main form state
   const [formData, setFormData] = useState({
-    name: "",
+    name: product?.name || "", // Will be read-only
     tagline: "",
     description: "",
     category: "",
@@ -48,6 +50,13 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
     },
     gallery: []
   });
+
+  // Add this before the return statement
+  const ariaLabels = {
+    closeModal: "Close edit product modal",
+    readOnlyName: "Product name (read-only)",
+    // Add more as needed
+  };
 
   // Reset form when closing modal
   useEffect(() => {
@@ -260,10 +269,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
   const validateForm = () => {
     const errors = {};
     
-    if (!formData.name || formData.name.trim().length < 3) {
-      errors.name = "Product name must be at least 3 characters";
-    }
-    
+    // Remove name validation since it's read-only now
     if (!formData.description || formData.description.trim().length < 10) {
       errors.description = "Description must be at least 10 characters";
     }
@@ -303,28 +309,41 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
       return;
     }
     
-    setSubmitting(true);
+    setIsSaving(true);
     
     try {
-      // Submit form data
-      const result = await updateProduct(product.slug, formData);
+      // Create formatted data for API
+      const productData = {
+        ...formData,
+        // Important: Convert links object to string to avoid JSON parsing issues
+        links: JSON.stringify(formData.links),
+        pricing: {
+          type: formData.pricingType,
+          amount: formData.pricingType === 'paid' ? parseFloat(formData.pricingAmount) : 0,
+          currency: formData.pricingCurrency
+        }
+      };
+
+      const result = await updateProduct(product.slug, productData);
       
       if (result.success) {
-        // Upload gallery images if any
         if (formData.gallery.length > 0 && product.slug) {
+          setIsImageUploading(true);
           try {
             await uploadProductGalleryImages(product.slug, formData.gallery);
+            toast.success("Product and gallery updated successfully");
           } catch (galleryError) {
             console.error("Error uploading gallery:", galleryError);
             toast.error("Product updated but gallery upload failed");
+          } finally {
+            setIsImageUploading(false);
           }
+        } else {
+          toast.success("Product updated successfully");
         }
         
-        toast.success("Product updated successfully");
         setHasUnsavedChanges(false);
-        
-        // Close the modal and pass the updated product back
-        onClose(result.product);
+        onClose(result.data || result.product);
       } else {
         toast.error(result.message || "Failed to update product");
       }
@@ -332,7 +351,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
       console.error("Error updating product:", err);
       toast.error("Failed to update product");
     } finally {
-      setSubmitting(false);
+      setIsSaving(false);
     }
   };
 
@@ -378,6 +397,31 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
     "Social Media", "Healthcare", "Finance", "Other"
   ];
 
+  const handleCloseModal = useCallback(() => {
+    if (hasUnsavedChanges) {
+      const confirmClose = window.confirm(
+        "You have unsaved changes. Are you sure you want to close the modal?"
+      );
+      if (confirmClose) {
+        setHasUnsavedChanges(false);
+        clearError();
+        onClose();
+      }
+    } else {
+      onClose();
+    }
+  }, [hasUnsavedChanges, clearError, onClose]);
+
+  // Add memoization for handlers that don't need frequent updates
+  const handleTabChange = useCallback((tabId) => {
+    setActiveTab(tabId);
+  }, []);
+
+  const handleGalleryUpload = useCallback((files) => {
+    if (!files.length) return;
+    // ...existing gallery upload logic...
+  }, [galleryPreviews.length, setGalleryPreviews, setFormData, setHasUnsavedChanges]);
+
   if (!isOpen) return null;
 
   return (
@@ -398,15 +442,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
               <p className="text-gray-500 mt-1">Update your product details and settings</p>
             </div>
             <button
-              onClick={() => {
-                if (hasUnsavedChanges) {
-                  if (window.confirm("You have unsaved changes. Are you sure you want to close?")) {
-                    onClose();
-                  }
-                } else {
-                  onClose();
-                }
-              }}
+              onClick={handleCloseModal}
               className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100 transition-colors"
               aria-label="Close modal"
             >
@@ -419,7 +455,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`flex items-center space-x-2 py-4 px-3 border-b-2 font-medium transition-colors ${
                   activeTab === tab.id
                     ? "border-violet-600 text-violet-600"
@@ -443,22 +479,27 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                      Product Name*
+                      Product Name
+                      <span className="ml-2 text-xs text-gray-500">(Cannot be changed after creation)</span>
                     </label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors ${
-                        validationErrors.name ? "border-red-500" : "border-gray-300"
-                      }`}
-                      placeholder="Enter your product name"
-                    />
-                    {validationErrors.name && (
-                      <p className="mt-1 text-sm text-red-600">{validationErrors.name}</p>
-                    )}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        readOnly
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
+                      />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <span className="text-gray-400">
+                          <HiX className="w-4 h-4" />
+                        </span>
+                      </div>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Product names cannot be modified after creation to maintain consistency
+                    </p>
                   </div>
                   
                   <div>
@@ -837,15 +878,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
             <div className="flex space-x-3">
               <button
                 type="button"
-                onClick={() => {
-                  if (hasUnsavedChanges) {
-                    if (window.confirm("You have unsaved changes. Are you sure you want to cancel?")) {
-                      onClose();
-                    }
-                  } else {
-                    onClose();
-                  }
-                }}
+                onClick={handleCloseModal}
                 className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                 disabled={submitting}
               >

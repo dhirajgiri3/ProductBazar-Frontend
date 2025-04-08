@@ -97,6 +97,18 @@ const EditProfileModal = ({ isOpen, onClose }) => {
     return Object.keys(errors).length === 0;
   };
 
+  // Clean social links before submitting
+  const cleanSocialLinks = (links) => {
+    const cleaned = {};
+    Object.entries(links).forEach(([key, value]) => {
+      // Only include non-empty values
+      if (value && value.trim()) {
+        cleaned[key] = value.trim();
+      }
+    });
+    return cleaned;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -106,7 +118,14 @@ const EditProfileModal = ({ isOpen, onClose }) => {
 
     try {
       const loadingToast = toast.loading("Saving changes...");
-      await updateProfile(formData);
+      
+      // Clean the form data
+      const cleanedFormData = {
+        ...formData,
+        socialLinks: cleanSocialLinks(formData.socialLinks)
+      };
+
+      await updateProfile(cleanedFormData);
       toast.dismiss(loadingToast);
       toast.success("Profile updated successfully");
       setHasUnsavedChanges(false);

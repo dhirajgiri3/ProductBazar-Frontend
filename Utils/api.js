@@ -7,11 +7,23 @@ const API_BASE_URL =
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },
   withCredentials: true,
+});
+
+// Add request interceptor for debugging
+api.interceptors.request.use(request => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('API Request:', {
+      url: request.url,
+      method: request.method,
+      data: request.data
+    });
+  }
+  return request;
 });
 
 export const getAccessToken = () => {
@@ -142,6 +154,23 @@ api.interceptors.response.use(
       });
     }
 
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  response => response,
+  error => {
+    // Log detailed error info in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('API Error:', {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+    }
     return Promise.reject(error);
   }
 );

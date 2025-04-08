@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRecommendation } from "../../../../Contexts/Recommendation/RecommendationContext";
 import { useProduct } from "../../../../Contexts/Product/ProductContext";
-import LoaderComponent from "../../../../Components/ui/LoaderComponent";
+import LoaderComponent from "../../../../Components/UI/LoaderComponent";
 import { formatDistanceToNow } from "date-fns";
 
 const ProductCard = ({

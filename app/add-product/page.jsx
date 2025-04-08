@@ -6,7 +6,7 @@ import { useAuth } from "../../Contexts/Auth/AuthContext";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import InteractiveBackground from "../../Components/UI/Background/InteractiveBackground";
-import LoaderComponent from "../../Components/ui/LoaderComponent";
+import LoaderComponent from "../../Components/UI/LoaderComponent";
 
 export default function AddProductPage() {
   const { user, nextStep, authLoading, isInitialized } = useAuth();

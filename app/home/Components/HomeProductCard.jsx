@@ -12,63 +12,151 @@ import {
   MessageCircle,
   Clock,
 } from "lucide-react";
-import ViewTracker from "../../../Components/View/ViewTracker";
+import { useAuth } from "../../../Contexts/Auth/AuthContext";
+import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext";
 
 const HomeProductCard = ({
   product,
-  onUpvote,
-  onBookmark,
-  isUpvoteLoading = false,
-  isBookmarkLoading = false,
-  recommendationType = null,
   position = 0,
-  source,
+  recommendationType = null,
 }) => {
-  if (!product) return null;
+  const { isAuthenticated } = useAuth();
+  const { recordInteraction, submitRecommendationFeedback } =
+    useRecommendation();
+  const [isUpvoteLoading, setIsUpvoteLoading] = React.useState(false);
+  const [isBookmarkLoading, setIsBookmarkLoading] = React.useState(false);
+  const [localProduct, setLocalProduct] = React.useState(product);
 
-  const handleUpvote = (e) => {
+  if (!localProduct) return null;
+
+  const handleUpvote = async (e) => {
     e.preventDefault();
-    if (onUpvote) onUpvote(product);
+    e.stopPropagation();
+
+    if (!isAuthenticated) {
+      window.location.href =
+        "/login?redirect=" + encodeURIComponent(window.location.pathname);
+      return;
+    }
+
+    if (isUpvoteLoading) return;
+
+    setIsUpvoteLoading(true);
+    try {
+      // Optimistic UI update
+      const newHasUpvoted = !localProduct.userInteractions?.hasUpvoted;
+      const upvoteDelta = newHasUpvoted ? 1 : -1;
+
+      setLocalProduct((prev) => ({
+        ...prev,
+        upvoteCount: (prev.upvoteCount || 0) + upvoteDelta,
+        userInteractions: {
+          ...prev.userInteractions,
+          hasUpvoted: newHasUpvoted,
+        },
+      }));
+
+      // Record interaction with backend
+      await recordInteraction(
+        localProduct._id,
+        newHasUpvoted ? "upvote" : "remove_upvote",
+        {
+          source: recommendationType || "home",
+          position,
+          previousInteraction: !newHasUpvoted ? "upvoted" : "none",
+        }
+      );
+    } catch (error) {
+      console.error("Failed to upvote product:", error);
+      // Revert optimistic update on error
+      setLocalProduct(product);
+    } finally {
+      setIsUpvoteLoading(false);
+    }
   };
 
-  const handleBookmark = (e) => {
+  const handleBookmark = async (e) => {
     e.preventDefault();
-    if (onBookmark) onBookmark(product);
+    e.stopPropagation();
+
+    if (!isAuthenticated) {
+      window.location.href =
+        "/login?redirect=" + encodeURIComponent(window.location.pathname);
+      return;
+    }
+
+    if (isBookmarkLoading) return;
+
+    setIsBookmarkLoading(true);
+    try {
+      // Optimistic UI update
+      const newHasBookmarked = !localProduct.userInteractions?.hasBookmarked;
+
+      setLocalProduct((prev) => ({
+        ...prev,
+        userInteractions: {
+          ...prev.userInteractions,
+          hasBookmarked: newHasBookmarked,
+        },
+      }));
+
+      // Record interaction with backend
+      await recordInteraction(
+        localProduct._id,
+        newHasBookmarked ? "bookmark" : "remove_bookmark",
+        {
+          source: recommendationType || "home",
+          position,
+          previousInteraction: !newHasBookmarked ? "bookmarked" : "none",
+        }
+      );
+    } catch (error) {
+      console.error("Failed to bookmark product:", error);
+      // Revert optimistic update on error
+      setLocalProduct(product);
+    } finally {
+      setIsBookmarkLoading(false);
+    }
   };
 
   // Ensure fallbacks for required fields
-  const imageUrl = product.thumbnail || "https://images.unsplash.com/photo-1742277666303-bbba7fa3fecf?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
-  const productName = product.name || "Product";
+  const imageUrl = localProduct.thumbnail || "/images/product-placeholder.png";
+  const productName = localProduct.name || "Product";
   const tagline =
-    product.tagline || product.description || "No description available";
+    localProduct.tagline ||
+    localProduct.description ||
+    "No description available";
   const truncatedTagline =
     tagline.length > 100 ? `${tagline.substring(0, 100)}...` : tagline;
-  const slug = product.slug || "unknown";
-  const upvotesCount = product.upvotes?.count || product.upvoteCount || 0;
+  const slug = localProduct.slug || localProduct._id;
+  const upvotesCount =
+    localProduct.upvotes?.count || localProduct.upvoteCount || 0;
   const hasUpvoted =
-    product.upvotes?.userHasUpvoted ||
-    product.userInteractions?.hasUpvoted ||
+    localProduct.upvotes?.userHasUpvoted ||
+    localProduct.userInteractions?.hasUpvoted ||
     false;
   const hasBookmarked =
-    product.bookmarks?.userHasBookmarked ||
-    product.userInteractions?.hasBookmarked ||
+    localProduct.bookmarks?.userHasBookmarked ||
+    localProduct.userInteractions?.hasBookmarked ||
     false;
   const categoryName =
-    product.categoryNameVirtual ||
-    product.categoryName ||
-    product.category?.name ||
+    localProduct.categoryNameVirtual ||
+    localProduct.categoryName ||
+    localProduct.category?.name ||
     "General";
-  const makerName = product.maker?.fullName || "Unknown Maker";
+  const makerName =
+    localProduct.maker?.fullName || localProduct.maker?.name || "Unknown Maker";
   const makerImage =
-    product.maker?.profilePicture?.url || "https://images.unsplash.com/photo-1664575602554-2087b04935a5?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+    localProduct.maker?.profilePicture?.url || "/images/avatar-placeholder.png";
   const daysSinceCreation =
-    product.metrics?.daysSinceCreation ||
-    (product.createdAt
+    localProduct.metrics?.daysSinceCreation ||
+    (localProduct.createdAt
       ? Math.floor(
-          (new Date() - new Date(product.createdAt)) / (1000 * 60 * 60 * 24)
+          (new Date() - new Date(localProduct.createdAt)) /
+            (1000 * 60 * 60 * 24)
         )
       : null);
-  const commentCount = product.commentCount || 0;
+  const commentCount = localProduct.commentCount || 0;
 
   // Recommendation badges
   const recommendationBadges = {
@@ -78,6 +166,18 @@ const HomeProductCard = ({
     collaborative: {
       label: "Community Pick",
       color: "from-amber-500 to-orange-600",
+    },
+    similar: {
+      label: "Similar",
+      color: "from-blue-500 to-indigo-600",
+    },
+    category: {
+      label: categoryName,
+      color: "from-purple-500 to-indigo-600",
+    },
+    interest: {
+      label: "Based on interests",
+      color: "from-green-500 to-teal-600",
     },
   };
 
@@ -135,7 +235,7 @@ const HomeProductCard = ({
                 style={{ objectFit: "cover" }}
                 className="transition-all duration-300"
                 onError={(e) => {
-                  e.target.src = "https://images.unsplash.com/photo-1742277666303-bbba7fa3fecf?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+                  e.target.src = "/images/product-placeholder.png";
                 }}
               />
             </motion.div>
@@ -149,14 +249,14 @@ const HomeProductCard = ({
                 {truncatedTagline}
               </p>
 
-              {/* Category Tag */}
+              {/* Tags */}
               <div className="flex flex-wrap gap-2">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700 border border-violet-100">
                   {categoryName}
                 </span>
 
-                {product.tags &&
-                  product.tags.slice(0, 1).map((tag, index) => (
+                {localProduct.tags &&
+                  localProduct.tags.slice(0, 1).map((tag, index) => (
                     <span
                       key={index}
                       className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 border border-gray-100"
@@ -178,6 +278,9 @@ const HomeProductCard = ({
                   fill
                   sizes="20px"
                   style={{ objectFit: "cover" }}
+                  onError={(e) => {
+                    e.target.src = "/images/avatar-placeholder.png";
+                  }}
                 />
               </div>
               <span className="truncate max-w-[100px]">{makerName}</span>
@@ -244,9 +347,9 @@ const HomeProductCard = ({
           </motion.button>
 
           {/* External Link Button */}
-          {product.links?.website && (
+          {localProduct.links?.website && (
             <motion.a
-              href={product.links.website}
+              href={localProduct.links.website}
               target="_blank"
               rel="noopener noreferrer"
               className="p-1.5 rounded-full bg-white hover:bg-violet-50 text-gray-500 hover:text-violet-600 border border-gray-200 hover:border-violet-200"
@@ -260,19 +363,6 @@ const HomeProductCard = ({
           )}
         </div>
       </div>
-
-      {/* Explanation */}
-      {product.explanationText && (
-        <div className="px-5 py-2 bg-violet-50 text-violet-700 text-xs italic border-t border-violet-100">
-          "{product.explanationText}"
-        </div>
-      )}
-
-      <ViewTracker
-        productId={product._id}
-        source={source} // 'trending', 'new', 'personalized', etc.
-        position={position} // Index in list
-      />
     </motion.div>
   );
 };

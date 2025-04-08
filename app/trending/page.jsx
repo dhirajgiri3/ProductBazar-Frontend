@@ -8,7 +8,7 @@ import TrendingHeader from "./components/TrendingHeader";
 import TrendingFilters from "./components/TrendingFilters";
 import ProductCard from "./components/ProductCard";
 import TrendingStats from "./components/TrendingStats";
-import LoaderComponent from "../../Components/ui/LoaderComponent";
+import LoaderComponent from "../../Components/UI/LoaderComponent";
 import { demoProducts, demoStats } from "./data/demoData";
 import { useAuth } from "../../Contexts/Auth/AuthContext";
 

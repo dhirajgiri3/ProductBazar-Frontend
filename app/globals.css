@@ -26,7 +26,6 @@
   --xxl: 2.4rem;
   --xxxl: 3.2rem;
   --xxxxl: 4rem;
-
 }
 
 .dark {
@@ -110,12 +109,16 @@
 
 /* Keyframes for Shimmer Effect */
 @keyframes shimmer {
-  0% { background-position: -100% 0; }
-  100% { background-position: 100% 0; }
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 100% 0;
+  }
 }
 
 .skeleton-shimmer::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -124,7 +127,7 @@
   background: linear-gradient(
     to right,
     transparent 0%,
-    theme('colors.gray.200/50') 50%,
+    theme("colors.gray.200/50") 50%,
     transparent 100%
   );
   background-size: 200% 100%;
@@ -133,46 +136,78 @@
 }
 
 .dark .skeleton-shimmer::before {
-   background: linear-gradient(
+  background: linear-gradient(
     to right,
     transparent 0%,
-    theme('colors.gray.600/50') 50%,
+    theme("colors.gray.600/50") 50%,
     transparent 100%
   );
-   background-size: 200% 100%; /* Re-apply size for dark */
+  background-size: 200% 100%; /* Re-apply size for dark */
 }
 
 /* Pulsating Glow Effect */
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 5px var(--violet-glow), 0 0 15px rgba(139, 92, 246, 0.5); }
-  50% { box-shadow: 0 0 20px var(--violet-glow), 0 0 40px rgba(139, 92, 246, 0.8); }
+  0%,
+  100% {
+    box-shadow: 0 0 5px var(--violet-glow), 0 0 15px rgba(139, 92, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--violet-glow), 0 0 40px rgba(139, 92, 246, 0.8);
+  }
 }
 
 /* Floating Particle Effect */
 @keyframes floatParticle {
-  0% { transform: translate(0, 0) scale(1); opacity: 0.8; }
-  50% { transform: translate(20px, -30px) scale(1.2); opacity: 0.4; }
-  100% { transform: translate(-10px, 10px) scale(0.8); opacity: 0; }
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate(20px, -30px) scale(1.2);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translate(-10px, 10px) scale(0.8);
+    opacity: 0;
+  }
 }
 
 /* 3D Flip Effect */
 @keyframes flip3D {
-  0% { transform: perspective(600px) rotateY(0deg); }
-  50% { transform: perspective(600px) rotateY(180deg); }
-  100% { transform: perspective(600px) rotateY(360deg); }
+  0% {
+    transform: perspective(600px) rotateY(0deg);
+  }
+  50% {
+    transform: perspective(600px) rotateY(180deg);
+  }
+  100% {
+    transform: perspective(600px) rotateY(360deg);
+  }
 }
 
 /* Neon Wave Effect */
 @keyframes neonWave {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* Dynamic Burst */
 @keyframes burst {
-  0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.5); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
 }
 
 /* Apply to elements */
@@ -189,7 +224,12 @@
 }
 
 .neon-wave-bg {
-  background: linear-gradient(90deg, var(--violet-glow), var(--accent-dark), var(--violet-glow));
+  background: linear-gradient(
+    90deg,
+    var(--violet-glow),
+    var(--accent-dark),
+    var(--violet-glow)
+  );
   background-size: 200% 200%;
   animation: neonWave 6s infinite ease-in-out;
 }
@@ -200,5 +240,29 @@
 
 /* Add this class definition to your existing CSS */
 .bg-radial-gradient {
-  background: radial-gradient(circle at center, rgba(167, 139, 250, 0.07) 0%, transparent 70%);
+  background: radial-gradient(
+    circle at center,
+    rgba(167, 139, 250, 0.07) 0%,
+    transparent 70%
+  );
+}
+
+.hide-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.4) transparent;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.hide-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hide-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(99, 102, 241, 0.4);
+  border-radius: 20px;
+  border: transparent;
+}
+.hide-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(79, 70, 229, 0.6);
 }

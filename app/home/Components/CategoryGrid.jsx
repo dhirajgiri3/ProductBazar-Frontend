@@ -32,27 +32,26 @@ const CategoryItem = ({ category }) => {
       <Link
         href={href}
         className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all
-          hover:shadow-md hover:-translate-y-1 bg-white`} // Removed category.color, added white background
+          hover:shadow-md hover:-translate-y-1 bg-white border-gray-100`}
       >
-        <div className="icon">
+        <div className="icon mb-2">
           {category.icon ? (
             <Image
               src={category.icon}
               alt={category.name}
-              width={48} // Increased size for better visibility
+              width={48}
               height={48}
-              className="mb-2 rounded-full object-cover" // Ensure consistent icon display
+              className="rounded-full object-cover"
             />
           ) : (
-            <div className="w-12 h-12 mb-2 flex items-center justify-center rounded-full bg-gray-100 text-gray-500">
-              <span>📁</span> {/* Default icon if category.icon is missing */}
+            <div className="w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-600">
+              <span className="text-xl">📁</span>
             </div>
           )}
         </div>
         <span className="font-medium text-gray-800 text-sm text-center">
           {category.name}
-        </span>{" "}
-        {/* Centered text */}
+        </span>
       </Link>
     </motion.div>
   );
@@ -62,21 +61,50 @@ const CategoryGrid = () => {
   const { categories, loading, error } = useCategories();
 
   if (loading) {
-    return <p>Loading categories...</p>; // Simple loading indicator
+    return (
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-6 text-gray-900">
+          Explore by Category
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="flex flex-col items-center justify-center p-4 rounded-xl border bg-gray-50 animate-pulse h-24"
+            >
+              <div className="w-12 h-12 rounded-full bg-gray-200 mb-2"></div>
+              <div className="w-16 h-4 bg-gray-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <p>Error loading categories: {error}</p>; // Simple error message
+    return (
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-6 text-gray-900">
+          Explore by Category
+        </h2>
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
+          Error loading categories. Please try again later.
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="mt-8">
-      <h2 className="text-xl font-semibold mb-6 text-gray-900">
+      <h2 className="text-xl font-semibold mb-6 text-gray-900 flex items-center">
+        <span className="bg-violet-100 text-violet-600 w-7 h-7 flex items-center justify-center rounded-md mr-2 text-sm">
+          📂
+        </span>
         Explore by Category
       </h2>
       {categories && categories.length > 0 ? (
         <motion.div
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" // Adjusted grid for better responsiveness
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
           variants={container}
           initial="hidden"
           animate="show"
@@ -86,7 +114,9 @@ const CategoryGrid = () => {
           ))}
         </motion.div>
       ) : (
-        <p>No categories found.</p> // Handle empty category list
+        <div className="text-center py-8 bg-gray-50 rounded-lg">
+          <p>No categories found.</p>
+        </div>
       )}
     </div>
   );

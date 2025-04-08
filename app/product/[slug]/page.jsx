@@ -7,7 +7,7 @@ import { useProduct } from "../../../Contexts/Product/ProductContext.js";
 import { useAuth } from "../../../Contexts/Auth/AuthContext.js";
 import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext.js";
 import { useToast } from "../../../Contexts/Toast/ToastContext";
-import LoaderComponent from "../../../Components/ui/LoaderComponent.jsx";
+import LoaderComponent from "../../../Components/UI/LoaderComponent.jsx";
 import ViewTracker from "../../../Components/View/ViewTracker.js";
 import {
   FiArrowUp,
@@ -51,6 +51,7 @@ const ProductDetailPage = ({ params }) => {
   const [hasUpvoted, setHasUpvoted] = useState(false);
   const [hasBookmarked, setHasBookmarked] = useState(false);
   const [upvoteCount, setUpvoteCount] = useState(0);
+  const [commentCount, setCommentCount] = useState(0);
   const [isUpvoting, setIsUpvoting] = useState(false);
   const [isBookmarking, setIsBookmarking] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -74,11 +75,14 @@ const ProductDetailPage = ({ params }) => {
         return;
       }
       setProduct(data);
-      
+
       // Make sure we get the correct upvote count from the data
       const upvoteCount = data.upvotes?.count || 0;
       setUpvoteCount(upvoteCount);
-      
+
+      const commentCount = data.comments?.length || 0;
+      setCommentCount(commentCount);
+
       if (isAuthenticated && user) {
         setHasUpvoted(data.upvotes?.userHasUpvoted || false);
         setHasBookmarked(data.bookmarks?.userHasBookmarked || false);
@@ -149,16 +153,16 @@ const ProductDetailPage = ({ params }) => {
 
     try {
       const result = await toggleUpvote(slug);
-      
+
       if (result && result.success) {
         // Update with actual server values
         setHasUpvoted(result.upvoted);
         setUpvoteCount(result.upvoteCount);
-        
+
         // Record upvote interaction for recommendation system
         if (result.upvoted && !prevUpvoted) {
           handleInteraction("upvote");
-          
+
           // Show success message
           showToast("success", "Product upvoted successfully");
         } else if (!result.upvoted && prevUpvoted) {
@@ -265,7 +269,9 @@ const ProductDetailPage = ({ params }) => {
     );
   }
 
-  const thumbnailUrl = product?.thumbnail || "https://images.unsplash.com/photo-1742277666303-bbba7fa3fecf?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+  const thumbnailUrl =
+    product?.thumbnail ||
+    "https://images.unsplash.com/photo-1742277666303-bbba7fa3fecf?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
   const isOwner =
     isAuthenticated && user && product && user._id === product.maker._id;
 
@@ -490,7 +496,7 @@ const ProductDetailPage = ({ params }) => {
                   </span>
                   <span className="flex items-center">
                     <FiMessageSquare className="mr-1 text-gray-400" />
-                    <strong>{product.comments?.length || 0}</strong>
+                    <strong>{commentCount || 0}</strong>
                   </span>
                 </div>
               </div>

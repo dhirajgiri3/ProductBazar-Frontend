@@ -241,12 +241,13 @@ const AddProductModal = ({ isOpen, onClose }) => {
     }
     setSubmitting(true);
     try {
-      // Create a new FormData object
-      const productData = { ...formData };
-      
-      // Make sure we're using the correct field name for the backend
+      const productData = {
+        ...formData,
+        tags: formData.tags.join(","),
+        links: JSON.stringify(formData.links),
+      };
+
       if (formData.thumbnail) {
-        // This is the correct field name expected by the backend
         productData.thumbnail = formData.thumbnail;
       }
       
@@ -256,16 +257,15 @@ const AddProductModal = ({ isOpen, onClose }) => {
           try {
             // Show upload progress for gallery
             toast.loading("Uploading gallery images...");
-            
-            // Use the uploadProductGalleryImages utility function which handles proper field naming
+              
             const galleryResponse = await uploadProductGalleryImages(
               result.product.slug,
               formData.gallery
             );
-            
+              
             if (galleryResponse.success) {
-              toast.dismiss();
-              toast.success("Gallery images uploaded successfully");
+              toast.dismiss(); // Dismiss the loading toast
+              // Don't show separate gallery success toast
             } else {
               toast.dismiss();
               toast.error("Some gallery images failed to upload");
@@ -276,6 +276,7 @@ const AddProductModal = ({ isOpen, onClose }) => {
             toast.error("Product created but gallery upload failed");
           }
         }
+        // Single success toast that covers both product and gallery creation
         toast.success("Product created successfully");
         setHasUnsavedChanges(false);
         onClose(result.product);

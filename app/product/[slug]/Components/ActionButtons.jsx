@@ -47,11 +47,6 @@ const ActionButtons = ({ product, onRefresh }) => {
   const handleModalClose = (updatedProduct) => {
     setIsDeleteModalOpen(false);
     setIsEditModalOpen(false);
-
-    if (updatedProduct) {
-      onRefresh();
-      toast.success("Product updated successfully!");
-    }
   };
 
   const handleStatusChange = async (newStatus) => {

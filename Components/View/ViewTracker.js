@@ -51,6 +51,8 @@ const ViewTracker = ({
 
     try {
       const viewData = {
+        productId, // Ensure productId is included
+        type: 'view', // Explicitly set interaction type
         source,
         position,
         recommendationType,
@@ -60,16 +62,23 @@ const ViewTracker = ({
         url: window.location.href,
         userAgent: navigator.userAgent,
         viewport: `${window.innerWidth}x${window.innerHeight}`,
+        metadata: {
+          source,
+          position,
+          recommendationType,
+          sessionId: getSessionId(),
+          url: window.location.href
+        }
       };
 
       // Record via both services
       await Promise.all([
         viewService.recordProductView(productId, viewData),
-        recordInteraction(productId, "view", viewData),
+        recordInteraction(productId, 'view', viewData.metadata)
       ]);
 
       // Mark as tracked
-      sessionStorage.setItem(`view-${productId}-${source}`, Date.now());
+      sessionStorage.setItem(`view-${productId}-${source}`, Date.now().toString());
       hasTrackedRef.current = true;
     } catch (error) {
       console.error("View tracking error:", error);
