@@ -149,6 +149,38 @@ export const RecommendationProvider = ({ children }) => {
 
       const cacheKey = createCacheKey(cacheType, cacheParams);
 
+      // Rate limiting for API requests
+      const now = Date.now();
+      const requestKey = `last_api_request_${endpoint}_${JSON.stringify(params)}`;
+      const lastRequestTime = parseInt(sessionStorage.getItem(requestKey) || '0');
+
+      // If we've made this exact request in the last 5 seconds, use cache or wait
+      if (now - lastRequestTime < 5000) { // 5 seconds rate limit
+        // If we have valid cache, use it
+        if (isCacheValid(cacheKey)) {
+          const cached = getCachedData(cacheKey);
+          if (cached) {
+            logger.debug(`Rate limited request for ${cacheType}, using cache`);
+            return params.limit ? cached.slice(0, params.limit) : cached;
+          }
+        }
+
+        // If no cache but we're being rate limited, wait a bit before trying again
+        // This helps spread out requests when components mount simultaneously
+        if (now - lastRequestTime < 1000) { // If very recent request (< 1 second)
+          logger.debug(`Delaying request for ${cacheType} to avoid rate limiting`);
+          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+        }
+      }
+
+      // Update last request time
+      try {
+        sessionStorage.setItem(requestKey, now.toString());
+      } catch (e) {
+        // Ignore storage errors
+      }
+
+      // Check cache again (if not forced refresh)
       if (!refresh && isCacheValid(cacheKey)) {
         const cached = getCachedData(cacheKey);
         if (cached) {
@@ -162,7 +194,14 @@ export const RecommendationProvider = ({ children }) => {
         logger.info(
           `Fetching ${cacheType} recommendations from API: ${endpoint}`
         );
-        const response = await api.get(endpoint, { params });
+
+        // Add a timestamp to prevent browser caching
+        const requestParams = {
+          ...params,
+          _t: Date.now() // Add timestamp to bust cache
+        };
+
+        const response = await api.get(endpoint, { params: requestParams });
 
         if (!response.data.success) {
           throw new Error(
@@ -545,7 +584,9 @@ export const RecommendationProvider = ({ children }) => {
 
       try {
         logger.info("Fetching user history from API");
-        const response = await api.get("/recommendations/history");
+        const response = await api.get("/recommendations/history", {
+          params: { _t: Date.now() } // Add timestamp to prevent caching
+        });
         if (!response.data.success) {
           throw new Error(response.data.message || "Failed to fetch history");
         }
@@ -581,10 +622,80 @@ export const RecommendationProvider = ({ children }) => {
           referrer: typeof document !== "undefined" ? document.referrer : "",
         };
 
+        // Determine if this is a page interaction or product interaction
+        // Page interactions: explicit page types or non-MongoDB ObjectId strings
+        const isPageInteraction = (
+          // Check if it's a known page type
+          typeof productId === 'string' && [
+            'homepage', 'search', 'category', 'collection', 'profile',
+            'settings', 'notifications', 'dashboard'
+          ].includes(productId) ||
+          // Or if it's not a valid MongoDB ObjectId format
+          (typeof productId === 'string' && !/^[0-9a-fA-F]{24}$/.test(productId))
+        );
+
+        // Handle page interactions
+        if (isPageInteraction) {
+          logger.debug(`Recording page interaction: ${type} for ${productId}`);
+
+          // Use a rate limiter for page interactions to prevent excessive API calls
+          // Only send one page_view interaction per page per 30 seconds
+          if (type === 'page_view') {
+            const now = Date.now();
+            const lastViewKey = `last_page_view_${productId}`;
+            const lastViewTime = parseInt(sessionStorage.getItem(lastViewKey) || '0');
+
+            if (now - lastViewTime < 30000) { // 30 seconds
+              logger.debug(`Skipping duplicate page_view for ${productId} (rate limited)`);
+              return { success: true, rateLimited: true };
+            }
+
+            // Update last view time
+            try {
+              sessionStorage.setItem(lastViewKey, now.toString());
+            } catch (e) {
+              // Ignore storage errors
+            }
+          }
+
+          // Record page interactions
+          const response = await api.post("/analytics/page-interaction", {
+            pageType: productId, // Use productId as pageType
+            type,
+            metadata: enrichedMetadata,
+          }, {
+            params: { _t: Date.now() } // Add timestamp to prevent caching
+          });
+
+          return { success: response.data.success };
+        }
+
+        // Regular product interaction
+        // Add rate limiting for product views too
+        if (type === 'view') {
+          const now = Date.now();
+          const lastViewKey = `last_product_view_${productId}`;
+          const lastViewTime = parseInt(sessionStorage.getItem(lastViewKey) || '0');
+
+          if (now - lastViewTime < 30000) { // 30 seconds
+            logger.debug(`Skipping duplicate product view for ${productId} (rate limited)`);
+            return { success: true, rateLimited: true };
+          }
+
+          // Update last view time
+          try {
+            sessionStorage.setItem(lastViewKey, now.toString());
+          } catch (e) {
+            // Ignore storage errors
+          }
+        }
+
         const response = await api.post("/recommendations/interaction", {
           productId,
           type,
           metadata: enrichedMetadata,
+        }, {
+          params: { _t: Date.now() } // Add timestamp to prevent caching
         });
 
         if (!response.data.success) {

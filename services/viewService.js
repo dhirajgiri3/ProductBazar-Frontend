@@ -1,5 +1,4 @@
 import api from '../Utils/api';
-import logger from '../Utils/logger';
 
 /**
  * Record a product view 

@@ -5,6 +5,7 @@ import { Lightbulb } from "lucide-react";
 import ProductCardList from "./ProductCardList";
 import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext";
 import { useAuth } from "../../../Contexts/Auth/AuthContext";
+import { shouldRateLimit, markRequest, getRequestKey } from "../../../Utils/rateLimiter";
 
 const PersonalizedSection = () => {
   const { isAuthenticated } = useAuth();
@@ -19,19 +20,52 @@ const PersonalizedSection = () => {
         return;
       }
 
-      setIsLoading(true);
+      // Only show loading state if we don't have any data yet
+      if (personalized.length === 0) {
+        setIsLoading(true);
+      }
+
+      // Check if we should rate limit this request with a longer cooldown (15 seconds)
+      // Personalized recommendations are more expensive to compute, so we use a longer cooldown
+      const requestKey = getRequestKey('personalized', { limit: 6, offset: 0, strategy: 'personalized' });
+      if (shouldRateLimit(requestKey, 15000)) { // 15 second cooldown
+        console.log('Rate limiting personalized recommendations request');
+        // If we have cached data, don't show loading state
+        if (personalized.length > 0) {
+          setIsLoading(false);
+          return;
+        }
+        // Otherwise wait a bit before trying
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+
+      // Mark this request as made
+      markRequest(requestKey);
+
       try {
         // Use the updated getPersonalizedRecommendations from context
-        const results = await getPersonalizedRecommendations(6);
-        setPersonalized(results);
+        // Add forceRefresh=false to use cached data when available
+        const results = await getPersonalizedRecommendations(6, 0, 'personalized', false);
+
+        // Only update state if we got results
+        if (results && results.length > 0) {
+          setPersonalized(results);
+        }
       } catch (error) {
         console.error("Failed to fetch personalized recommendations:", error);
+        // Keep showing existing data if we have it
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchRecommendations();
+    // Only fetch if authenticated
+    if (isAuthenticated) {
+      fetchRecommendations();
+    }
+
+    // We don't need to include personalized.length in the dependencies
+    // to avoid unnecessary refetches
   }, [isAuthenticated, getPersonalizedRecommendations]);
 
   if (!isAuthenticated) return null;

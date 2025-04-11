@@ -1,13 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../../../Contexts/Auth/AuthContext";
-import { FiBriefcase, FiDollarSign, FiUsers, FiTrendingUp, FiMapPin } from "react-icons/fi";
+import { FiBriefcase, FiDollarSign, FiUsers, FiTrendingUp, FiMapPin, FiInfo, FiSettings } from "react-icons/fi";
+import api from "../../../../Utils/api";
+import logger from "../../../../Utils/logger";
 
 const RoleSpecificSection = ({ formData, setFormData, setHasUnsavedChanges }) => {
-  const { user } = useAuth();
+  const { user, refreshUserData } = useAuth();
   const [activeSection, setActiveSection] = useState("main");
+  const [secondaryRoles, setSecondaryRoles] = useState([]);
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [selectedRole, setSelectedRole] = useState("");
+  const [isAddingRole, setIsAddingRole] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [roleError, setRoleError] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -19,6 +27,30 @@ const RoleSpecificSection = ({ formData, setFormData, setHasUnsavedChanges }) =>
     setFormData((prev) => ({ ...prev, [name]: value.split(",").map(item => item.trim()) }));
     setHasUnsavedChanges(true);
   };
+
+  // Initialize secondary roles
+  useEffect(() => {
+    if (user) {
+      // Set secondary roles from user data
+      setSecondaryRoles(user.secondaryRoles || []);
+
+      // Set available roles (excluding primary role and existing secondary roles)
+      const allRoles = [
+        { id: 'startupOwner', label: 'Startup Owner' },
+        { id: 'investor', label: 'Investor' },
+        { id: 'agency', label: 'Agency' },
+        { id: 'freelancer', label: 'Freelancer' },
+        { id: 'jobseeker', label: 'Job Seeker' },
+        { id: 'maker', label: 'Maker' }
+      ];
+
+      const available = allRoles.filter(role =>
+        role.id !== user.role && !(user.secondaryRoles || []).includes(role.id)
+      );
+
+      setAvailableRoles(available);
+    }
+  }, [user]);
 
   const renderStartupFields = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -208,6 +240,216 @@ const RoleSpecificSection = ({ formData, setFormData, setHasUnsavedChanges }) =>
     </div>
   );
 
+  // Handle adding a secondary role
+  const handleAddSecondaryRole = async () => {
+    if (!selectedRole) return;
+
+    setIsSubmitting(true);
+    setRoleError("");
+
+    try {
+      // Add the selected role to secondary roles
+      const updatedSecondaryRoles = [...secondaryRoles, selectedRole];
+
+      const response = await api.put('/auth/profile', {
+        secondaryRoles: updatedSecondaryRoles
+      });
+
+      if (response.data.status === 'success') {
+        // Update local state
+        setSecondaryRoles(updatedSecondaryRoles);
+
+        // Update available roles
+        setAvailableRoles(availableRoles.filter(role => role.id !== selectedRole));
+
+        // Reset form
+        setSelectedRole("");
+        setIsAddingRole(false);
+
+        // Refresh user data to get updated capabilities
+        await refreshUserData();
+
+        // Update form data
+        setFormData(prev => ({
+          ...prev,
+          secondaryRoles: updatedSecondaryRoles
+        }));
+
+        setHasUnsavedChanges(true);
+      } else {
+        setRoleError(response.data.message || "Failed to add role");
+      }
+    } catch (err) {
+      logger.error("Error adding secondary role:", err);
+      setRoleError(err.response?.data?.message || "Failed to add role");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle removing a secondary role
+  const handleRemoveSecondaryRole = async (roleId) => {
+    setIsSubmitting(true);
+    setRoleError("");
+
+    try {
+      // Remove the role from secondary roles
+      const updatedSecondaryRoles = secondaryRoles.filter(role => role !== roleId);
+
+      const response = await api.put('/auth/profile', {
+        secondaryRoles: updatedSecondaryRoles
+      });
+
+      if (response.data.status === 'success') {
+        // Update local state
+        setSecondaryRoles(updatedSecondaryRoles);
+
+        // Update available roles
+        const roleToAdd = [
+          { id: 'startupOwner', label: 'Startup Owner' },
+          { id: 'investor', label: 'Investor' },
+          { id: 'agency', label: 'Agency' },
+          { id: 'freelancer', label: 'Freelancer' },
+          { id: 'jobseeker', label: 'Job Seeker' },
+          { id: 'maker', label: 'Maker' }
+        ].find(r => r.id === roleId);
+
+        if (roleToAdd) {
+          setAvailableRoles([...availableRoles, roleToAdd]);
+        }
+
+        // Refresh user data to get updated capabilities
+        await refreshUserData();
+
+        // Update form data
+        setFormData(prev => ({
+          ...prev,
+          secondaryRoles: updatedSecondaryRoles
+        }));
+
+        setHasUnsavedChanges(true);
+      } else {
+        setRoleError(response.data.message || "Failed to remove role");
+      }
+    } catch (err) {
+      logger.error("Error removing secondary role:", err);
+      setRoleError(err.response?.data?.message || "Failed to remove role");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Helper function to get label for a role ID
+  const getRoleLabel = (roleId) => {
+    const roleLabels = {
+      startupOwner: "Startup Owner",
+      investor: "Investor",
+      agency: "Agency",
+      freelancer: "Freelancer",
+      jobseeker: "Job Seeker",
+      maker: "Maker",
+      user: "Regular User",
+      admin: "Administrator"
+    };
+
+    return roleLabels[roleId] || roleId;
+  };
+
+  // Render secondary roles section
+  const renderSecondaryRolesSection = () => (
+    <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="text-md font-medium text-gray-800">Secondary Roles</h4>
+        {!isAddingRole && availableRoles.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setIsAddingRole(true)}
+            className="text-sm flex items-center text-violet-600 hover:text-violet-700"
+            disabled={isSubmitting}
+          >
+            <FiUsers className="mr-1" /> Add Role
+          </button>
+        )}
+      </div>
+
+      {roleError && (
+        <div className="mb-4 p-2 bg-red-50 text-red-600 text-sm rounded">
+          {roleError}
+        </div>
+      )}
+
+      {secondaryRoles.length > 0 ? (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {secondaryRoles.map(role => (
+            <div
+              key={role}
+              className="p-2 bg-blue-50 rounded text-blue-800 flex items-center"
+            >
+              {getRoleLabel(role)}
+              <button
+                type="button"
+                onClick={() => handleRemoveSecondaryRole(role)}
+                className="ml-2 text-blue-500 hover:text-blue-700"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "..." : "×"}
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-500 mb-4">
+          You don't have any secondary roles. Adding secondary roles gives you additional capabilities.
+        </p>
+      )}
+
+      {isAddingRole && (
+        <div className="border-t pt-3 mt-3">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Select a role to add:
+          </label>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {availableRoles.map(role => (
+              <button
+                type="button"
+                key={role.id}
+                onClick={() => setSelectedRole(role.id)}
+                className={`px-3 py-2 rounded-lg text-sm ${
+                  selectedRole === role.id
+                    ? 'bg-violet-100 text-violet-800 border border-violet-300'
+                    : 'bg-gray-100 text-gray-800 border border-gray-200 hover:bg-gray-200'
+                }`}
+              >
+                {role.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsAddingRole(false);
+                setSelectedRole("");
+              }}
+              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleAddSecondaryRole}
+              className="px-3 py-1 text-sm bg-violet-600 text-white rounded hover:bg-violet-700 flex items-center"
+              disabled={!selectedRole || isSubmitting}
+            >
+              {isSubmitting ? "Adding..." : "Add Role"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const renderFields = () => {
     switch (user?.role) {
       case "startupOwner":
@@ -260,6 +502,10 @@ const RoleSpecificSection = ({ formData, setFormData, setHasUnsavedChanges }) =>
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
           >
+            {/* Secondary Roles Section */}
+            {renderSecondaryRolesSection()}
+
+            {/* Role-specific fields */}
             {renderFields()}
           </motion.div>
         </AnimatePresence>

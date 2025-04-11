@@ -14,6 +14,8 @@ import TopicsTab from "./Components/ProfileTabs/TopicsTab";
 import ActivityTab from "./Components/ProfileTabs/ActivityTab";
 import SkillsTab from "./Components/ProfileTabs/SkillsTab";
 import SocialTab from "./Components/ProfileTabs/SocialTab";
+import RoleCapabilities from "../../Components/User/RoleCapabilities";
+import SecondaryRoles from "../../Components/User/SecondaryRoles";
 import logger from "../../Utils/logger";
 import LoaderComponent from "../../Components/UI/LoaderComponent.jsx";
 import { normalizeProducts } from "../../Utils/Product/productUtils.js";
@@ -370,7 +372,9 @@ export default function ProfilePage() {
                         d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                       />
                     </svg>
-                    {user.address}
+                    {typeof user.address === 'object'
+                      ? `${user.address.city || ''}, ${user.address.country || ''}`
+                      : user.address}
                   </span>
                 )}
                 {user.preferredContact && (
@@ -447,6 +451,14 @@ export default function ProfilePage() {
               )}
             </div>
           </motion.div>
+
+          {/* Only show these components if the user is viewing their own profile */}
+          {user && (
+            <>
+              <SecondaryRoles />
+              <RoleCapabilities />
+            </>
+          )}
         </div>
       </div>
 

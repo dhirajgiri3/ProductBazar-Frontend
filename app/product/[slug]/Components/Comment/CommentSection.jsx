@@ -499,10 +499,14 @@ const CommentSection = ({ productSlug, productId }) => {
             );
 
             // Track interaction for recommendations
-            await recordInteraction(productSlug, isNestedReply ? "reply_like" : "comment_like", {
-              commentId: itemId,
-              parentId: parentId,
-            });
+            await recordInteraction(
+              productSlug,
+              isNestedReply ? "reply_like" : "comment_like",
+              {
+                commentId: itemId,
+                parentId: parentId,
+              }
+            );
           } else {
             // Revert optimistic update on failure
             setComments((prev) =>
@@ -556,7 +560,9 @@ const CommentSection = ({ productSlug, productId }) => {
         }
         // Check in replies
         if (comment.replies) {
-          const foundReply = comment.replies.find(reply => reply._id === targetId);
+          const foundReply = comment.replies.find(
+            (reply) => reply._id === targetId
+          );
           if (foundReply) {
             targetComment = foundReply;
             break;
@@ -590,11 +596,13 @@ const CommentSection = ({ productSlug, productId }) => {
 
         // Find target comment or reply
         let targetItem = null;
-        comments.forEach(comment => {
+        comments.forEach((comment) => {
           if (comment._id === parentReplyId) {
             targetItem = comment;
           } else if (comment.replies) {
-            const foundReply = comment.replies.find(reply => reply._id === parentReplyId);
+            const foundReply = comment.replies.find(
+              (reply) => reply._id === parentReplyId
+            );
             if (foundReply) {
               targetItem = foundReply;
             }
@@ -632,24 +640,32 @@ const CommentSection = ({ productSlug, productId }) => {
         } catch (error) {
           console.error("Error adding reply:", error);
           let errorMessage = "Failed to add reply";
-          
+
           // Handle specific error cases
           if (error.response?.data?.message) {
             errorMessage = error.response.data.message;
-            
+
             // Special handling for "cannot reply to own comment" error
             if (errorMessage.includes("cannot reply to your own")) {
               handleCancelReply(); // Close reply form
             }
           }
-          
+
           showToast("error", errorMessage);
         } finally {
           setSubmitting(false);
         }
       });
     },
-    [productSlug, requireAuth, addReply, showToast, handleCancelReply, comments, isUserCommentOwner]
+    [
+      productSlug,
+      requireAuth,
+      addReply,
+      showToast,
+      handleCancelReply,
+      comments,
+      isUserCommentOwner,
+    ]
   );
 
   return (

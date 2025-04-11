@@ -1,324 +1,180 @@
-import React, { useState, useEffect, useCallback } from "react";
+// file: frontend/components/SimilarProductsSection.jsx
+"use client";
+
+import React, { useState, useEffect, useRef } from "react";
 import { useRecommendation } from "../../../../Contexts/Recommendation/RecommendationContext";
-import { useProduct } from "../../../../Contexts/Product/ProductContext";
-import LoaderComponent from "../../../../Components/UI/LoaderComponent";
-import { formatDistanceToNow } from "date-fns";
+import ProductCard from "../../../../Components/Product/ProductCard";
+import logger from "../../../../Utils/logger";
+import { motion } from "framer-motion";
+import { FiArrowRight, FiArrowLeft, FiPackage } from "react-icons/fi";
 
-const ProductCard = ({
-  product,
-  onUpvote,
-  onBookmark,
-  recommendationContext,
-}) => {
-  const [isUpvoted, setIsUpvoted] = useState(product.hasUpvoted);
-  const [upvoteCount, setUpvoteCount] = useState(product.upvotes);
-  const [isSaved, setIsSaved] = useState(product.isSaved);
-
-  const handleUpvote = async () => {
-    const result = await onUpvote(product.slug);
-    if (result) {
-      setIsUpvoted(result.upvoted);
-      setUpvoteCount(result.count);
-    }
-  };
-
-  const handleBookmark = async () => {
-    const result = await onBookmark(product.slug);
-    if (result) {
-      setIsSaved(result.bookmarked);
-    }
-  };
-
-  return (
-    <div className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1">
-      <div className="relative w-full h-40 overflow-hidden">
-        <img
-          src={product.thumbnail}
-          alt={product.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          onError={(e) => (e.target.src = "https://images.unsplash.com/photo-1742277666303-bbba7fa3fecf?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-gray-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      </div>
-      <div className="p-4">
-        <a href={`/product/${product.slug}`} className="block">
-          <h3 className="text-lg font-semibold text-gray-900 truncate group-hover:text-violet-600 transition-colors duration-200">
-            {product.name}
-          </h3>
-        </a>
-        <p className="text-sm text-gray-500 mt-1 line-clamp-2">
-          {product.tagline}
-        </p>
-        {recommendationContext && (
-          <p className="text-xs text-gray-400 mt-1 italic">
-            {recommendationContext.explanationText}
-          </p>
-        )}
-        <div className="mt-3 flex items-center">
-          <img
-            src={product.maker.avatar}
-            alt={product.maker.name}
-            className="w-8 h-8 rounded-full border border-gray-200 object-cover"
-            onError={(e) => (e.target.src = "/default-avatar.png")}
-          />
-          <div className="ml-2">
-            <a
-              href={`/user/${product.maker.username}`}
-              className="text-sm font-medium text-gray-700 hover:text-violet-600 transition-colors duration-200"
-            >
-              {product.maker.name}
-            </a>
-            <p className="text-xs text-gray-400">
-              {formatDistanceToNow(new Date(product.createdAt), {
-                addSuffix: true,
-              })}
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <button
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-sm transition-colors duration-200 ${
-                isUpvoted
-                  ? "bg-violet-100 text-violet-600"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-              onClick={handleUpvote}
-            >
-              <svg
-                className={`w-4 h-4 ${isUpvoted ? "fill-violet-600" : ""}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 10l7-7m0 0l7 7m-7-7v18"
-                />
-              </svg>
-              {upvoteCount}
-            </button>
-            <button
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-sm transition-colors duration-200 ${
-                isSaved
-                  ? "bg-violet-100 text-violet-600"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-              onClick={handleBookmark}
-            >
-              <svg
-                className={`w-4 h-4 ${isSaved ? "fill-violet-600" : ""}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const SimilarProductsSection = ({ productId, limit = 3 }) => {
-  const { getSimilarProducts, handleInteraction } = useRecommendation();
-  const { toggleUpvote, toggleBookmark, recordProductInteraction } =
-    useProduct();
+const SimilarProductsSection = ({ productId, limit = 5 }) => {
+  const { getSimilarRecommendations } = useRecommendation();
   const [similarProducts, setSimilarProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [source, setSource] = useState(null);
-  const [contextInsights, setContextInsights] = useState(null);
+  const scrollContainerRef = useRef(null);
 
-  const fetchSimilarProducts = useCallback(async () => {
-    if (!productId) return;
-
-    setLoading(true);
-    try {
-      const response = await getSimilarProducts(productId, limit);
-      if (response && response.data) {
-        const transformedProducts = response.data.map((item) => {
-          const product = item.product || item;
-          return {
-            id: product._id,
-            name: product.name || "Unnamed Product",
-            slug: product.slug || "",
-            thumbnail: product.thumbnail || "https://images.unsplash.com/photo-1742277666303-bbba7fa3fecf?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-            tagline: product.tagline || "",
-            createdAt: product.createdAt || new Date().toISOString(),
-            upvotes: product.views?.count || 0,
-            hasUpvoted: product.userInteractions?.hasUpvoted || false,
-            isSaved: product.userInteractions?.hasBookmarked || false,
-            maker: {
-              name: product.maker?.fullName || "Unknown Maker",
-              avatar:
-                product.maker?.profilePicture?.url || "/default-avatar.png",
-              username: product.maker?._id || "unknown",
-            },
-            recommendationContext: {
-              score: item.score,
-              explanationText: item.explanationText,
-              reason: item.reason,
-            },
-          };
-        });
-        setSimilarProducts(transformedProducts);
-        setSource(response.meta?.source || "api");
-        setContextInsights(response.meta?.contextInsights || null);
-        setError(null);
-
-        await recordProductInteraction(productId, "view_similar", {
-          source: "similar_section",
-        });
-      } else {
-        throw new Error("Failed to load similar products");
-      }
-    } catch (error) {
-      console.error("Error fetching similar products:", error);
-      setError(
-        error.message ||
-          "Failed to load similar products. Please try again later."
-      );
-      setSimilarProducts([]);
-    } finally {
-      setLoading(false);
+  // Scroll controls for horizontal scrolling
+  const scroll = (direction) => {
+    if (scrollContainerRef.current) {
+      const { current } = scrollContainerRef;
+      const scrollAmount = direction === 'left' ? -300 : 300;
+      current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
-  }, [productId, limit, getSimilarProducts, recordProductInteraction]);
+  };
 
   useEffect(() => {
+    const fetchSimilarProducts = async () => {
+      if (!productId) {
+        setError("No product ID provided");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch similar products using the context function
+        const recommendations = await getSimilarRecommendations(
+          productId,
+          limit
+        );
+
+        if (!Array.isArray(recommendations)) {
+          throw new Error("Invalid response format from recommendations");
+        }
+
+        setSimilarProducts(recommendations);
+      } catch (err) {
+        logger.error("Error fetching similar products:", err);
+        setError(err.message || "Failed to load similar products");
+        setSimilarProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchSimilarProducts();
-  }, [fetchSimilarProducts]);
+  }, [productId, limit, getSimilarRecommendations]);
 
-  const handleUpvote = useCallback(
-    async (slug) => {
-      const result = await toggleUpvote(slug);
-      if (result) {
-        setSimilarProducts((prev) =>
-          prev.map((p) =>
-            p.slug === slug
-              ? { ...p, hasUpvoted: result.upvoted, upvotes: result.count }
-              : p
-          )
-        );
-        await handleInteraction(slug, "upvote");
-        return result;
-      }
-      return null;
-    },
-    [toggleUpvote, handleInteraction]
-  );
-
-  const handleBookmark = useCallback(
-    async (slug) => {
-      const result = await toggleBookmark(slug);
-      if (result) {
-        setSimilarProducts((prev) =>
-          prev.map((p) =>
-            p.slug === slug ? { ...p, isSaved: result.bookmarked } : p
-          )
-        );
-        await handleInteraction(slug, "bookmark");
-        return result;
-      }
-      return null;
-    },
-    [toggleBookmark, handleInteraction]
-  );
-
-  if (
-    !loading &&
-    !error &&
-    (!similarProducts || similarProducts.length === 0)
-  ) {
-    return null;
-  }
-
-  return (
-    <div className="mt-12 bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center mr-3">
-            <svg
-              className="w-4 h-4 text-violet-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900">Similar Products</h2>
+  // Section header component
+  const SectionHeader = () => (
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-gradient-to-r from-violet-500 to-indigo-600 rounded-lg text-white shadow-sm">
+          <FiPackage size={20} />
         </div>
-        <div className="flex items-center space-x-2">
-          {source && !loading && (
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full animate-fade-in">
-              {source === "client-cache"
-                ? "From cache"
-                : "Latest recommendations"}
-            </span>
-          )}
-          {contextInsights?.commonThemes && (
-            <span className="text-xs text-violet-600 bg-violet-50 px-2 py-1 rounded-full">
-              Themes: {contextInsights.commonThemes.join(", ")}
-            </span>
-          )}
-        </div>
+        <h2 className="text-xl font-bold text-gray-800">Similar Products</h2>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center my-8">
-          <LoaderComponent message="Finding similar products..." />
-        </div>
-      ) : error ? (
-        <div className="text-center py-10 bg-gray-50 rounded-xl animate-fade-in">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
-            <svg
-              className="w-8 h-8 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-          </div>
-          <h3 className="text-lg font-medium text-gray-700 mb-1">{error}</h3>
-          <p className="text-gray-500 text-sm">
-            We couldn't load similar products at this time.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {similarProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onUpvote={handleUpvote}
-              onBookmark={handleBookmark}
-              recommendationContext={product.recommendationContext}
-            />
-          ))}
+      {similarProducts.length > 2 && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => scroll('left')}
+            className="p-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-violet-600 transition-colors shadow-sm"
+            aria-label="Scroll left"
+          >
+            <FiArrowLeft size={18} />
+          </button>
+          <button
+            onClick={() => scroll('right')}
+            className="p-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-violet-600 transition-colors shadow-sm"
+            aria-label="Scroll right"
+          >
+            <FiArrowRight size={18} />
+          </button>
         </div>
       )}
     </div>
+  );
+
+  // Loading state with skeleton
+  if (loading) {
+    return (
+      <div className="mt-12 py-8">
+        <SectionHeader />
+        <div className="flex space-x-6 overflow-hidden">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="min-w-[280px] w-[280px] animate-pulse">
+              <div className="h-40 bg-gray-200 rounded-xl mb-3"></div>
+              <div className="h-5 bg-gray-200 rounded-full w-3/4 mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded-full w-full mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded-full w-2/3"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="mt-12 py-8">
+        <SectionHeader />
+        <div className="bg-white rounded-xl p-8 text-center border border-gray-200 shadow-sm">
+          <div className="text-red-500 mb-3">
+            <svg className="w-12 h-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to load recommendations</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors shadow-sm"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (!similarProducts.length) {
+    return (
+      <div className="mt-12 py-8">
+        <SectionHeader />
+        <div className="bg-white rounded-xl p-8 text-center border border-gray-200 shadow-sm">
+          <div className="text-gray-400 mb-3">
+            <svg className="w-12 h-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No similar products found</h3>
+          <p className="text-gray-600">We couldn't find any products similar to this one.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Success state with horizontal scrolling
+  return (
+    <motion.div
+      className="mt-12 py-8"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <SectionHeader />
+
+      <div
+        ref={scrollContainerRef}
+        className="flex space-x-6 overflow-x-auto pb-4 hide-scrollbar snap-x"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {similarProducts.map((product, index) => (
+          <div key={product._id || product.productId || index} className="snap-start">
+            <ProductCard
+              product={product.productData || product}
+            />
+          </div>
+        ))}
+      </div>
+    </motion.div>
   );
 };
 

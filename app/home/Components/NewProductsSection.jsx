@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import ProductCardList from "./ProductCardList";
 import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext";
+import { shouldRateLimit, markRequest, getRequestKey } from "../../../Utils/rateLimiter";
 
 const NewProductsSection = () => {
   const { getNewRecommendations } = useRecommendation();
@@ -13,32 +14,49 @@ const NewProductsSection = () => {
 
   useEffect(() => {
     const fetchNewProducts = async () => {
-      setIsLoading(true);
+      // Only show loading state if we don't have any data yet
+      if (newProducts.length === 0) {
+        setIsLoading(true);
+      }
+
+      // Use a longer cooldown for new products (8 seconds)
+      const requestKey = getRequestKey('new-products', { limit: 6 });
+      if (shouldRateLimit(requestKey, 8000)) {
+        console.log('Rate limiting new products request');
+        if (newProducts.length > 0) {
+          setIsLoading(false);
+          return;
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      markRequest(requestKey);
+
       try {
-        // Use the updated getNewRecommendations from context
-        const results = await getNewRecommendations(6);
+        // Add forceRefresh=false to use cached data when available
+        const results = await getNewRecommendations(6, 0, 7, false);
 
-        console.log("New products fetched:", results); // Debugging
-
+        // Only update state if we got valid results
         if (Array.isArray(results) && results.length > 0) {
           setNewProducts(results);
-        } else {
-          console.warn(
-            "No new products found or invalid response format:",
-            results
-          );
-          setNewProducts([]);
+          // Clear any previous errors
+          if (error) setError(null);
+        } else if (newProducts.length === 0) {
+          // Only show warning if we don't have existing data
+          console.warn("No new products found or invalid response format");
         }
       } catch (error) {
         console.error("Failed to fetch new products:", error);
-        setError("Failed to load new products");
+        // Only set error if we don't have existing data
+        if (newProducts.length === 0) {
+          setError("Failed to load new products");
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchNewProducts();
-  }, [getNewRecommendations]);
+  }, [getNewRecommendations]); // Removed newProducts.length from dependencies
 
   return (
     <section className="mt-10">

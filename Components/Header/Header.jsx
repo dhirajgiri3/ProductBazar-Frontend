@@ -41,7 +41,7 @@ const Header = () => {
   const pathname = usePathname();
   const { user, isAuthenticated, logout, nextStep } = useAuth();
   const { searchProducts } = useProduct();
-  const { categories = [] } = useCategories();
+  const { categories = [], error: categoryError, retryFetchCategories } = useCategories();
 
   // States
   const [isSearchActive, setIsSearchActive] = useState(false);
@@ -73,7 +73,7 @@ const Header = () => {
       // Check if user has pending onboarding steps
       if (nextStep) {
         setShowOnboardingBanner(true);
-        
+
         // Set the appropriate banner link based on the next step type
         if (nextStep.type === "email_verification") {
           setBannerLink("/auth/verify-email");
@@ -636,11 +636,25 @@ const Header = () => {
                 </nav>
 
                 {/* Categories */}
-                {categories.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="text-xs uppercase tracking-wider text-gray-500 font-semibold px-4 mb-2">
-                      Browse by Category
-                    </h3>
+                <div className="mt-6">
+                  <h3 className="text-xs uppercase tracking-wider text-gray-500 font-semibold px-4 mb-2">
+                    Browse by Category
+                  </h3>
+
+                  {categoryError ? (
+                    <div className="px-4 py-3 text-sm text-red-600 bg-red-50 rounded-lg mx-2">
+                      <p className="mb-2">Error loading categories</p>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          retryFetchCategories();
+                        }}
+                        className="text-xs bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : categories.length > 0 ? (
                     <div className="space-y-1">
                       {categories.slice(0, 6).map((category) => (
                         <Link
@@ -659,8 +673,18 @@ const Header = () => {
                         </Link>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="px-4 py-3 text-sm text-gray-500">
+                      <div className="animate-pulse flex space-x-2">
+                        <div className="rounded-full bg-gray-200 h-5 w-5"></div>
+                        <div className="flex-1 space-y-2">
+                          <div className="h-2 bg-gray-200 rounded"></div>
+                          <div className="h-2 bg-gray-200 rounded w-5/6"></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Footer Actions */}

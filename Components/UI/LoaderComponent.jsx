@@ -4,43 +4,59 @@ function LoaderComponent({
   text = "Loading",
   message = "Loading",
   size = "default",
+  color = "violet",
 }) {
-  const containerSize = size === "small" ? "h-16" : "h-28";
-  const dotSize = size === "small" ? "w-2 h-2" : "w-3 h-3";
-  const textSize = size === "small" ? "text-sm" : "text-base";
+  const containerSize = size === "small" ? "h-16" : "h-24";
+  const dotSize = size === "small" ? "w-1.5 h-1.5" : "w-2 h-2";
+  const textSize = size === "small" ? "text-xs" : "text-sm";
+  const colorClass = `bg-${color}-500`;
+
+  // Optimized animation variants
+  const containerVariants = {
+    hidden: { opacity: 0, scale: 0.9 },
+    visible: { opacity: 1, scale: 1, transition: { duration: 0.3 } }
+  };
+
+  const dotVariants = {
+    animate: (i) => ({
+      y: [0, -8, 0],
+      scale: [1, 1.2, 1],
+      opacity: [0.7, 1, 0.7],
+      transition: {
+        duration: 0.8,
+        repeat: Infinity,
+        repeatType: "loop",
+        ease: "easeInOut",
+        delay: i * 0.15,
+      }
+    })
+  };
 
   return (
     <motion.div
       className={`flex flex-col items-center justify-center ${containerSize}`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center space-x-1.5">
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
-            className={`${dotSize} rounded-full bg-violet-500`}
-            animate={{
-              y: ["0%", "-50%", "0%"],
-              opacity: [1, 0.5, 1],
-            }}
-            transition={{
-              duration: 1,
-              repeat: Infinity,
-              delay: i * 0.2,
-              ease: "easeInOut",
-            }}
+            className={`${dotSize} rounded-full ${colorClass}`}
+            custom={i}
+            variants={dotVariants}
+            animate="animate"
           />
         ))}
       </div>
       <motion.p
-        className={`mt-4 text-white font-medium ${textSize}`}
+        className={`mt-3 text-gray-600 font-medium ${textSize}`}
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        animate={{ opacity: 0.8 }}
         transition={{ delay: 0.2 }}
       >
-        {text ? text : message}
+        {text || message}
       </motion.p>
     </motion.div>
   );

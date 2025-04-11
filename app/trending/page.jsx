@@ -11,6 +11,7 @@ import TrendingStats from "./components/TrendingStats";
 import LoaderComponent from "../../Components/UI/LoaderComponent";
 import { demoProducts, demoStats } from "./data/demoData";
 import { useAuth } from "../../Contexts/Auth/AuthContext";
+import { useProduct } from "../../Contexts/Product/ProductContext";
 
 export default function TrendingPage() {
   const [error, setError] = useState(null);
@@ -28,6 +29,7 @@ export default function TrendingPage() {
   const [featuredOnly, setFeaturedOnly] = useState(false);
 
   const { user } = useAuth();
+  const { toggleUpvote, toggleBookmark } = useProduct();
   const { ref, inView } = useInView({
     threshold: 0.15,
     triggerOnce: false,
@@ -38,9 +40,9 @@ export default function TrendingPage() {
       setError(null);
       setLoading(true);
       await new Promise(resolve => setTimeout(resolve, 800));
-      
+
       let filteredProducts = [...demoProducts];
-      
+
       // Updated filtering logic with better date handling
       const now = new Date();
       const timeFilters = {
@@ -52,7 +54,7 @@ export default function TrendingPage() {
 
       // Category filtering
       if (category !== "all") {
-        filteredProducts = filteredProducts.filter(p => 
+        filteredProducts = filteredProducts.filter(p =>
           p.tags.some(tag => tag.toLowerCase() === category.toLowerCase())
         );
       }
@@ -80,7 +82,7 @@ export default function TrendingPage() {
       // Compute pagination
       const computedTotalPages = Math.ceil(filteredProducts.length / itemsPerPage);
       setTotalPages(computedTotalPages);
-      
+
       const startIndex = (page - 1) * itemsPerPage;
       const endIndex = startIndex + itemsPerPage;
       const newProducts = filteredProducts.slice(startIndex, endIndex);
@@ -106,30 +108,84 @@ export default function TrendingPage() {
     await fetchProducts();
   }, [fetchProducts]);
 
-  const handleUpvote = useCallback((productId) => {
-    setProducts(prev => prev.map(p => {
-      if (p.id === productId) {
-        const newUpvotes = p.hasUpvoted ? p.upvotes - 1 : p.upvotes + 1;
-        return { ...p, upvotes: newUpvotes, hasUpvoted: !p.hasUpvoted };
-      }
-      return p;
-    }));
-    toast.success("Vote recorded!");
-  }, []);
+  const handleUpvote = useCallback(async (productId) => {
+    try {
+      // Find the product by ID
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
 
-  const handleSave = useCallback((productId) => {
-    setSavedProducts(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(productId)) {
-        newSet.delete(productId);
-        toast.success("Removed from saved items");
-      } else {
-        newSet.add(productId);
-        toast.success("Added to saved items");
+      // Optimistic UI update
+      setProducts(prev => prev.map(p => {
+        if (p.id === productId) {
+          const newUpvotes = p.hasUpvoted ? p.upvotes - 1 : p.upvotes + 1;
+          return { ...p, upvotes: newUpvotes, hasUpvoted: !p.hasUpvoted };
+        }
+        return p;
+      }));
+
+      // Call the API through ProductContext
+      const result = await toggleUpvote(product.slug);
+
+      if (!result.success) {
+        // Revert optimistic update if API call failed
+        setProducts(prev => prev.map(p => {
+          if (p.id === productId) {
+            return { ...p, upvotes: p.hasUpvoted ? p.upvotes + 1 : p.upvotes - 1, hasUpvoted: !p.hasUpvoted };
+          }
+          return p;
+        }));
+        toast.error(result.message || "Failed to update vote");
+        return;
       }
-      return newSet;
-    });
-  }, []);
+
+      toast.success(result.upvoted ? "Product upvoted successfully" : "Upvote removed");
+    } catch (error) {
+      console.error("Error toggling upvote:", error);
+      toast.error("Something went wrong");
+    }
+  }, [products, toggleUpvote]);
+
+  const handleSave = useCallback(async (productId) => {
+    try {
+      // Find the product by ID
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+
+      // Optimistic UI update
+      setSavedProducts(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(productId)) {
+          newSet.delete(productId);
+        } else {
+          newSet.add(productId);
+        }
+        return newSet;
+      });
+
+      // Call the API through ProductContext
+      const result = await toggleBookmark(product.slug);
+
+      if (!result.success) {
+        // Revert optimistic update if API call failed
+        setSavedProducts(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(productId)) {
+            newSet.delete(productId);
+          } else {
+            newSet.add(productId);
+          }
+          return newSet;
+        });
+        toast.error(result.message || "Failed to update bookmark");
+        return;
+      }
+
+      toast.success(result.bookmarked ? "Product bookmarked successfully" : "Bookmark removed");
+    } catch (error) {
+      console.error("Error toggling bookmark:", error);
+      toast.error("Something went wrong");
+    }
+  }, [products, toggleBookmark]);
 
   const handleResetFilters = useCallback(() => {
     setFilter("all-time");
@@ -206,7 +262,7 @@ export default function TrendingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header Section with enhanced styling */}
           <div className="mb-12">
-            <TrendingHeader 
+            <TrendingHeader
               onRefresh={handleRefresh}
               isRefreshing={isRefreshing}
               totalProducts={products.length}
@@ -239,14 +295,14 @@ export default function TrendingPage() {
               <LoadingState />
             ) : error ? (
               <ErrorState
-                error={error} 
-                onRetry={handleRefresh} 
-                onReset={handleResetFilters} 
+                error={error}
+                onRetry={handleRefresh}
+                onReset={handleResetFilters}
               />
             ) : (
-              <ProductGrid 
-                products={products} 
-                filter={filter} 
+              <ProductGrid
+                products={products}
+                filter={filter}
                 category={category}
                 savedProducts={savedProducts}
                 onUpvote={handleUpvote}
@@ -258,7 +314,7 @@ export default function TrendingPage() {
 
           {/* Pagination with enhanced styling */}
           {!loading && !error && products.length > 0 && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="mt-12 flex items-center justify-center space-x-4"
@@ -270,11 +326,11 @@ export default function TrendingPage() {
               >
                 Previous
               </PaginationButton>
-              
+
               <span className="px-4 py-2 text-sm text-gray-700 bg-white/50 backdrop-blur-sm rounded-md border border-gray-200/50">
                 Page {page} of {totalPages}
               </span>
-              
+
               <PaginationButton
                 onClick={handleNextPage}
                 disabled={page === totalPages}
@@ -377,7 +433,7 @@ const PaginationButton = ({ children, onClick, disabled, direction }) => (
     disabled={disabled}
     className={`
       px-4 py-2 rounded-md text-sm font-medium transition-all
-      ${disabled 
+      ${disabled
         ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
         : 'bg-white/50 text-gray-700 hover:bg-white/80 backdrop-blur-sm border border-gray-200/50 shadow-sm'
       }

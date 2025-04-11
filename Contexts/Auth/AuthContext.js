@@ -25,10 +25,10 @@ export const AuthProvider = ({ children }) => {
   // Initialize auth state
   useEffect(() => {
     let mounted = true;
-    
+
     const initializeAuth = async () => {
       if (!mounted) return;
-      
+
       try {
         const storedToken = localStorage.getItem("accessToken");
         const storedUser = localStorage.getItem("user");
@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
         if (storedNextStep) {
           setNextStep(JSON.parse(storedNextStep));
         }
-        
+
         if (storedToken) {
           setAccessToken(storedToken);
           await fetchUserData(storedToken);
@@ -70,8 +70,26 @@ export const AuthProvider = ({ children }) => {
         });
 
         if (response.data.status === "success") {
-          setUser(response.data.data.user);
-          localStorage.setItem("user", JSON.stringify(response.data.data.user));
+          // Ensure roleCapabilities is present
+          const userData = response.data.data.user;
+          if (!userData.roleCapabilities) {
+            userData.roleCapabilities = {
+              canUploadProducts: ['startupOwner', 'maker'].includes(userData.role),
+              canInvest: userData.role === 'investor',
+              canOfferServices: ['agency', 'freelancer'].includes(userData.role),
+              canApplyToJobs: userData.role === 'jobseeker',
+              canPostJobs: ['startupOwner', 'agency'].includes(userData.role),
+              canShowcaseProjects: ['startupOwner', 'agency', 'freelancer', 'jobseeker'].includes(userData.role),
+            };
+          }
+
+          // Ensure secondaryRoles is present
+          if (!userData.secondaryRoles) {
+            userData.secondaryRoles = [];
+          }
+
+          setUser(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
           setAuthLoading(false);
           return true;
         }
@@ -96,12 +114,34 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      setUser(data.data.user);
-      localStorage.setItem("user", JSON.stringify(data.data.user));
+      // Ensure roleCapabilities is present
+      const userData = data.data.user;
+      if (!userData.roleCapabilities) {
+        userData.roleCapabilities = {
+          canUploadProducts: ['startupOwner', 'maker'].includes(userData.role),
+          canInvest: userData.role === 'investor',
+          canOfferServices: ['agency', 'freelancer'].includes(userData.role),
+          canApplyToJobs: userData.role === 'jobseeker',
+          canPostJobs: ['startupOwner', 'agency'].includes(userData.role),
+          canShowcaseProjects: ['startupOwner', 'agency', 'freelancer', 'jobseeker'].includes(userData.role),
+        };
+      }
+
+      // Ensure secondaryRoles is present
+      if (!userData.secondaryRoles) {
+        userData.secondaryRoles = [];
+      }
+
+      setUser(userData);
+      localStorage.setItem("user", JSON.stringify(userData));
 
       if (data.data.accessToken) {
         setAccessToken(data.data.accessToken);
         localStorage.setItem("accessToken", data.data.accessToken);
+
+        // Note: We don't need to store the refresh token in localStorage
+        // as it's stored in an HTTP-only cookie by the server
+        // This is more secure as it prevents XSS attacks from stealing the refresh token
       }
 
       if (data.nextStep) {
@@ -162,6 +202,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("user");
     localStorage.removeItem("nextStep");
+    // Note: We don't need to remove refreshToken from localStorage
+    // as it's stored in an HTTP-only cookie and managed by the server
   }, []);
 
   const clearAuthStateAndRedirect = useCallback(() => {
@@ -384,7 +426,12 @@ export const AuthProvider = ({ children }) => {
     setError("");
 
     try {
-      const response = await api.post("/auth/logout");
+      // Make sure to include withCredentials to send cookies
+      const response = await api.post(
+        "/auth/logout",
+        {},
+        { withCredentials: true }
+      );
       if (response.data.status === "success") {
         clearAuthState();
         router.push("/auth/login");
@@ -393,9 +440,18 @@ export const AuthProvider = ({ children }) => {
       setError(response.data.message || "Logout failed");
       return { success: false, message: response.data.message };
     } catch (err) {
+      // Even if the server request fails, clear local auth state
+      // This ensures the user can still log out even if the server is unreachable
+      clearAuthState();
+      router.push("/auth/login");
+
       const errorMessage = err.response?.data?.message || "Logout failed";
       setError(errorMessage);
-      return { success: false, message: errorMessage };
+      return {
+        success: false,
+        message: errorMessage,
+        localLogoutSuccessful: true,
+      };
     } finally {
       setAuthLoading(false);
     }
@@ -696,81 +752,109 @@ export const AuthProvider = ({ children }) => {
       setError("");
 
       try {
+        logger.info('Processing profile completion request');
+
+        // Ensure we're working with FormData
         let dataToSend;
-
-        // Handle FormData object
         if (formData instanceof FormData) {
-          // Ensure phone number is properly formatted before submission
-          if (formData.has("userData")) {
-            const userData = JSON.parse(formData.get("userData"));
-
-            // If user registered with phone, ensure we use that phone number
-            if (
-              user &&
-              user.isPhoneVerified &&
-              user.phone &&
-              (!userData.phone || userData.phone === "")
-            ) {
-              userData.phone = user.phone;
-            }
-
-            // Replace the form data with updated userData
-            formData.set("userData", JSON.stringify(userData));
-          }
           dataToSend = formData;
-        }
-        // Handle direct object submission
-        else {
-          // If user registered with phone, ensure we use that phone number
-          if (
-            user &&
-            user.isPhoneVerified &&
-            user.phone &&
-            (!formData.phone || formData.phone === "")
-          ) {
-            formData.phone = user.phone;
-          }
-
-          // Create form data from object
+        } else {
+          // Convert object to FormData
           dataToSend = new FormData();
           dataToSend.append("userData", JSON.stringify(formData));
 
-          // Handle file uploads if present
-          if (
-            formData.profilePicture &&
-            formData.profilePicture instanceof File
-          ) {
-            dataToSend.append("profilePicture", formData.profilePicture);
+          // Handle file upload for profilePicture if it exists
+          if (formData.profilePicture && formData.profilePicture instanceof File) {
+            dataToSend.append("profileImage", formData.profilePicture);
+            logger.debug('Added profile picture to form data');
           }
         }
 
+        // Basic validation
+        try {
+          const userData = dataToSend.get("userData");
+          const parsedUserData = typeof userData === 'string' ? JSON.parse(userData) : userData;
+
+          // Check for required fields
+          const requiredFields = ['firstName', 'lastName'];
+          const missingFields = requiredFields.filter(field => !parsedUserData[field]);
+
+          if (missingFields.length > 0) {
+            logger.warn(`Missing required fields: ${missingFields.join(', ')}`);
+            setError(`Please provide the following required fields: ${missingFields.join(', ')}`);
+            return { success: false, message: `Missing required fields: ${missingFields.join(', ')}` };
+          }
+
+          // Ensure at least one contact method is provided
+          if (!parsedUserData.email && !parsedUserData.phone) {
+            logger.warn('No contact method provided');
+            setError('Please provide at least one contact method (email or phone)');
+            return { success: false, message: 'Please provide at least one contact method (email or phone)' };
+          }
+        } catch (e) {
+          logger.error('Error validating user data:', e);
+        }
+
+        logger.info('Submitting profile completion request to API');
         const response = await api.post("/auth/complete-profile", dataToSend, {
           headers: { "Content-Type": "multipart/form-data" },
         });
 
         if (response.data.status === "success") {
+          logger.info('Profile completion successful:', response.data);
+
+          // Update user state with the new data but don't redirect
           handleAuthSuccess(
             {
               ...response.data,
               data: { ...response.data.data },
             },
-            true
+            false // Don't redirect - let the component handle it after confetti
           );
+
           return { success: true, user: response.data.data.user };
         }
 
+        logger.error('Profile completion failed:', response.data.message);
         setError(response.data.message || "Profile completion failed");
         return { success: false, message: response.data.message };
       } catch (err) {
-        const errorMessage =
-          err.response?.data?.message || "Profile completion failed";
+        logger.error('Exception in completeProfile:', err);
+
+        // Enhanced error handling
+        let errorMessage = "Profile completion failed";
+        let errorCode = null;
+
+        if (err.response) {
+          errorMessage = err.response.data?.message || errorMessage;
+          errorCode = err.response.status;
+
+          // Handle specific error codes
+          if (errorCode === 400) {
+            errorMessage = err.response.data?.message || "Invalid profile data";
+          } else if (errorCode === 401) {
+            errorMessage = "Authentication required. Please log in again.";
+            clearAuthState();
+          } else if (errorCode === 413) {
+            errorMessage = "Profile image too large. Please use a smaller image.";
+          } else if (errorCode === 429) {
+            errorMessage = "Too many requests. Please try again later.";
+          } else if (errorCode >= 500) {
+            errorMessage = "Server error. Please try again later.";
+          }
+        }
+
         setError(errorMessage);
-        return { success: false, message: errorMessage };
+        return {
+          success: false,
+          message: errorMessage,
+          code: errorCode
+        };
       } finally {
         setAuthLoading(false);
       }
     },
-    [user, handleAuthSuccess]
+    [user, handleAuthSuccess, clearAuthState, setAuthLoading, setError]
   );
 
   const updateProfile = useCallback(
