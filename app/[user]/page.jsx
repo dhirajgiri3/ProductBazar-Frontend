@@ -16,6 +16,7 @@ import SkillsTab from "./Components/ProfileTabs/SkillsTab";
 import SocialTab from "./Components/ProfileTabs/SocialTab";
 import RoleCapabilities from "../../Components/User/RoleCapabilities";
 import SecondaryRoles from "../../Components/User/SecondaryRoles";
+import AdminRoleManager from "../../Components/Admin/AdminRoleManager";
 import logger from "../../Utils/logger";
 import LoaderComponent from "../../Components/UI/LoaderComponent.jsx";
 import { normalizeProducts } from "../../Utils/Product/productUtils.js";
@@ -63,6 +64,8 @@ export default function ProfilePage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("Overview");
   const [mergedProducts, setMergedProducts] = useState([]);
+  const [isOwnProfile, setIsOwnProfile] = useState(true);
+  const [profileUser, setProfileUser] = useState(null);
 
   // Product tab specific states
   const [currentPage, setCurrentPage] = useState(1);
@@ -168,6 +171,10 @@ export default function ProfilePage() {
   // Initialize products data when user is loaded
   useEffect(() => {
     if (user?._id) {
+      // For now, we're only showing the current user's profile
+      // In the future, this could be updated to fetch another user's profile
+      setIsOwnProfile(true);
+      setProfileUser(user);
       fetchUserProducts(currentPage, activeProductFilter);
     }
   }, [user, fetchUserProducts, currentPage, activeProductFilter]);
@@ -262,16 +269,43 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Banner */}
-      <div className="relative h-40 md:h-56 bg-gradient-to-r from-violet-100 to-violet-100 overflow-hidden">
-        <Image
-          src="/Assets/Image/ProfileBg.png"
-          alt="Banner"
-          fill
-          style={{ objectFit: "cover" }}
-          className="opacity-70"
+      <motion.div
+        className="relative h-40 md:h-56 overflow-hidden rounded-t-xl"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-violet-50 to-violet-100" />
+        <div className="absolute inset-0 bg-[url('/Assets/Image/ProfileBg.png')] bg-cover bg-center opacity-70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/30 to-white" />
+
+        {/* Decorative Elements */}
+        <motion.div
+          className="absolute top-1/4 left-1/4 w-20 h-20 rounded-full bg-violet-200 opacity-20"
+          animate={{
+            y: [0, -10, 0],
+            scale: [1, 1.1, 1],
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: 5,
+            ease: "easeInOut"
+          }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/50 to-white" />
-      </div>
+        <motion.div
+          className="absolute bottom-1/3 right-1/3 w-16 h-16 rounded-full bg-violet-300 opacity-20"
+          animate={{
+            y: [0, 10, 0],
+            scale: [1, 1.2, 1],
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: 4,
+            ease: "easeInOut",
+            delay: 1
+          }}
+        />
+      </motion.div>
 
       {/* Profile Header */}
       <div className="relative -mt-20 px-4">
@@ -280,11 +314,16 @@ export default function ProfilePage() {
             variants={headerVariants}
             initial="hidden"
             animate="visible"
-            className="flex flex-col md:flex-row md:items-end gap-6 bg-white rounded-xl p-6 shadow-sm border border-gray-100"
+            className="flex flex-col md:flex-row md:items-end gap-6 bg-white/95 backdrop-blur-sm rounded-xl p-8 border border-gray-50 shadow-[0_4px_20px_-12px_rgba(0,0,0,0.1)]"
           >
             {/* Profile Image */}
-            <div className="relative mx-auto md:mx-0">
-              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white bg-gray-50 shadow-md">
+            <motion.div
+              className="relative mx-auto md:mx-0"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white bg-gradient-to-br from-violet-50 to-white">
                 <Image
                   src={user.profilePicture?.url || "/Assets/Image/Profile.png"}
                   alt={`${user.firstName} ${user.lastName}'s Profile`}
@@ -293,47 +332,61 @@ export default function ProfilePage() {
                   className="rounded-full"
                 />
               </div>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsEditModalOpen(true)}
-                className="absolute bottom-0 right-0 bg-violet-600 p-2 rounded-full shadow-md text-white border border-violet-700"
-                aria-label="Edit Profile"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              {isOwnProfile && (
+                <motion.button
+                  whileHover={{ scale: 1.05, backgroundColor: "#7c3aed" }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="absolute bottom-0 right-0 bg-violet-600 p-2 rounded-full text-white border border-violet-100 transition-colors duration-200"
+                  aria-label="Edit Profile"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                  />
-                </svg>
-              </motion.button>
-            </div>
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                    />
+                  </svg>
+                </motion.button>
+              )}
+            </motion.div>
 
             {/* User Info */}
-            <div className="flex-grow text-center md:text-left">
+            <motion.div
+              className="flex-grow text-center md:text-left"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
               <div className="flex flex-col md:flex-row md:items-center justify-center md:justify-start gap-2 mb-3">
-                <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">
+                <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight">
                   {user.firstName} {user.lastName}
                 </h1>
-                <span
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2 }}
                   className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.textColor}`}
                 >
                   {badge.text}
-                </span>
-                {user.openToWork &&
-                  (user.role === "freelancer" || user.role === "jobseeker") && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse"></span>
-                      Open to Work
-                    </span>
-                  )}
+                </motion.span>
+                {user.openToWork && (
+                  <motion.span
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 ml-2"
+                  >
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse"></span>
+                    Open to Work
+                  </motion.span>
+                )}
               </div>
 
               <p className="text-gray-600 text-sm font-medium">
@@ -372,8 +425,10 @@ export default function ProfilePage() {
                         d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                       />
                     </svg>
-                    {typeof user.address === 'object'
-                      ? `${user.address.city || ''}, ${user.address.country || ''}`
+                    {typeof user.address === "object"
+                      ? `${user.address.city || ""}, ${
+                          user.address.country || ""
+                        }`
                       : user.address}
                   </span>
                 )}
@@ -398,39 +453,55 @@ export default function ProfilePage() {
               </div>
 
               <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-3 text-sm">
-                <span className="flex items-center gap-1.5">
+                <motion.span
+                  className="flex items-center gap-1.5"
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
                   <span className="font-medium text-gray-900">
                     {mergedProducts.length}
-                    {/* {user.products?.length || 0} */}
                   </span>
                   <span className="text-gray-500">Products</span>
-                </span>
-                <span className="flex items-center gap-1.5">
+                </motion.span>
+                <motion.span
+                  className="flex items-center gap-1.5"
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
                   <span className="font-medium text-gray-900">
                     {user.upvotes || 0}
                   </span>
                   <span className="text-gray-500">Upvotes</span>
-                </span>
+                </motion.span>
               </div>
-            </div>
+            </motion.div>
 
             {/* Action Buttons */}
-            <div className="flex flex-row md:flex-col gap-2 mt-3 md:mt-0 justify-center">
-              <motion.button
-                onClick={() => setIsEditModalOpen(true)}
-                className="px-4 py-2 bg-violet-600 text-white rounded-md text-sm font-medium hover:bg-violet-700 shadow-sm"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                Edit Profile
-              </motion.button>
+            <motion.div
+              className="flex flex-row md:flex-col gap-2 mt-3 md:mt-0 justify-center"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              {isOwnProfile && (
+                <motion.button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="px-4 py-2 bg-violet-600 text-white rounded-md text-sm font-medium hover:bg-violet-700 transition-colors duration-200"
+                  whileHover={{ scale: 1.02, backgroundColor: "#7c3aed" }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Edit Profile
+                </motion.button>
+              )}
               {user.socialLinks?.website && (
                 <motion.a
                   href={user.socialLinks.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2 border border-gray-200 text-violet-600 rounded-md text-sm font-medium hover:bg-violet-50 shadow-sm flex items-center justify-center gap-1"
-                  whileHover={{ scale: 1.02 }}
+                  className="px-4 py-2 border border-gray-100 text-violet-600 rounded-md text-sm font-medium hover:bg-violet-50 transition-colors duration-200 flex items-center justify-center gap-1"
+                  whileHover={{ scale: 1.02, borderColor: "#ddd6fe" }}
                   whileTap={{ scale: 0.98 }}
                 >
                   <svg
@@ -449,48 +520,42 @@ export default function ProfilePage() {
                   Website
                 </motion.a>
               )}
-            </div>
+            </motion.div>
           </motion.div>
 
-          {/* Only show these components if the user is viewing their own profile */}
-          {user && (
-            <>
-              <SecondaryRoles />
-              <RoleCapabilities />
-            </>
-          )}
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="sticky top-0 z-10 bg-white border-b border-gray-100 mt-6 shadow-sm">
+      <nav className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm mt-6 border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-4">
           <motion.div
             variants={tabVariants}
             initial="hidden"
             animate="visible"
-            className="flex space-x-1 overflow-x-auto hide-scrollbar py-1"
+            className="flex space-x-2 overflow-x-auto hide-scrollbar py-3"
           >
-            {tabs.map((item) => (
+            {tabs.map((item, index) => (
               <motion.button
                 key={item}
                 onClick={() => setActiveTab(item)}
-                className={`py-2.5 px-3 text-sm font-medium whitespace-nowrap relative rounded-md transition-colors ${
+                className={`py-2 px-5 text-sm font-medium whitespace-nowrap relative rounded-full transition-all ${
                   activeTab === item
-                    ? "text-violet-600 bg-violet-50"
+                    ? "text-white bg-violet-600 shadow-sm shadow-violet-200"
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 }`}
-                whileHover={{ scale: activeTab !== item ? 1.02 : 1 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  delay: 0.1 + index * 0.05,
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 25
+                }}
               >
                 {item}
-                {activeTab === item && (
-                  <motion.div
-                    layoutId="activeTabIndicator"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-600"
-                    layout
-                  />
-                )}
               </motion.button>
             ))}
           </motion.div>
@@ -498,15 +563,20 @@ export default function ProfilePage() {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-6">
+      <main className="max-w-4xl mx-auto px-4 py-8">
         <AnimatePresence mode="wait">
           {activeTab === "Overview" && (
             <motion.div
               key="Overview"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -30 }}
+              transition={{
+                duration: 0.5,
+                ease: [0.22, 1, 0.36, 1],
+                staggerChildren: 0.1
+              }}
+              className="bg-white rounded-xl border border-gray-50 p-8 shadow-[0_4px_20px_-12px_rgba(0,0,0,0.05)]"
             >
               <OverviewTab user={user} products={mergedProducts} />
             </motion.div>
@@ -514,10 +584,15 @@ export default function ProfilePage() {
           {activeTab === "Products" && (
             <motion.div
               key="Products"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -30 }}
+              transition={{
+                duration: 0.5,
+                ease: [0.22, 1, 0.36, 1],
+                staggerChildren: 0.1
+              }}
+              className="bg-white rounded-xl border border-gray-50 p-8 shadow-[0_4px_20px_-12px_rgba(0,0,0,0.05)]"
             >
               <ProductsTab
                 products={filteredProducts}
@@ -532,17 +607,22 @@ export default function ProfilePage() {
                   fetchUserProducts(currentPage, activeProductFilter)
                 }
                 userId={user._id}
-                isOwner={true}
+                isOwner={isOwnProfile}
               />
             </motion.div>
           )}
           {activeTab === "Collections" && (
             <motion.div
               key="Collections"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -30 }}
+              transition={{
+                duration: 0.5,
+                ease: [0.22, 1, 0.36, 1],
+                staggerChildren: 0.1
+              }}
+              className="bg-white rounded-xl border border-gray-50 p-8 shadow-[0_4px_20px_-12px_rgba(0,0,0,0.05)]"
             >
               <CollectionsTab collections={user.collections || []} />
             </motion.div>
@@ -550,10 +630,15 @@ export default function ProfilePage() {
           {activeTab === "Upvotes" && (
             <motion.div
               key="Upvotes"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -30 }}
+              transition={{
+                duration: 0.5,
+                ease: [0.22, 1, 0.36, 1],
+                staggerChildren: 0.1
+              }}
+              className="bg-white rounded-xl border border-gray-50 p-8 shadow-[0_4px_20px_-12px_rgba(0,0,0,0.05)]"
             >
               <UpvotesTab upvotes={user.upvotes || 0} />
             </motion.div>
@@ -561,10 +646,15 @@ export default function ProfilePage() {
           {activeTab === "Topics" && (
             <motion.div
               key="Topics"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -30 }}
+              transition={{
+                duration: 0.5,
+                ease: [0.22, 1, 0.36, 1],
+                staggerChildren: 0.1
+              }}
+              className="bg-white rounded-xl border border-gray-50 p-8 shadow-[0_4px_20px_-12px_rgba(0,0,0,0.05)]"
             >
               <TopicsTab topics={user.topics || []} />
             </motion.div>
@@ -572,10 +662,15 @@ export default function ProfilePage() {
           {activeTab === "Activity" && (
             <motion.div
               key="Activity"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -30 }}
+              transition={{
+                duration: 0.5,
+                ease: [0.22, 1, 0.36, 1],
+                staggerChildren: 0.1
+              }}
+              className="bg-white rounded-xl border border-gray-50 p-8 shadow-[0_4px_20px_-12px_rgba(0,0,0,0.05)]"
             >
               <ActivityTab activity={user.activity || []} />
             </motion.div>
@@ -583,10 +678,15 @@ export default function ProfilePage() {
           {activeTab === "Skills" && (
             <motion.div
               key="Skills"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -30 }}
+              transition={{
+                duration: 0.5,
+                ease: [0.22, 1, 0.36, 1],
+                staggerChildren: 0.1
+              }}
+              className="bg-white rounded-xl border border-gray-50 p-8 shadow-[0_4px_20px_-12px_rgba(0,0,0,0.05)]"
             >
               <SkillsTab skills={user.skills || []} />
             </motion.div>
@@ -594,10 +694,15 @@ export default function ProfilePage() {
           {activeTab === "Social" && (
             <motion.div
               key="Social"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -30 }}
+              transition={{
+                duration: 0.5,
+                ease: [0.22, 1, 0.36, 1],
+                staggerChildren: 0.1
+              }}
+              className="bg-white rounded-xl border border-gray-50 p-8 shadow-[0_4px_20px_-12px_rgba(0,0,0,0.05)]"
             >
               <SocialTab social={user.socialLinks || {}} />
             </motion.div>

@@ -5,7 +5,7 @@ import Particles, { initParticlesEngine } from "@tsparticles/react";
 // import { loadFull } from "@tsparticles/all";
 
 // Only use the correct import
-import { loadAll } from "@tsparticles/all"; 
+import { loadAll } from "@tsparticles/all";
 
 const InteractiveBackground = () => {
   const [init, setInit] = useState(false);
@@ -17,10 +17,16 @@ const InteractiveBackground = () => {
     const initializeParticles = async () => {
       try {
         await initParticlesEngine(async (engine) => {
-          // Fix: Use the proper loading function
-          await loadAll(engine);
-          // Alternative if above doesn't work:
-          // await loadSlim(engine);
+          // Fix: Use the proper loading function with error handling
+          try {
+            await loadAll(engine);
+            console.log("Particles engine loaded with loadAll");
+          } catch (loadError) {
+            console.error("Error loading with loadAll:", loadError);
+            // If loadAll fails, we could try an alternative loading method
+            // This would require importing the alternative method
+            throw loadError; // Re-throw to be caught by outer try/catch
+          }
         });
         setInit(true);
         console.log("Particles engine initialized successfully");
@@ -29,7 +35,7 @@ const InteractiveBackground = () => {
         setError(err.message);
       }
     };
-    
+
     initializeParticles();
   }, []);
 
@@ -38,7 +44,12 @@ const InteractiveBackground = () => {
     // Force a redraw to ensure visibility
     if (container) {
       setTimeout(() => {
-        container.refresh();
+        try {
+          container.refresh();
+          console.log("Container refreshed successfully");
+        } catch (err) {
+          console.error("Error refreshing container:", err);
+        }
       }, 200);
     }
   };
@@ -57,7 +68,7 @@ const InteractiveBackground = () => {
       <div className="fixed inset-0 -z-10" ref={containerRef}>
         {/* Base background color layer - changed to white */}
         <div className="absolute inset-0 bg-gradient-to-br from-white via-gray-50 to-white" />
-        
+
         {/* Particles container with explicit dimensions and positioning */}
         <div className="absolute inset-0 overflow-hidden">
           <Particles
@@ -73,7 +84,7 @@ const InteractiveBackground = () => {
               detectRetina: true,
               background: {
                 color: {
-                  value: "transparent",
+                  value: "#ffffff00",
                 },
               },
               interactivity: {
@@ -86,10 +97,10 @@ const InteractiveBackground = () => {
                   onHover: {
                     enable: true,
                     mode: "bubble",
-                    parallax: { 
+                    parallax: {
                       enable: true,
                       force: 80,
-                      smooth: 10 
+                      smooth: 10
                     },
                   },
                   resize: true,
@@ -436,11 +447,11 @@ const InteractiveBackground = () => {
             }}
           />
         </div>
-        
+
         {/* Gradient overlays for depth and dimension - changed to light colors */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-100/30 via-transparent to-violet-100/30 z-[2]" />
         <div className="absolute inset-0 bg-radial-gradient from-transparent to-purple-50/40 z-[2]" />
-        
+
         {/* Light effects and glow - adjusted for white background */}
         <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-purple-200/10 to-transparent z-[2]" />
         <div className="absolute bottom-0 left-0 w-full h-96 bg-gradient-to-t from-violet-200/20 to-transparent z-[2]" />

@@ -135,6 +135,7 @@ const ProductFormSteps = ({
                     message: "Product name cannot exceed 100 characters",
                   },
                 }}
+                note="Choose a memorable, descriptive name"
                 icon={<TextQuote size={18} className="text-violet-400" />}
               />
             </motion.div>
@@ -168,6 +169,7 @@ const ProductFormSteps = ({
                     onChange={field.onChange}
                     error={errors.category?.message}
                     required={true}
+                    label="Category"
                     note="Choose the category that best fits your product"
                   />
                 )}

@@ -1,8 +1,7 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/complete-profile/page": "app/complete-profile/page.js",
-  "/page": "app/page.js",
-  "/product/[slug]/page": "app/product/[slug]/page.js",
-  "/product/new/page": "app/product/new/page.js",
+  "/jobs/page": "app/jobs/page.js",
+  "/jobs/post/page": "app/jobs/post/page.js",
+  "/user/settings/page": "app/user/settings/page.js",
+  "/jobs/[slug]/page": "app/jobs/[slug]/page.js",
   "/[user]/page": "app/[user]/page.js"
 }

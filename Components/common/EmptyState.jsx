@@ -5,6 +5,7 @@ const EmptyState = ({
   title,
   description,
   icon,
+  action,
   actionButton,
   className = '',
   size = 'md'
@@ -39,13 +40,22 @@ const EmptyState = ({
           {description}
         </p>
       )}
-      {actionButton && (
+      {(actionButton || action) && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          {actionButton}
+          {actionButton || (
+            action && (
+              <button
+                onClick={action.onClick}
+                className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
+              >
+                {action.label}
+              </button>
+            )
+          )}
         </motion.div>
       )}
     </motion.div>

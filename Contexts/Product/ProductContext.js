@@ -69,20 +69,20 @@ export const ProductProvider = ({ children }) => {
           ...(status && { status }),
           ...(bypassCache && { _t: Date.now() }), // Cache buster
         });
-        
+
         const response = await api.get(`/products?${params}`, {
           headers: bypassCache ? {
             'Cache-Control': 'no-cache, no-store',
             'Pragma': 'no-cache'
           } : {}
         });
-        
+
         if (!response.data.success)
           throw new Error(response.data.message || "Failed to fetch products");
-        
+
         // Validate products to make sure they still exist
         const products = normalizeProducts(response.data.data).filter(product => product && product._id);
-        
+
         return {
           products,
           pagination: response.data.pagination,
@@ -112,32 +112,71 @@ export const ProductProvider = ({ children }) => {
     }
   }, []);
 
-  // Update createProduct to include productUrl
+  // Create a new product with thumbnail
   const createProduct = async (productData) => {
     setLoading(true);
     try {
+      // Create FormData for the product data and thumbnail
       const formData = new FormData();
+
+      // Handle regular fields
       Object.entries(productData).forEach(([key, value]) => {
-        if (value && key !== "thumbnail" && key !== "galleryImages") {
-          formData.append(key, Array.isArray(value) ? value.join(",") : value);
+        if (value && key !== "thumbnail") {
+          // Handle pricing object - stringify it
+          if (key === "pricing" && typeof value === "object") {
+            formData.append(key, JSON.stringify(value));
+          }
+          // Handle arrays - join with commas
+          else if (Array.isArray(value)) {
+            formData.append(key, value.join(","));
+          }
+          // Handle objects - stringify them
+          else if (typeof value === "object" && value !== null && !(value instanceof File)) {
+            formData.append(key, JSON.stringify(value));
+          }
+          // Handle primitive values
+          else {
+            formData.append(key, value);
+          }
         }
       });
-      if (productData.thumbnail instanceof File)
+
+      // Handle thumbnail
+      if (productData.thumbnail instanceof File) {
         formData.append("thumbnail", productData.thumbnail);
-      if (productData.galleryImages) {
-        productData.galleryImages.forEach((image, index) => {
-          if (image instanceof File) {
-            formData.append(`galleryImages[${index}]`, image);
+      } else if (typeof productData.thumbnail === "string" && productData.thumbnail) {
+        // Handle base64 images by converting to blob
+        if (productData.thumbnail.startsWith("data:")) {
+          try {
+            const blob = dataURLtoBlob(productData.thumbnail);
+            formData.append("thumbnail", blob, "thumbnail.jpg");
+            logger.info("Added base64 thumbnail to form data");
+          } catch (e) {
+            logger.error("Failed to convert base64 thumbnail:", e);
+            formData.append("thumbnail", productData.thumbnail);
           }
-        });
+        } else {
+          // For URL or other string values
+          formData.append("thumbnail", productData.thumbnail);
+        }
       }
 
+      // Log the form data for debugging
+      logger.info("Creating product with form data:", {
+        fields: [...formData.entries()].map(([key]) => key)
+      });
+
+      // Create the product
       const response = await api.post("/products", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      if (!response.data.success)
+
+      if (!response.data.success) {
         throw new Error(response.data.message || "Failed to create product");
-      return response.data.data;
+      }
+
+      const createdProduct = response.data.data;
+      return createdProduct;
     } catch (err) {
       setError(err.message);
       logger.error("Error creating product:", err);
@@ -145,6 +184,21 @@ export const ProductProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to convert data URL to Blob
+  const dataURLtoBlob = (dataURL) => {
+    const arr = dataURL.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+
+    return new Blob([u8arr], { type: mime });
   };
 
   // Update a product
@@ -167,11 +221,11 @@ export const ProductProvider = ({ children }) => {
             }
           }
         });
-        
+
         if (productData.thumbnail instanceof File) {
           formData.append("thumbnail", productData.thumbnail);
         }
-        
+
         const response = await api.put(`/products/${slug}`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
@@ -206,13 +260,13 @@ export const ProductProvider = ({ children }) => {
             'X-Cache-Invalidate': 'true' // Custom header for cache invalidation
           }
         });
-        
+
         if (!response.data.success)
           throw new Error(response.data.message || "Failed to delete product");
-        
+
         // Clear local product data from any in-memory caches
         clearProductFromLocalCache(slug);
-        
+
         router.push("/products");
         return true;
       } catch (err) {
@@ -231,7 +285,7 @@ export const ProductProvider = ({ children }) => {
     // Clear any React Query caches if you're using it
     // queryClient.invalidateQueries(['product', slug]);
     // queryClient.invalidateQueries('products');
-    
+
     // Remove from localStorage if you're caching there
     try {
       const cachedProductsKey = 'cached_products';
@@ -240,7 +294,7 @@ export const ProductProvider = ({ children }) => {
         delete cachedProducts[slug];
         localStorage.setItem(cachedProductsKey, JSON.stringify(cachedProducts));
       }
-      
+
       // Clear any other product listings from localStorage
       localStorage.removeItem('product_list_cache');
       localStorage.removeItem('trending_products');
@@ -248,12 +302,12 @@ export const ProductProvider = ({ children }) => {
     } catch (error) {
       logger.error('Error clearing local product cache:', error);
     }
-    
+
     // Force refresh of browser cache for this product
     if (typeof window !== 'undefined') {
       const productUrl = `/products/${slug}`;
       const cachedUrls = [productUrl, '/products', '/'];
-      
+
       // If the Cache API is available, use it to delete cached responses
       if ('caches' in window) {
         caches.keys().then(cacheNames => {

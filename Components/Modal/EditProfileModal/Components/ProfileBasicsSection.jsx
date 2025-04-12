@@ -137,9 +137,13 @@ const ProfileBasicsSection = ({
         }));
 
         setHasUnsavedChanges(true);
-        toast.warning(
-          "Image saved locally. Changes will be applied when you save the form."
-        );
+        toast("Image saved locally. Changes will be applied when you save the form.", {
+          icon: '⚠️',
+          style: {
+            backgroundColor: '#FEF3C7',
+            color: '#92400E'
+          }
+        });
       }
     } catch (err) {
       toast.error(
@@ -183,7 +187,13 @@ const ProfileBasicsSection = ({
         } else {
           // If the server update fails, we'll still keep the local state updated
           // but inform the user that they need to save the form
-          toast.warning("Profile picture will be removed when you save the form");
+          toast("Profile picture will be removed when you save the form", {
+            icon: '⚠️',
+            style: {
+              backgroundColor: '#FEF3C7',
+              color: '#92400E'
+            }
+          });
           setFormData((prev) => ({
             ...prev,
             removeProfilePicture: true, // Set flag for form submission

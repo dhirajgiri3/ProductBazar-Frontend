@@ -32,6 +32,17 @@ export const ToastProvider = ({ children }) => {
           position: "top-center",
         });
         break;
+      case "warning":
+        toast(message, {
+          duration: 4000,
+          position: "top-center",
+          icon: '⚠️',
+          style: {
+            backgroundColor: '#FEF3C7',
+            color: '#92400E'
+          }
+        });
+        break;
       case "loading":
         return toast.loading(message, {
           position: "top-center",

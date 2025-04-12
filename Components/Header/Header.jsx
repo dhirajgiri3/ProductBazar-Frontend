@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import {
   Search,
@@ -14,6 +15,17 @@ import {
   User,
   Settings,
   Briefcase,
+  FileText,
+  Building,
+  DollarSign,
+  Layers,
+  Code,
+  Users,
+  Bookmark,
+  Home,
+  Grid,
+  TrendingUp,
+  Folder,
 } from "lucide-react";
 import { useAuth } from "../../Contexts/Auth/AuthContext";
 import { useProduct } from "../../Contexts/Product/ProductContext";
@@ -21,6 +33,7 @@ import { useCategories } from "../../Contexts/Category/CategoryContext";
 import debounce from "lodash.debounce";
 import { useOnClickOutside } from "../../Hooks/useOnClickOutside";
 import { toast } from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 const NavItem = ({ label, isActive, href, onClick }) => (
   <Link
@@ -39,7 +52,7 @@ const NavItem = ({ label, isActive, href, onClick }) => (
 const Header = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, isAuthenticated, logout, nextStep } = useAuth();
+  const { user, isAuthenticated, logout, nextStep, authLoading, isInitialized } = useAuth();
   const { searchProducts } = useProduct();
   const { categories = [], error: categoryError, retryFetchCategories } = useCategories();
 
@@ -52,10 +65,12 @@ const Header = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showOnboardingBanner, setShowOnboardingBanner] = useState(false);
   const [bannerLink, setBannerLink] = useState("");
+  const [showRoleMenu, setShowRoleMenu] = useState(false);
 
   // Refs
   const searchRef = useRef(null);
   const userMenuRef = useRef(null);
+  const roleMenuRef = useRef(null);
   const searchInputRef = useRef(null);
 
   // Close dropdowns when clicking outside
@@ -66,6 +81,83 @@ const Header = () => {
   useOnClickOutside(userMenuRef, () => {
     setIsUserMenuOpen(false);
   });
+
+  useOnClickOutside(roleMenuRef, () => {
+    setShowRoleMenu(false);
+  });
+
+  // Get role-specific navigation items
+  const getRoleBasedNavItems = useCallback(() => {
+    if (!user || !user.roleCapabilities) return [];
+
+    const items = [];
+
+    // Add admin-specific navigation items
+    if (user.role === 'admin') {
+      items.push({
+        label: "Admin Dashboard",
+        href: "/admin/users",
+        isActive: pathname.startsWith("/admin"),
+        icon: <Users size={16} />,
+        isNew: true
+      });
+    }
+
+    // Add role-specific navigation items
+    if (user.roleCapabilities.canApplyToJobs) {
+      items.push({
+        label: "Jobs",
+        href: "/jobs",
+        isActive: pathname.startsWith("/jobs") && !pathname.includes("/post"),
+        icon: <Briefcase size={16} />
+      });
+
+      items.push({
+        label: "My Applications",
+        href: "/profile/applications",
+        isActive: pathname.startsWith("/profile/applications"),
+        icon: <FileText size={16} />
+      });
+    }
+
+    if (user.roleCapabilities.canPostJobs) {
+      items.push({
+        label: "Post Job",
+        href: "/jobs/post",
+        isActive: pathname === "/jobs/post",
+        icon: <Plus size={16} />
+      });
+    }
+
+    if (user.roleCapabilities.canShowcaseProjects) {
+      items.push({
+        label: "Projects",
+        href: "/projects",
+        isActive: pathname.startsWith("/projects"),
+        icon: <Layers size={16} />
+      });
+    }
+
+    if (user.roleCapabilities.canOfferServices) {
+      items.push({
+        label: "Services",
+        href: "/services",
+        isActive: pathname.startsWith("/services"),
+        icon: <Code size={16} />
+      });
+    }
+
+    if (user.roleCapabilities.canInvest) {
+      items.push({
+        label: "Invest",
+        href: "/invest",
+        isActive: pathname.startsWith("/invest"),
+        icon: <DollarSign size={16} />
+      });
+    }
+
+    return items;
+  }, [user, pathname]);
 
   // Consolidated effect for onboarding and profile status
   useEffect(() => {
@@ -195,7 +287,13 @@ const Header = () => {
       return;
     }
 
-    router.push("/add-product");
+    // Check if user has permission to upload products
+    if (user?.roleCapabilities?.canUploadProducts) {
+      router.push("/add-product");
+    } else {
+      toast.error("Your current role doesn't allow product submissions");
+      router.push("/user/settings");
+    }
   };
 
   // Complete onboarding redirect based on next step
@@ -372,27 +470,82 @@ const Header = () => {
               href="/trending"
             />
             {isAuthenticated() && (
-              <NavItem
-                label="Bookmarks"
-                isActive={pathname === "/bookmarks"}
-                href="/bookmarks"
-              />
+              <>
+                <NavItem
+                  label="Bookmarks"
+                  isActive={pathname === "/bookmarks"}
+                  href="/bookmarks"
+                />
+
+                {/* Role-based navigation dropdown */}
+                <div ref={roleMenuRef} className="relative">
+                  <button
+                    onClick={() => setShowRoleMenu(!showRoleMenu)}
+                    className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${pathname.startsWith("/jobs") || pathname.startsWith("/projects") || pathname.startsWith("/services") || pathname.startsWith("/invest") || pathname.startsWith("/profile/applications") ? "text-violet-600" : "text-gray-700 hover:text-violet-600"}`}
+                  >
+                    <span>Features</span>
+                    <ChevronDown size={16} className={`ml-1 transition-transform ${showRoleMenu ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {/* Role-based menu dropdown */}
+                  <AnimatePresence>
+                    {showRoleMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg z-10 border border-gray-200 py-1"
+                      >
+                        {getRoleBasedNavItems().map((item, index) => (
+                          <Link
+                            key={index}
+                            href={item.href}
+                            className={`flex items-center px-4 py-2 text-sm ${item.isActive ? "bg-violet-50 text-violet-700" : "text-gray-700 hover:bg-gray-50"}`}
+                            onClick={() => setShowRoleMenu(false)}
+                          >
+                            <span className="mr-2">{item.icon}</span>
+                            <span>{item.label}</span>
+                            {item.isNew && (
+                              <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">New</span>
+                            )}
+                          </Link>
+                        ))}
+
+                        {getRoleBasedNavItems().length === 0 && (
+                          <div className="px-4 py-2 text-sm text-gray-500">
+                            No role-specific features available
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </>
             )}
           </nav>
 
           {/* Right Section: Actions, Notifications, Profile */}
           <div className="flex items-center space-x-4">
-            {/* Submit Button */}
-            <button
-              onClick={handleProductSubmit}
-              className="hidden md:flex items-center justify-center bg-violet-600 hover:bg-violet-700 text-white rounded-full px-4 py-2 text-sm font-medium transition-colors"
-              aria-label="Submit a product"
-            >
-              <Plus size={16} className="mr-1" />
-              Submit
-            </button>
+            {/* Submit Button - Only show for users who can upload products */}
+            {isInitialized && isAuthenticated() && user?.roleCapabilities?.canUploadProducts && (
+              <button
+                onClick={handleProductSubmit}
+                className="hidden md:flex items-center justify-center bg-violet-600 hover:bg-violet-700 text-white rounded-full px-4 py-2 text-sm font-medium transition-colors"
+                aria-label="Submit a product"
+              >
+                <Plus size={16} className="mr-1" />
+                Submit
+              </button>
+            )}
 
-            {isAuthenticated() ? (
+            {!isInitialized ? (
+              // Show skeleton loader while auth is initializing
+              <div className="flex items-center space-x-2 animate-pulse">
+                <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                <div className="h-4 w-16 bg-gray-200 rounded"></div>
+              </div>
+            ) : isAuthenticated() ? (
               <>
                 {/* Notifications */}
                 <Link
@@ -473,6 +626,32 @@ const Header = () => {
                           <Briefcase size={16} className="mr-2" />
                           Your Products
                         </Link>
+
+                        {/* Role-specific menu items */}
+                        {user?.roleCapabilities?.canApplyToJobs && (
+                          <Link
+                            href="/profile/applications"
+                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            onClick={() => setIsUserMenuOpen(false)}
+                            role="menuitem"
+                          >
+                            <FileText size={16} className="mr-2" />
+                            My Applications
+                            <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">New</span>
+                          </Link>
+                        )}
+
+                        {user?.roleCapabilities?.canShowcaseProjects && (
+                          <Link
+                            href="/projects"
+                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            onClick={() => setIsUserMenuOpen(false)}
+                            role="menuitem"
+                          >
+                            <Layers size={16} className="mr-2" />
+                            My Projects
+                          </Link>
+                        )}
 
                         <Link
                           href="/user/settings"
@@ -578,60 +757,91 @@ const Header = () => {
                 <nav className="flex flex-col space-y-1">
                   <Link
                     href="/"
-                    className={`px-4 py-3 rounded-lg text-gray-800 ${
-                      pathname === "/"
+                    className={`flex items-center px-4 py-3 rounded-lg text-gray-800 ${
+                      pathname === "/" || pathname === "/home"
                         ? "bg-violet-50 text-violet-700 font-medium"
                         : "hover:bg-gray-50"
                     }`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
+                    <Home size={18} className="mr-3" />
                     Home
                   </Link>
                   <Link
                     href="/products"
-                    className={`px-4 py-3 rounded-lg text-gray-800 ${
-                      pathname === "/products"
+                    className={`flex items-center px-4 py-3 rounded-lg text-gray-800 ${
+                      pathname === "/products" || pathname.startsWith("/products/")
                         ? "bg-violet-50 text-violet-700 font-medium"
                         : "hover:bg-gray-50"
                     }`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
+                    <Grid size={18} className="mr-3" />
                     Products
                   </Link>
                   <Link
                     href="/categories"
-                    className={`px-4 py-3 rounded-lg text-gray-800 ${
-                      pathname === "/categories"
+                    className={`flex items-center px-4 py-3 rounded-lg text-gray-800 ${
+                      pathname === "/categories" || pathname.startsWith("/category/")
                         ? "bg-violet-50 text-violet-700 font-medium"
                         : "hover:bg-gray-50"
                     }`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
+                    <Folder size={18} className="mr-3" />
                     Categories
                   </Link>
                   <Link
                     href="/trending"
-                    className={`px-4 py-3 rounded-lg text-gray-800 ${
+                    className={`flex items-center px-4 py-3 rounded-lg text-gray-800 ${
                       pathname === "/trending"
                         ? "bg-violet-50 text-violet-700 font-medium"
                         : "hover:bg-gray-50"
                     }`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
+                    <TrendingUp size={18} className="mr-3" />
                     Trending
                   </Link>
                   {isAuthenticated() && (
-                    <Link
-                      href="/bookmarks"
-                      className={`px-4 py-3 rounded-lg text-gray-800 ${
-                        pathname === "/bookmarks"
-                          ? "bg-violet-50 text-violet-700 font-medium"
-                          : "hover:bg-gray-50"
-                      }`}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      Bookmarks
-                    </Link>
+                    <>
+                      <Link
+                        href="/bookmarks"
+                        className={`flex items-center px-4 py-3 rounded-lg text-gray-800 ${
+                          pathname === "/bookmarks"
+                            ? "bg-violet-50 text-violet-700 font-medium"
+                            : "hover:bg-gray-50"
+                        }`}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <Bookmark size={18} className="mr-3" />
+                        Bookmarks
+                      </Link>
+
+                      {/* Role-based mobile navigation */}
+                      <div className="mt-4 mb-2 px-4">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Features</h3>
+                      </div>
+
+                      {getRoleBasedNavItems().map((item, index) => (
+                        <Link
+                          key={index}
+                          href={item.href}
+                          className={`flex items-center px-4 py-3 rounded-lg text-gray-800 ${
+                            item.isActive
+                              ? "bg-violet-50 text-violet-700 font-medium"
+                              : "hover:bg-gray-50"
+                          }`}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          <span className="mr-3">{item.icon}</span>
+                          {item.label}
+                          {item.isNew && (
+                            <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">New</span>
+                          )}
+                        </Link>
+                      ))}
+                    </>
                   )}
                 </nav>
 

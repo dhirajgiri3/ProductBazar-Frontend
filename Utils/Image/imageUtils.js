@@ -1,13 +1,87 @@
 import logger from '../logger.js';
 
 /**
- * Optimize an image by resizing and compressing it
+ * Get device and network capabilities for optimization
+ * @returns {Promise<Object>} Optimization parameters
+ */
+export const getOptimizationParams = async () => {
+  const params = {
+    maxWidth: 1200,
+    quality: 0.85,
+    format: 'webp'
+  };
+
+  try {
+    // Check WebP support
+    const canvas = document.createElement('canvas');
+    if (canvas.toDataURL('image/webp').indexOf('data:image/webp') !== 0) {
+      params.format = 'jpeg';
+    }
+
+    // Check connection speed
+    if ('connection' in navigator) {
+      const connection = navigator.connection;
+      
+      if (connection.saveData) {
+        // Data saver is enabled
+        params.maxWidth = 800;
+        params.quality = 0.7;
+      } else if (connection.effectiveType) {
+        // Adjust based on connection speed
+        switch (connection.effectiveType) {
+          case 'slow-2g':
+          case '2g':
+            params.maxWidth = 600;
+            params.quality = 0.6;
+            break;
+          case '3g':
+            params.maxWidth = 800;
+            params.quality = 0.75;
+            break;
+          case '4g':
+            // Keep defaults
+            break;
+        }
+      }
+    }
+
+    // Check device memory
+    if ('deviceMemory' in navigator) {
+      if (navigator.deviceMemory < 4) {
+        // Lower memory devices
+        params.maxWidth = Math.min(params.maxWidth, 800);
+      }
+    }
+
+  } catch (error) {
+    logger.warn('Error detecting optimization capabilities:', error);
+  }
+
+  return params;
+};
+
+/**
+ * Optimize an image by resizing and compressing it with adaptive quality
  * @param {File} file - The original image file
- * @param {number} maxWidth - Maximum width in pixels
- * @param {number} maxSizeMB - Maximum size in MB
+ * @param {Object} options - Optimization options
+ * @param {number} [options.maxWidth=1200] - Maximum width in pixels
+ * @param {number} [options.maxSizeMB=2] - Maximum size in MB
+ * @param {string} [options.format='webp'] - Output format (webp, jpeg, png)
  * @returns {Promise<File>} - The optimized image file
  */
-export const optimizeImage = async (file, maxWidth = 1200, maxSizeMB = 2) => {
+export const optimizeImage = async (file, options = {}) => {
+  // Get dynamic parameters based on device/network
+  const deviceParams = await getOptimizationParams();
+  
+  // Merge with provided options, preferring provided options
+  const {
+    maxWidth = deviceParams.maxWidth,
+    maxHeight = deviceParams.maxWidth * (3/4), // Maintain aspect ratio
+    quality = deviceParams.quality,
+    format = deviceParams.format,
+    maxSizeMB = 2 // Default to 2MB max size
+  } = options;
+
   // If not an image or already small enough, return original
   if (!file.type.startsWith('image/') || file.size <= maxSizeMB * 0.5 * 1024 * 1024) {
     return file;
@@ -42,8 +116,30 @@ export const optimizeImage = async (file, maxWidth = 1200, maxSizeMB = 2) => {
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
           
-          // Start with high quality
-          let quality = 0.8;
+          // Determine output format and mime type
+          let outputFormat = format.toLowerCase();
+          let mimeType;
+          
+          switch (outputFormat) {
+            case 'webp':
+              mimeType = 'image/webp';
+              break;
+            case 'png':
+              mimeType = 'image/png';
+              break;
+            case 'jpeg':
+            case 'jpg':
+              mimeType = 'image/jpeg';
+              break;
+            default:
+              mimeType = 'image/webp';
+              outputFormat = 'webp';
+          }
+          
+          // Adaptive quality based on image size and dimensions
+          const baseQuality = Math.min(0.92, Math.max(0.7, 1 - (width * height) / (4000 * 3000)));
+          let quality = baseQuality;
+          
           const tryCompress = (currentQuality) => {
             canvas.toBlob(
               (blob) => {
@@ -52,27 +148,33 @@ export const optimizeImage = async (file, maxWidth = 1200, maxSizeMB = 2) => {
                   return;
                 }
                 
-                // If still too large and quality can be reduced further, try again
-                if (blob.size > maxSizeMB * 1024 * 1024 && currentQuality > 0.2) {
-                  tryCompress(currentQuality - 0.1);
+                // If still too large and quality can be reduced, try again
+                if (blob.size > maxSizeMB * 1024 * 1024 && currentQuality > 0.3) {
+                  // Adaptive quality reduction based on how far we are from target size
+                  const reduction = Math.min(0.15, Math.max(0.05, 
+                    (blob.size - maxSizeMB * 1024 * 1024) / (blob.size * 2)));
+                  tryCompress(currentQuality - reduction);
                   return;
                 }
                 
-                // Create new file from blob
-                const optimizedFile = new File([blob], file.name, {
-                  type: 'image/jpeg',
+                // Create new file with correct extension
+                const extension = outputFormat === 'jpeg' ? 'jpg' : outputFormat;
+                const newFilename = file.name.replace(/\.[^.]+$/, '') + '.' + extension;
+                
+                const optimizedFile = new File([blob], newFilename, {
+                  type: mimeType,
                   lastModified: Date.now()
                 });
                 
                 logger.info(`Image optimized: ${file.size} → ${optimizedFile.size} bytes (${Math.round((1 - optimizedFile.size / file.size) * 100)}% reduction)`);
                 resolve(optimizedFile);
               },
-              'image/jpeg',
+              mimeType,
               currentQuality
             );
           };
           
-          // Start compression
+          // Start compression with adaptive base quality
           tryCompress(quality);
         };
         

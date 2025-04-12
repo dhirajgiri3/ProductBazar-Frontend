@@ -39,6 +39,13 @@ const createRequestId = (config) => {
 // Add request interceptor to handle authentication
 api.interceptors.request.use(
   (config) => {
+    // Don't modify Content-Type for multipart/form-data requests
+    // This is important for file uploads
+    if (config.headers['Content-Type'] === 'multipart/form-data') {
+      // For multipart/form-data, let the browser set the Content-Type and boundary
+      delete config.headers['Content-Type'];
+    }
+
     // Create a request identifier to prevent duplicates
     // Use our helper function to ignore timestamp parameters
     const requestId = createRequestId(config);
@@ -58,7 +65,7 @@ api.interceptors.request.use(
 
       // Check if this is a high priority request that shouldn't be canceled
       // Look for priority in query params instead of headers to avoid CORS issues
-      const isPriorityRequest = config.params && config.params._priority === 'high';
+      const isPriorityRequest = (config.params && config.params._priority === 'high') || config.skipDuplicateCheck;
 
       // Handle duplicate requests - cancel previous ones if not priority
       if (pendingRequests.has(requestId) && !config.skipDuplicateCheck) {
@@ -69,7 +76,7 @@ api.interceptors.request.use(
         // If previous request was high priority, don't cancel it unless current is also high priority
         if (isPriorityRequest || !pendingRequest.isPriority) {
           console.debug(`Canceling previous request: ${requestId}`);
-          previousController.abort();
+          previousController.abort('Canceled due to duplicate request with higher priority');
           pendingRequests.delete(requestId);
         } else {
           // If previous is priority and current is not, cancel the current one
@@ -80,7 +87,7 @@ api.interceptors.request.use(
 
           // Set a flag to identify this as a canceled request
           // This helps with debugging and error handling
-          setTimeout(() => controller.abort(), 0);
+          setTimeout(() => controller.abort('Canceled due to duplicate request with higher priority'), 0);
 
           return {
             ...config,
@@ -162,6 +169,27 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       // Skip on refresh token requests to avoid loops
       if (error.config.url !== '/auth/refresh-token') {
+        // Check if this is a public endpoint that should work without auth
+        const publicEndpoints = [
+          '/jobs',
+          '/products',
+          '/categories',
+          '/trending',
+          '/search'
+        ];
+
+        const url = error.config.url;
+        const isPublicEndpoint = publicEndpoints.some(endpoint =>
+          url === endpoint || url.startsWith(`${endpoint}/`)
+        );
+
+        if (isPublicEndpoint && error.config.method === 'get') {
+          // For public GET endpoints, we'll retry without auth
+          console.warn(`Auth error on public endpoint ${url}, retrying as guest`);
+          delete error.config.headers.Authorization;
+          return axios(error.config);
+        }
+
         try {
           // Try to refresh the token using HTTP-only cookie
           // The cookie will be automatically sent with the request
@@ -201,8 +229,8 @@ api.interceptors.response.use(
           // Dispatch logout event for components to respond
           window.dispatchEvent(new Event('auth:logout'));
 
-          // Redirect to login if not already there
-          if (window.location.pathname !== '/auth/login') {
+          // Only redirect to login for non-public pages
+          if (!isPublicEndpoint && window.location.pathname !== '/auth/login') {
             window.location.href = '/auth/login';
           }
         }
@@ -257,7 +285,7 @@ export const debounce = (func, wait) => {
 
 // Utility function to make a request with priority
 export const makePriorityRequest = async (method, url, options = {}) => {
-  const { params, data, headers = {} } = options;
+  const { params, data, headers = {}, isFormData = false, timeout, signal } = options;
 
   // Use query parameter instead of header for priority
   // This avoids CORS preflight issues
@@ -267,21 +295,70 @@ export const makePriorityRequest = async (method, url, options = {}) => {
     _priority: 'high' // Use query param instead of header
   };
 
+  // Set up request config
+  const config = {
+    params: requestParams,
+    headers: { ...headers },
+    timeout: timeout || 15000, // Use provided timeout or default to 15 seconds
+    signal, // Pass through any AbortSignal
+    skipDuplicateCheck: true // Skip the duplicate check for priority requests
+  };
+
+  // Handle FormData correctly
+  if (isFormData || (data instanceof FormData)) {
+    config.headers['Content-Type'] = 'multipart/form-data';
+  }
+
   try {
+    let response;
+
     if (method.toLowerCase() === 'get') {
-      return await api.get(url, { params: requestParams, headers });
+      response = await api.get(url, config);
     } else if (method.toLowerCase() === 'post') {
-      return await api.post(url, data, { params: requestParams, headers });
+      response = await api.post(url, data, config);
     } else if (method.toLowerCase() === 'put') {
-      return await api.put(url, data, { params: requestParams, headers });
+      response = await api.put(url, data, config);
+    } else if (method.toLowerCase() === 'patch') {
+      response = await api.patch(url, data, config);
     } else if (method.toLowerCase() === 'delete') {
-      return await api.delete(url, { params: requestParams, headers, data });
+      response = await api.delete(url, { ...config, data });
+    } else {
+      throw new Error(`Unsupported method: ${method}`);
     }
+
+    return response;
   } catch (error) {
     // Handle canceled requests gracefully
     if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
       console.debug('Priority request was canceled:', url);
+    } else if (error.response?.status === 401) {
+      // For public endpoints, we should still return data even if unauthenticated
+      // Check if this is a public endpoint
+      const publicEndpoints = [
+        '/jobs',
+        '/products',
+        '/categories',
+        '/trending',
+        '/search'
+      ];
+
+      // Check if the URL starts with any of the public endpoints
+      const isPublicEndpoint = publicEndpoints.some(endpoint =>
+        url === endpoint || url.startsWith(`${endpoint}/`)
+      );
+
+      if (isPublicEndpoint) {
+        console.warn(`Auth error on public endpoint ${url}, continuing as guest`);
+        // For public endpoints, we'll retry without auth
+        delete config.headers.Authorization;
+
+        // Retry the request without auth
+        if (method.toLowerCase() === 'get') {
+          return await api.get(url, config);
+        }
+      }
     }
+
     throw error;
   }
 };

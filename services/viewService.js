@@ -1,7 +1,7 @@
 import api from '../Utils/api';
 
 /**
- * Record a product view 
+ * Record a product view
  * @param {string} productId - The ID of the product being viewed
  * @param {Object} viewData - Data about the view (source, referrer, etc.)
  * @returns {Promise} Promise object representing the API response
@@ -10,7 +10,7 @@ export const recordProductView = async (productId, viewData = {}) => {
   try {
     // Get referrer information
     const referrer = typeof document !== 'undefined' ? (document.referrer || window.location.pathname) : '';
-    
+
     // Merge provided data with automatically detected data
     const viewPayload = {
       source: viewData.source || 'direct',
@@ -19,7 +19,7 @@ export const recordProductView = async (productId, viewData = {}) => {
       position: viewData.position || null,
       ...viewData,
     };
-    
+
     const response = await api.post(`/views/product/${productId}`, viewPayload);
     return response.data;
   } catch (error) {
@@ -39,15 +39,15 @@ export const recordProductView = async (productId, viewData = {}) => {
 export const updateViewDuration = async (productId, startTime, engagementData = {}) => {
   try {
     if (!productId || !startTime) return;
-    
+
     const viewDuration = Math.floor((Date.now() - startTime) / 1000); // duration in seconds
     if (viewDuration < 1) return; // Ignore very short views
-    
+
     const payload = {
       viewDuration,
       ...engagementData
     };
-    
+
     const response = await api.post(`/views/product/${productId}/duration`, payload);
     return response.data;
   } catch (error) {
@@ -67,20 +67,20 @@ export const updateViewDuration = async (productId, startTime, engagementData = 
 export const recordViewDuration = async (productId, startTime, exitPage = null) => {
   try {
     if (!productId || !startTime) return;
-    
+
     const viewDuration = Math.floor((Date.now() - startTime) / 1000); // duration in seconds
-    
+
     if (viewDuration < 1) return; // Ignore very short views
-    
+
     const viewPayload = {
       viewDuration,
       exitPage: exitPage || (typeof window !== 'undefined' ? window.location.pathname : ''),
     };
-    
+
     // Use a beacon for reliability during page unload if in browser
     if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
       const blob = new Blob([JSON.stringify(viewPayload)], { type: 'application/json' });
-      navigator.sendBeacon(`/api/views/product/${productId}/duration`, blob);
+      navigator.sendBeacon(`/api/v1/views/product/${productId}/duration`, blob);
     } else {
       // Fallback to standard request
       await api.post(`/views/product/${productId}/duration`, viewPayload);
@@ -121,18 +121,18 @@ export const getProductViewStats = async (productId, options = {}) => {
       console.error('Invalid product ID provided to getProductViewStats:', productId);
       throw new Error('Invalid product ID');
     }
-    
+
     // Build query string for options
     const params = new URLSearchParams();
     if (options.days) params.append('days', options.days);
-    
+
     const queryString = params.toString() ? `?${params.toString()}` : '';
     const response = await api.get(`/views/product/${productId}/stats${queryString}`);
-    
+
     if (!response.data.success) {
       throw new Error(response.data.message || 'Failed to fetch view statistics');
     }
-    
+
     return response.data;
   } catch (error) {
     console.error(`Error fetching view stats for product ${productId}:`, error);
@@ -172,7 +172,7 @@ export const getProductDeviceAnalytics = async (productId, options = {}) => {
   try {
     const params = new URLSearchParams();
     if (options.days) params.append('days', options.days);
-    
+
     const queryString = params.toString() ? `?${params.toString()}` : '';
     const response = await api.get(`/views/product/${productId}/devices${queryString}`);
     return response.data;
@@ -286,12 +286,12 @@ export const getProductEngagementMetrics = async (productId, days = 30) => {
 export const useProductView = (productId, viewData = {}) => {
   useEffect(() => {
     if (!productId) return;
-    
+
     const startTime = Date.now();
-    
+
     // Record the initial view
     recordProductView(productId, viewData);
-    
+
     // Return cleanup function to record view duration when component unmounts
     return () => {
       if (productId) {

@@ -185,7 +185,35 @@ export const optimizeImage = async (file, options = {}) => {
 };
 
 /**
- * Upload product images with progress tracking
+ * Retry wrapper for upload attempts
+ * @param {Function} uploadFn - Upload function to retry
+ * @param {number} maxRetries - Maximum number of retry attempts
+ * @param {number} baseDelay - Base delay between retries in ms
+ * @returns {Promise} Upload result
+ */
+const withRetry = async (uploadFn, maxRetries = 3, baseDelay = 1000) => {
+  let lastError;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await uploadFn();
+    } catch (error) {
+      lastError = error;
+      logger.warn(`Upload attempt ${attempt + 1} failed:`, error.message);
+      
+      if (attempt < maxRetries - 1) {
+        // Exponential backoff with jitter
+        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+};
+
+/**
+ * Upload product images with progress tracking and retry logic
  * @param {string} productId - Product ID or slug
  * @param {Object} files - Object containing main image and gallery images
  * @param {File} files.mainImage - Main product image
@@ -198,16 +226,15 @@ export const uploadProductImages = async (productId, files, options = {}) => {
     const formData = new FormData();
     let optimizedCount = 0;
     
-    // Add main image if provided - using both field names for compatibility
+    // Add main image if provided
     if (files.mainImage) {
-      const optimized = await optimizeImage(files.mainImage, {
+      const optimizedMain = await optimizeImage(files.mainImage, {
         maxWidth: 1200,
         quality: 0.85,
         format: 'webp'
       });
       optimizedCount++;
-      // Use the field name expected by the backend (thumbnail)
-      formData.append('thumbnail', optimized);
+      formData.append('thumbnail', optimizedMain);
     }
     
     // Add gallery images if provided
@@ -227,23 +254,24 @@ export const uploadProductImages = async (productId, files, options = {}) => {
         
         optimizedCount += optimizedBatch.length;
         optimizedBatch.forEach(file => {
-          formData.append('images', file); // Use 'images' field name for gallery
+          formData.append('images', file);
         });
       }
     }
     
     logger.info(`Uploading ${optimizedCount} optimized images for product ${productId}`);
     
-    // Make request with progress tracking
-    const response = await api.uploadFormData(
+    // Upload with retry logic
+    const uploadFn = () => api.uploadFormData(
       `/products/${productId}/gallery`, 
       formData,
       {
-        onUploadProgress: options.onProgress
+        onUploadProgress: options.onProgress,
+        timeout: 30000 // 30 second timeout
       }
     );
     
-    return response.data;
+    return await withRetry(uploadFn);
   } catch (error) {
     logger.error('Product image upload error:', error);
     throw error;

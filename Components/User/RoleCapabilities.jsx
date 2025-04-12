@@ -1,39 +1,42 @@
 "use client";
 
 import React from 'react';
-import { 
-  FiUpload, 
-  FiDollarSign, 
-  FiBriefcase, 
-  FiUsers, 
-  FiFileText, 
-  FiLayers 
+import {
+  FiUpload,
+  FiDollarSign,
+  FiBriefcase,
+  FiUsers,
+  FiFileText,
+  FiLayers
 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../Contexts/Auth/AuthContext';
 
-const RoleCapabilities = () => {
+const RoleCapabilities = ({ profileUser, isOwnProfile = true }) => {
   const { user } = useAuth();
-  
-  if (!user || !user.roleCapabilities) {
+
+  // Use the provided profileUser or fall back to the authenticated user
+  const targetUser = profileUser || user;
+
+  if (!targetUser || !targetUser.roleCapabilities) {
     return null;
   }
-  
-  const { 
-    canUploadProducts, 
-    canInvest, 
-    canOfferServices, 
-    canApplyToJobs, 
-    canPostJobs, 
-    canShowcaseProjects 
-  } = user.roleCapabilities;
-  
+
+  const {
+    canUploadProducts,
+    canInvest,
+    canOfferServices,
+    canApplyToJobs,
+    canPostJobs,
+    canShowcaseProjects
+  } = targetUser.roleCapabilities;
+
   // Only show the component if the user has at least one capability
-  const hasAnyCapability = Object.values(user.roleCapabilities).some(val => val);
+  const hasAnyCapability = Object.values(targetUser.roleCapabilities).some(val => val);
   if (!hasAnyCapability) {
     return null;
   }
-  
+
   const capabilities = [
     {
       id: 'upload',
@@ -84,13 +87,13 @@ const RoleCapabilities = () => {
       href: '/projects'
     }
   ];
-  
+
   // Filter to only show enabled capabilities
   const enabledCapabilities = capabilities.filter(cap => cap.enabled);
-  
+
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-      <h3 className="text-lg font-semibold mb-4 text-gray-800">Your Capabilities</h3>
+      <h3 className="text-lg font-semibold mb-4 text-gray-800">{isOwnProfile ? 'Your Capabilities' : 'User Capabilities'}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {enabledCapabilities.map((capability, index) => (
           <motion.a
