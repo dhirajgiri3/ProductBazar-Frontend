@@ -14,14 +14,15 @@ import { useAuth } from "../../Contexts/Auth/AuthContext";
 import { useProduct } from "../../Contexts/Product/ProductContext";
 import EditProductModal from "../Modal/Product/EditProductModal";
 
-const ProductCard = ({
+// Memoize the component to prevent unnecessary re-renders
+const ProductCard = React.memo(function ProductCard({
   product,
   showMaker = true,
   minimal = false,
   isOwner = false,
-  onEdit, 
+  onEdit,
   onDelete,
-}) => {
+}) {
   const { isAuthenticated, user } = useAuth();
   const { toggleUpvote, toggleBookmark } = useProduct();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -300,6 +301,6 @@ const ProductCard = ({
       )}
     </>
   );
-};
+});
 
 export default ProductCard;

@@ -5,8 +5,9 @@ import { Avatar } from "@mui/material";
 import { FormatTimeAgo } from "../../../../../../Utils/FormatTimeAgo";
 import CommentActions from "./CommentActions";
 import CommentForm from "./CommentForm";
-import { FaChevronDown, FaChevronRight, FaReply, FaUser, FaBadgeCheck } from "react-icons/fa";
+import { FaChevronDown, FaChevronRight, FaReply, FaUser } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
+import { BadgeCheck } from "lucide-react";
 
 // Enhanced animation variants
 const commentVariants = {
@@ -219,7 +220,7 @@ const CommentItem = ({
           {/* Verified badge for maker or admin */}
           {(isMaker || isAdmin) && (
             <div className="absolute -bottom-1 -right-1 bg-violet-500 text-white rounded-full p-0.5 border border-white dark:border-gray-800">
-              <FaBadgeCheck size={10} />
+              <BadgeCheck size={10} />
             </div>
           )}
         </div>

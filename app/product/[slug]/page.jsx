@@ -7,21 +7,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useProduct } from "../../../Contexts/Product/ProductContext.js";
 import { useAuth } from "../../../Contexts/Auth/AuthContext.js";
 import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext.js";
+import { useSocket } from "../../../Contexts/Socket/SocketContext";
 import { useToast } from "../../../Contexts/Toast/ToastContext";
 import LoaderComponent from "../../../Components/UI/LoaderComponent.jsx";
 import ViewTracker from "../../../Components/View/ViewTracker.js";
 import {
   ArrowLeft,
-  ArrowUp,
-  Bookmark,
   ExternalLink,
-  GitHub,
   Play,
   Eye,
   MessageSquare,
   Calendar,
   Share2,
-  ChevronRight,
   Award,
   Edit,
   MoreHorizontal,
@@ -30,16 +27,17 @@ import {
   ChevronDown,
   Globe,
   Info,
-  Users,
   Tag,
   BarChart,
   Star,
-  Heart,
 } from "lucide-react";
+import UpvoteButton from "../../../Components/Buttons/Upvote/UpvoteButton";
+import BookmarkButton from "../../../Components/Buttons/Bookmark/BookmarkButton";
 
 import { formatDistanceToNow } from "date-fns";
 import SimilarProductsSection from "./Components/SimilarProductsSection.jsx";
 import CommentSection from "./Components/Comment/CommentSection.jsx";
+import { FaGithub } from "react-icons/fa";
 
 const ProductDetailPage = () => {
   const { slug } = useParams();
@@ -48,23 +46,20 @@ const ProductDetailPage = () => {
   const { isAuthenticated, user } = useAuth();
   const {
     getProductBySlug,
-    toggleUpvote,
-    toggleBookmark,
     loading,
     error,
     clearError,
+    updateProductInCache
   } = useProduct();
 
   const { recordInteraction } = useRecommendation();
   const { showToast } = useToast();
+  const { subscribeToProductUpdates } = useSocket();
 
   const [product, setProduct] = useState(null);
-  const [hasUpvoted, setHasUpvoted] = useState(false);
-  const [hasBookmarked, setHasBookmarked] = useState(false);
-  const [upvoteCount, setUpvoteCount] = useState(0);
+  // We don't need separate state variables for interaction status as the button components handle this
   const [commentCount, setCommentCount] = useState(0);
-  const [isUpvoting, setIsUpvoting] = useState(false);
-  const [isBookmarking, setIsBookmarking] = useState(false);
+  // We don't need these states anymore as they're handled by the button components
   const [isLoaded, setIsLoaded] = useState(false);
   const [source, setSource] = useState("direct");
   const [activeTab, setActiveTab] = useState("overview");
@@ -98,34 +93,71 @@ const ProductDetailPage = () => {
 
   // Memoized loadProduct function
   const loadProduct = useCallback(async () => {
-    try {
-      const data = await getProductBySlug(slug, !isLoaded);
-      if (!data || data.success === false) {
+    // Track retry attempts
+    let retryCount = 0;
+    const maxRetries = 2;
+
+    while (retryCount <= maxRetries) {
+      try {
+        // Show loading state
+        if (retryCount > 0) {
+          showToast("info", `Retrying... (attempt ${retryCount}/${maxRetries})`);
+        }
+
+        // Always bypass cache when loading the product to ensure we get fresh data
+        const data = await getProductBySlug(slug, true);
+        if (!data || data.success === false) {
+          setIsLoaded(true);
+          return;
+        }
+
+        // The data is already fully normalized by ProductContext.getProductBySlug
+        // No need for additional normalization here
+        setProduct(data);
+
+        // Update comment count from the product data
+        const commentCount = data.comments?.count || 0;
+        setCommentCount(commentCount);
         setIsLoaded(true);
-        return;
+
+        // Record view interaction for recommendation engine
+        // Use a try/catch to prevent view tracking from breaking the page
+        if (data._id && recordInteraction) {
+          try {
+            await recordInteraction(data._id, "view", { source });
+          } catch (viewError) {
+            console.warn("Failed to record view interaction:", viewError);
+            // Don't show toast for this error as it's not critical
+          }
+        }
+
+        // Successfully loaded, exit the retry loop
+        break;
+      } catch (err) {
+        // Check if this is a rate limit error
+        if (err.response?.status === 429) {
+          retryCount++;
+
+          if (retryCount <= maxRetries) {
+            // Calculate backoff time with jitter
+            const baseDelay = Math.min(Math.pow(2, retryCount) * 1000, 5000);
+            const jitter = Math.random() * 500;
+            const delay = baseDelay + jitter;
+
+            console.warn(`Rate limited when loading product. Retrying in ${Math.round(delay/1000)}s`);
+
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue; // Try again
+          }
+        }
+
+        // For other errors or if we've exhausted retries
+        showToast("error", "Failed to load product details");
+        console.error("Error loading product:", err);
+        setIsLoaded(true);
+        break;
       }
-      setProduct(data);
-
-      const upvoteCount = data.upvotes?.count || 0;
-      setUpvoteCount(upvoteCount);
-
-      const commentCount = data.comments?.count || 0;
-      setCommentCount(commentCount);
-
-      if (isAuthenticated && user) {
-        setHasUpvoted(data.upvotes?.userHasUpvoted || false);
-        setHasBookmarked(data.bookmarks?.userHasBookmarked || false);
-      }
-      setIsLoaded(true);
-
-      // Record view interaction for recommendation engine
-      if (data._id) {
-        recordInteraction(data._id, "view", { source });
-      }
-    } catch (err) {
-      showToast("error", "Failed to load product details");
-      console.error("Error loading product:", err);
-      setIsLoaded(true);
     }
   }, [
     slug,
@@ -148,99 +180,103 @@ const ProductDetailPage = () => {
     };
   }, [slug, loadProduct, clearError]);
 
-  // Record product interaction
-  const handleInteraction = async (type) => {
+  // Debug log for product data and ensure interaction data is correct
+  useEffect(() => {
+    if (product) {
+      console.log('Product data loaded:', {
+        upvotes: product.upvotes,
+        bookmarks: product.bookmarks,
+        comments: product.comments,
+        upvoteCount: product.upvoteCount,
+        bookmarkCount: product.bookmarkCount,
+        userInteractions: product.userInteractions,
+        upvoted: product.upvoted,
+        bookmarked: product.bookmarked
+      });
+
+      // Check if there's a discrepancy between upvotes.count and upvoteCount
+      if (product.upvotes &&
+          typeof product.upvotes.count === 'number' &&
+          product.upvotes.count !== product.upvoteCount) {
+        console.warn('Upvote count discrepancy detected:', {
+          upvotesCount: product.upvotes.count,
+          upvoteCount: product.upvoteCount
+        });
+      }
+
+      // Check if there's a discrepancy between bookmarks.count and bookmarkCount
+      if (product.bookmarks &&
+          typeof product.bookmarks.count === 'number' &&
+          product.bookmarks.count !== product.bookmarkCount) {
+        console.warn('Bookmark count discrepancy detected:', {
+          bookmarksCount: product.bookmarks.count,
+          bookmarkCount: product.bookmarkCount
+        });
+      }
+
+      // Check if there's a discrepancy between upvotes.userHasUpvoted and userInteractions.hasUpvoted
+      if (product.upvotes && product.userInteractions &&
+          product.upvotes.userHasUpvoted !== product.userInteractions.hasUpvoted) {
+        console.warn('Upvote interaction discrepancy detected:', {
+          upvotesUserHasUpvoted: product.upvotes.userHasUpvoted,
+          userInteractionsHasUpvoted: product.userInteractions.hasUpvoted
+        });
+      }
+    }
+  }, [product]);
+
+  // Subscribe to socket updates for this product
+  useEffect(() => {
     if (!product || !product._id) return;
 
-    try {
-      await recordInteraction(product._id, type);
-    } catch (err) {
-      console.error(`Error recording ${type} interaction:`, err);
+    console.log(`Subscribing to socket updates for product ${product._id}`);
+
+    // Subscribe to product updates via socket
+    const unsubscribe = subscribeToProductUpdates(product._id);
+
+    // Setup socket event handler for direct product updates
+    const handleProductUpdate = (updatedData) => {
+      console.log(`Received direct product update for ${product._id}:`, updatedData);
+
+      // Update the local product state
+      setProduct(prev => {
+        if (!prev) return prev;
+
+        return {
+          ...prev,
+          ...updatedData,
+          // Ensure nested objects are properly updated
+          upvotes: {
+            ...prev.upvotes,
+            ...(updatedData.upvotes || {}),
+            count: updatedData.upvoteCount || prev.upvotes?.count || 0
+          },
+          bookmarks: {
+            ...prev.bookmarks,
+            ...(updatedData.bookmarks || {}),
+            count: updatedData.bookmarkCount || prev.bookmarks?.count || 0
+          }
+        };
+      });
+    };
+
+    // Register for direct product updates
+    if (window.socket) {
+      window.socket.on(`product:${product._id}:update`, handleProductUpdate);
     }
-  };
 
-  const handleUpvote = async () => {
-    if (!isAuthenticated) {
-      showToast("error", "Please log in to upvote products");
-      return;
-    }
+    // Cleanup subscription on unmount
+    return () => {
+      if (unsubscribe) unsubscribe();
 
-    if (user && product && user._id === product.maker._id) {
-      showToast("error", "You cannot upvote your own product");
-      return;
-    }
-
-    if (isUpvoting) return;
-
-    setIsUpvoting(true);
-    const prevUpvoted = hasUpvoted;
-    const prevCount = upvoteCount;
-
-    // Optimistically update UI
-    setHasUpvoted(!hasUpvoted);
-    setUpvoteCount((prev) => (hasUpvoted ? prev - 1 : prev + 1));
-
-    try {
-      const result = await toggleUpvote(slug);
-
-      if (result && result.success) {
-        setHasUpvoted(result.upvoted);
-        setUpvoteCount(result.upvoteCount);
-
-        if (result.upvoted && !prevUpvoted) {
-          handleInteraction("upvote");
-          showToast("success", "Product upvoted successfully");
-        } else if (!result.upvoted && prevUpvoted) {
-          showToast("info", "Upvote removed");
-        }
-      } else {
-        setHasUpvoted(prevUpvoted);
-        setUpvoteCount(prevCount);
-        showToast("error", result?.message || "Failed to update vote");
+      // Remove direct update listener
+      if (window.socket) {
+        window.socket.off(`product:${product._id}:update`, handleProductUpdate);
       }
-    } catch (error) {
-      setHasUpvoted(prevUpvoted);
-      setUpvoteCount(prevCount);
-      showToast("error", "Something went wrong");
-      console.error("Upvote error:", error);
-    } finally {
-      setIsUpvoting(false);
-    }
-  };
+    };
+  }, [product?._id, subscribeToProductUpdates]);
 
-  const handleBookmark = async () => {
-    if (!isAuthenticated) {
-      showToast("error", "Please log in to bookmark products");
-      return;
-    }
-
-    if (isBookmarking) return;
-
-    setIsBookmarking(true);
-    const prevBookmarked = hasBookmarked;
-
-    setHasBookmarked(!hasBookmarked);
-
-    try {
-      const result = await toggleBookmark(slug);
-      if (!result.success) {
-        setHasBookmarked(prevBookmarked);
-        showToast("error", "Failed to update bookmark");
-      } else {
-        if (!prevBookmarked) {
-          handleInteraction("bookmark");
-          showToast("success", "Product bookmarked successfully");
-        } else {
-          showToast("info", "Bookmark removed");
-        }
-      }
-    } catch (error) {
-      setHasBookmarked(prevBookmarked);
-      showToast("error", "Something went wrong");
-    } finally {
-      setIsBookmarking(false);
-    }
-  };
+  // Button interactions are now handled by the centralized button components
 
   const handleBackClick = () => {
     router.back();
@@ -489,45 +525,39 @@ const ProductDetailPage = () => {
 
                 {/* Action buttons */}
                 <div className="flex flex-wrap items-center gap-3 mt-4">
-                  <motion.button
-                    onClick={handleUpvote}
-                    disabled={isUpvoting}
-                    whileTap={{ scale: 0.95 }}
-                    className={`flex items-center gap-2 py-2.5 px-5 rounded-xl transition-all ${
-                      hasUpvoted
-                        ? "bg-violet-100 text-violet-700 border border-violet-200"
-                        : "bg-white border border-gray-200 text-gray-700 hover:border-violet-300 hover:bg-violet-50"
-                    }`}
-                  >
-                    <ArrowUp
-                      className={`transition-transform ${
-                        hasUpvoted ? "text-violet-600" : ""
-                      }`}
-                      size={18}
+                  <motion.div whileTap={{ scale: 0.95 }}>
+                    <UpvoteButton
+                      product={product}
+                      size="lg"
+                      source="product_detail"
+                      showText={true}
+                      onSuccess={(result) => {
+                        // The ProductContext.toggleUpvote already updates the cache via updateProductInCache
+                        // which will trigger a re-render with the correct state
+                        console.log('Upvote update successful:', {
+                          upvoted: result.upvoted,
+                          count: result.upvoteCount || result.count
+                        });
+                      }}
                     />
-                    <span className="font-medium">{upvoteCount}</span>
-                  </motion.button>
+                  </motion.div>
 
-                  <motion.button
-                    onClick={handleBookmark}
-                    disabled={isBookmarking}
-                    whileTap={{ scale: 0.95 }}
-                    className={`flex items-center gap-2 py-2.5 px-5 rounded-xl transition-all ${
-                      hasBookmarked
-                        ? "bg-violet-100 text-violet-700 border border-violet-200"
-                        : "bg-white border border-gray-200 text-gray-700 hover:border-violet-300 hover:bg-violet-50"
-                    }`}
-                  >
-                    <Bookmark
-                      className={`transition-transform ${
-                        hasBookmarked ? "text-violet-600 fill-violet-600" : ""
-                      }`}
-                      size={18}
+                  <motion.div whileTap={{ scale: 0.95 }}>
+                    <BookmarkButton
+                      product={product}
+                      size="lg"
+                      source="product_detail"
+                      showText={true}
+                      onSuccess={(result) => {
+                        // The ProductContext.toggleBookmark already updates the cache via updateProductInCache
+                        // which will trigger a re-render with the correct state
+                        console.log('Bookmark update successful:', {
+                          bookmarked: result.bookmarked,
+                          count: result.bookmarkCount || result.count
+                        });
+                      }}
                     />
-                    <span className="font-medium">
-                      {hasBookmarked ? "Saved" : "Save"}
-                    </span>
-                  </motion.button>
+                  </motion.div>
 
                   <motion.div
                     initial={{ opacity: 0 }}
@@ -725,7 +755,7 @@ const ProductDetailPage = () => {
                     whileTap={{ scale: 0.97 }}
                     className="flex items-center gap-2 px-5 py-3 bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 rounded-xl transition-all shadow-sm hover:shadow-md"
                   >
-                    <GitHub size={18} className="text-violet-600" />
+                    <FaGithub size={18} className="text-violet-600" />
                     <span className="font-medium">GitHub</span>
                   </motion.a>
                 )}
@@ -885,9 +915,9 @@ const ProductDetailPage = () => {
                   }`}
                 >
                   Discussion
-                  {commentCount > 0 && (
+                  {(commentCount > 0 || (product?.comments?.count > 0)) && (
                     <span className="ml-2 bg-violet-100 text-violet-800 px-2 py-0.5 rounded-full text-xs">
-                      {commentCount}
+                      {commentCount || product?.comments?.count || 0}
                     </span>
                   )}
                 </button>

@@ -38,7 +38,7 @@ const createRequestId = (config) => {
 
 // Add request interceptor to handle authentication
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     // Don't modify Content-Type for multipart/form-data requests
     // This is important for file uploads
     if (config.headers['Content-Type'] === 'multipart/form-data') {
@@ -52,6 +52,45 @@ api.interceptors.request.use(
 
     // Browser-only code
     if (typeof window !== 'undefined') {
+      // Check for global rate limiting
+      try {
+        const globalRateLimitStr = sessionStorage.getItem('global_rate_limit');
+        const globalRetryStr = sessionStorage.getItem('global_rate_limit_retry');
+
+        if (globalRateLimitStr && globalRetryStr) {
+          const now = Date.now();
+          const globalRetry = parseInt(globalRetryStr);
+
+          // If we're in global rate limit and it's not a priority request
+          if (now < globalRetry && !config.params?._priority && !config.skipRateLimit) {
+            const waitTime = globalRetry - now;
+            console.log(`Waiting ${waitTime}ms due to global rate limit`);
+
+            // Wait for the global rate limit to expire
+            await new Promise(resolve => setTimeout(resolve, waitTime + 100));
+          }
+        }
+
+        // Check endpoint-specific rate limiting
+        const endpoint = config.url;
+        const rateLimitRetryStr = sessionStorage.getItem(`rate_limit_retry_${endpoint}`);
+
+        if (rateLimitRetryStr && !config.params?._priority && !config.skipRateLimit) {
+          const now = Date.now();
+          const retryTime = parseInt(rateLimitRetryStr);
+
+          if (now < retryTime) {
+            const waitTime = retryTime - now;
+            console.log(`Waiting ${waitTime}ms due to endpoint rate limit for ${endpoint}`);
+
+            // Wait for the endpoint rate limit to expire
+            await new Promise(resolve => setTimeout(resolve, waitTime + 100));
+          }
+        }
+      } catch (e) {
+        // Ignore storage errors
+      }
+
       // Add authentication token to requests if available
       const token = localStorage.getItem('accessToken');
       if (token) {
@@ -75,12 +114,18 @@ api.interceptors.request.use(
         // If current request is high priority, cancel the previous one
         // If previous request was high priority, don't cancel it unless current is also high priority
         if (isPriorityRequest || !pendingRequest.isPriority) {
-          console.debug(`Canceling previous request: ${requestId}`);
+          // Only log in development mode and when not a common request pattern
+          if (process.env.NODE_ENV === 'development' && !requestId.includes('/products/') && !requestId.includes('/comments')) {
+            console.debug(`Canceling previous request: ${requestId}`);
+          }
           previousController.abort('Canceled due to duplicate request with higher priority');
           pendingRequests.delete(requestId);
         } else {
           // If previous is priority and current is not, cancel the current one
-          console.debug(`Current request will be canceled in favor of existing priority request: ${requestId}`);
+          // Only log in development mode and when not a common request pattern
+          if (process.env.NODE_ENV === 'development' && !requestId.includes('/products/') && !requestId.includes('/comments')) {
+            console.debug(`Current request will be canceled in favor of existing priority request: ${requestId}`);
+          }
 
           // Create a controller that we can immediately abort
           const controller = new AbortController();
@@ -148,14 +193,26 @@ api.interceptors.response.use(
     // Check if this is a canceled request
     if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
       // For canceled requests, we can add custom handling here
-      const reason = error.config?.__cancelReason || 'unknown reason';
-      console.debug(`Request was canceled (${reason}):`, error.config?.url);
+      const reason = error.config?.__cancelReason || 'navigation or component unmount';
+
+      // Only log in development mode and only if it's not a common navigation cancellation
+      // Also filter out common product and comment requests
+      if (process.env.NODE_ENV === 'development' &&
+          error.config?.__cancelRequest &&
+          error.config?.url &&
+          !error.config.url.includes('/products/') &&
+          !error.config.url.includes('/comments')) {
+        console.debug(`Request was canceled (${reason}):`, error.config?.url);
+      }
 
       // If this was intentionally canceled due to deduplication, we can
       // make this a silent error by setting a flag
       if (error.config?.__cancelRequest) {
         error.isIntentionalCancel = true;
       }
+
+      // Set a flag to indicate this is a navigation or unmount cancellation
+      error.isNavigationCancel = true;
     }
 
     // Clean up pending request if exists
@@ -246,14 +303,46 @@ api.interceptors.response.use(
         try {
           const endpoint = error.config.url;
           const rateLimitKey = `rate_limited_${endpoint}`;
-          sessionStorage.setItem(rateLimitKey, Date.now().toString());
+          const now = Date.now();
+          sessionStorage.setItem(rateLimitKey, now.toString());
+
+          // Track global rate limit to prevent all requests for a short period
+          sessionStorage.setItem('global_rate_limit', now.toString());
+
+          // Get retry-after header if available
+          const retryAfter = error.response.headers['retry-after'];
+          const retryMs = retryAfter ? parseInt(retryAfter) * 1000 : 5000; // Default to 5 seconds
+
+          // Store when we can retry
+          sessionStorage.setItem(`rate_limit_retry_${endpoint}`, (now + retryMs).toString());
+          sessionStorage.setItem('global_rate_limit_retry', (now + 2000).toString()); // Global shorter cooldown
 
           // Dispatch event for components to respond
           window.dispatchEvent(new CustomEvent('api:rate-limited', {
-            detail: { endpoint, timestamp: Date.now() }
+            detail: {
+              endpoint,
+              timestamp: now,
+              retryAfter: retryMs
+            }
           }));
+
+          // If this is a priority request, we might want to retry after delay
+          if (error.config.params?._priority === 'high') {
+            console.log(`Will retry priority request to ${endpoint} after ${retryMs}ms`);
+
+            // For important requests, we can retry automatically after the retry period
+            return new Promise(resolve => {
+              setTimeout(() => {
+                console.log(`Retrying priority request to ${endpoint}`);
+                // Remove the rate limit flag before retrying
+                delete error.config.params._t; // Remove timestamp to get a fresh one
+                resolve(axios(error.config));
+              }, retryMs);
+            });
+          }
         } catch (e) {
           // Ignore storage errors
+          console.error('Error handling rate limit:', e);
         }
       }
     }
@@ -285,7 +374,7 @@ export const debounce = (func, wait) => {
 
 // Utility function to make a request with priority
 export const makePriorityRequest = async (method, url, options = {}) => {
-  const { params, data, headers = {}, isFormData = false, timeout, signal } = options;
+  const { params, data, headers = {}, isFormData = false, timeout, signal, retryCount = 0 } = options;
 
   // Use query parameter instead of header for priority
   // This avoids CORS preflight issues
@@ -301,12 +390,19 @@ export const makePriorityRequest = async (method, url, options = {}) => {
     headers: { ...headers },
     timeout: timeout || 15000, // Use provided timeout or default to 15 seconds
     signal, // Pass through any AbortSignal
-    skipDuplicateCheck: true // Skip the duplicate check for priority requests
+    skipDuplicateCheck: true, // Skip the duplicate check for priority requests
+    skipRateLimit: true // Skip rate limit checks for priority requests
   };
 
   // Handle FormData correctly
   if (isFormData || (data instanceof FormData)) {
     config.headers['Content-Type'] = 'multipart/form-data';
+  }
+
+  // Add exponential backoff for retries
+  if (retryCount > 0) {
+    const backoffTime = Math.min(Math.pow(2, retryCount) * 100, 10000); // Max 10 seconds
+    await new Promise(resolve => setTimeout(resolve, backoffTime));
   }
 
   try {
@@ -330,7 +426,30 @@ export const makePriorityRequest = async (method, url, options = {}) => {
   } catch (error) {
     // Handle canceled requests gracefully
     if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
-      console.debug('Priority request was canceled:', url);
+      // Only log in development mode and for non-common requests
+      if (process.env.NODE_ENV === 'development' && !url.includes('/products/') && !url.includes('/comments')) {
+        console.debug('Priority request was canceled:', url);
+      }
+    } else if (error.response?.status === 429 && retryCount < 3) {
+      // Rate limited - retry with exponential backoff
+      console.warn(`Rate limited on ${url}, retrying (attempt ${retryCount + 1}/3)`);
+
+      // Get retry-after header if available
+      const retryAfter = error.response.headers['retry-after'];
+      const retryMs = retryAfter ? parseInt(retryAfter) * 1000 : Math.min(Math.pow(2, retryCount + 1) * 1000, 10000);
+
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, retryMs));
+
+      // Retry with incremented retry count
+      return makePriorityRequest(method, url, {
+        ...options,
+        retryCount: retryCount + 1,
+        params: {
+          ...params,
+          _t: Date.now() // Fresh timestamp
+        }
+      });
     } else if (error.response?.status === 401) {
       // For public endpoints, we should still return data even if unauthenticated
       // Check if this is a public endpoint

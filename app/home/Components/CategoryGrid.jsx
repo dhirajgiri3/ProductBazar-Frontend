@@ -5,22 +5,23 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { useCategories } from "../../../Contexts/Category/CategoryContext";
-import { Grid, ArrowUpRight } from "lucide-react";
+import { Grid, ArrowRight } from "lucide-react";
 
+// Animation variants
 const container = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.07,
-      delayChildren: 0.1
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
     },
   },
 };
 
 const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1.0] } },
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
 };
 
 const CategoryItem = ({ category }) => {
@@ -33,38 +34,34 @@ const CategoryItem = ({ category }) => {
     <motion.div variants={item} key={category._id}>
       <Link
         href={href}
-        className="group flex flex-col items-center justify-center p-5 rounded-2xl transition-all
-          hover:shadow-lg hover:-translate-y-1 bg-white border-0 shadow-sm hover:shadow-violet-100/60 relative overflow-hidden"
+        className="group flex flex-col items-center p-6 rounded-xl transition-all duration-300
+          bg-white border border-gray-100 hover:border-violet-200 relative overflow-hidden"
       >
-        <div className="w-full absolute bottom-0 left-0 h-1 bg-gradient-to-r from-violet-500 to-indigo-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
-        
-        <div className="icon mb-3 relative transition-transform group-hover:scale-110">
+        {/* Subtle gradient hover effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+        <div className="relative z-10 mb-4 transition-all duration-300 group-hover:translate-y-1">
           {category.icon ? (
             <Image
               src={category.icon}
               alt={category.name}
-              width={52}
-              height={52}
+              width={48}
+              height={48}
               className="rounded-lg object-cover"
             />
           ) : (
-            <div className="w-14 h-14 flex items-center justify-center rounded-xl bg-gradient-to-br from-violet-50 to-indigo-50 text-violet-600 shadow-sm">
-              <span className="text-xl">📁</span>
+            <div className="w-12 h-12 flex items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+              <span className="text-lg">📁</span>
             </div>
           )}
-          
-          <motion.span 
-            className="absolute -right-1 -top-1 w-5 h-5 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-            initial={{ rotate: 0 }}
-            whileHover={{ rotate: 45 }}
-          >
-            <ArrowUpRight className="w-3 h-3" />
-          </motion.span>
         </div>
-        
-        <span className="font-semibold text-gray-800 text-sm group-hover:text-violet-700 transition-colors">
-          {category.name}
-        </span>
+
+        <div className="flex items-center space-x-1 relative z-10">
+          <span className="font-medium text-gray-700 text-sm group-hover:text-violet-700 transition-colors">
+            {category.name}
+          </span>
+          <ArrowRight className="w-3 h-3 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-violet-500" />
+        </div>
       </Link>
     </motion.div>
   );
@@ -75,68 +72,62 @@ const CategoryGrid = () => {
 
   if (loading) {
     return (
-      <div className="mt-8">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-            <span className="bg-violet-100 text-violet-600 w-8 h-8 flex items-center justify-center rounded-md mr-3 text-sm">
-              <Grid className="w-4 h-4" />
-            </span>
-            Explore by Category
+      <section className="mt-12">
+        <div className="flex items-center mb-8">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Explore Categories
           </h2>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              className="flex flex-col items-center justify-center p-5 rounded-2xl border border-gray-100 bg-gray-50/50 animate-pulse h-28"
+              className="flex flex-col items-center p-6 rounded-xl bg-gray-50 animate-pulse h-28"
             >
-              <div className="w-14 h-14 rounded-xl bg-gray-200 mb-3"></div>
-              <div className="w-20 h-4 bg-gray-200 rounded"></div>
+              <div className="w-12 h-12 rounded-lg bg-gray-200 mb-4"></div>
+              <div className="w-16 h-3 bg-gray-200 rounded"></div>
             </div>
           ))}
         </div>
-      </div>
+      </section>
     );
   }
 
   if (error) {
     return (
-      <div className="mt-8">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-            <span className="bg-violet-100 text-violet-600 w-8 h-8 flex items-center justify-center rounded-md mr-3 text-sm">
-              <Grid className="w-4 h-4" />
-            </span>
-            Explore by Category
+      <section className="mt-12">
+        <div className="flex items-center mb-8">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Explore Categories
           </h2>
         </div>
-        <div className="bg-red-50 text-red-600 p-6 rounded-2xl flex flex-col items-center shadow-sm border border-red-100">
-          <p className="mb-4 font-medium">Error loading categories: {error}</p>
+        <div className="bg-red-50 p-6 rounded-xl flex flex-col items-center border border-red-100">
+          <p className="mb-4 text-sm text-red-600">Unable to load categories</p>
           <button
             onClick={retryFetchCategories}
-            className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+            className="px-4 py-2 bg-white text-red-600 text-sm rounded-lg hover:bg-red-600 hover:text-white border border-red-200 transition-colors"
           >
-            Retry
+            Try Again
           </button>
         </div>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="mt-8">
+    <section className="mt-12">
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-          <span className="bg-violet-100 text-violet-600 w-8 h-8 flex items-center justify-center rounded-md mr-3 text-sm">
+        <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+          <span className="bg-violet-50 text-violet-600 w-8 h-8 flex items-center justify-center rounded-md mr-3">
             <Grid className="w-4 h-4" />
           </span>
-          Explore by Category
+          Explore Categories
         </h2>
       </div>
-      
+
       {categories && categories.length > 0 ? (
         <motion.div
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5"
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"
           variants={container}
           initial="hidden"
           animate="show"
@@ -146,11 +137,11 @@ const CategoryGrid = () => {
           ))}
         </motion.div>
       ) : (
-        <div className="text-center py-12 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm">
-          <p className="text-gray-500 font-medium">No categories found.</p>
+        <div className="text-center py-10 bg-gray-50 rounded-xl border border-gray-100">
+          <p className="text-gray-500 text-sm">No categories available</p>
         </div>
       )}
-    </div>
+    </section>
   );
 };
 

@@ -9,7 +9,9 @@ import { ToastProvider } from "../Contexts/Toast/ToastContext";
 import { CategoryProvider } from "../Contexts/Category/CategoryContext";
 import { ProductProvider } from "../Contexts/Product/ProductContext";
 import { RecommendationProvider } from "../Contexts/Recommendation/RecommendationContext";
+import { SocketProvider } from "../Contexts/Socket/SocketContext";
 import Header from "../Components/Header/Header";
+import runAllCleanup from "../Utils/cleanupUtils";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,20 +24,27 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  // Run cleanup on application startup
+  if (typeof window !== 'undefined') {
+    runAllCleanup();
+  }
+
   return (
     <html lang="en">
-      <body>
+      <body className={inter.className}>
         <ToastProvider>
           <StyledComponentsRegistry>
             <AuthProvider>
               <ProductProvider>
                 <CategoryProvider>
                   <RecommendationProvider>
-                    <GlobalStyle />
-                    <Header />
-                    {children}
-                    <Toaster />
-                  <Footer />
+                    <SocketProvider>
+                      <GlobalStyle />
+                      <Header />
+                      {children}
+                      <Toaster />
+                      <Footer />
+                    </SocketProvider>
                   </RecommendationProvider>
                 </CategoryProvider>
               </ProductProvider>

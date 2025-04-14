@@ -1,11 +1,25 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Heart } from "lucide-react";
-import ProductCardList from "./ProductCardList";
+import { motion } from "framer-motion";
+import NumberedProductList from "./NumberedProductList";
 import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext";
 import { useAuth } from "../../../Contexts/Auth/AuthContext";
-import { shouldRateLimit, markRequest, getRequestKey } from "../../../Utils/rateLimiter";
+import { globalRecommendationTracker } from "../../../Utils/recommendationUtils";
+import logger from "../../../Utils/logger";
+import { Star } from "lucide-react";
+
+// Section wrapper for consistent styling and animations
+const SectionWrapper = ({ children, delay = 0, className = "" }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.6, delay }}
+    className={`w-full ${className}`}
+  >
+    {children}
+  </motion.div>
+);
 
 const InterestBasedSection = () => {
   const { isAuthenticated } = useAuth();
@@ -15,69 +29,83 @@ const InterestBasedSection = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchRecommendations = async () => {
       // Only show loading state if we don't have any data yet
       if (interestProducts.length === 0) {
-        setIsLoading(true);
+        if (isMounted) setIsLoading(true);
       }
-
-      // Check if we should rate limit this request with a longer cooldown (15 seconds)
-      // Interest-based recommendations are more expensive to compute, so we use a longer cooldown
-      const requestKey = getRequestKey('interests', { limit: 6, offset: 0, strategy: 'interests' });
-      if (shouldRateLimit(requestKey, 15000)) { // 15 second cooldown
-        console.log('Rate limiting interest-based recommendations request');
-        // If we have cached data, don't show loading state
-        if (interestProducts.length > 0) {
-          setIsLoading(false);
-          return;
-        }
-        // Otherwise wait a bit before trying
-        await new Promise(resolve => setTimeout(resolve, 3000));
-      }
-
-      // Mark this request as made
-      markRequest(requestKey);
 
       try {
-        // Use the updated getInterestsRecommendations from context
-        // Add forceRefresh=false to use cached data when available
-        const results = await getInterestsRecommendations(6, 0, false);
+        // The context now handles caching, in-flight requests, and rate limiting
+        // Request more recommendations to ensure we have enough distinct ones
+        const results = await getInterestsRecommendations(12, 0, false);
 
-        // Only update state if we got results
-        if (results && results.length > 0) {
-          setInterestProducts(results);
+        // Only update state if component is still mounted and we got results
+        if (isMounted && results && results.length > 0) {
+          // Get distinct recommendations that haven't been seen in other sections
+          const distinctResults = globalRecommendationTracker.getDistinct(
+            results,
+            6
+          );
+          globalRecommendationTracker.markAsSeen(distinctResults);
+
+          setInterestProducts(distinctResults);
+
+          // Only log once per component mount
+          if (!window._loggedInterestsLoad) {
+            logger.debug(`Loaded ${distinctResults.length} interest-based recommendations`);
+            window._loggedInterestsLoad = true;
+          }
         }
       } catch (error) {
-        console.error("Failed to fetch interest-based recommendations:", error);
-        setError("Failed to load recommendations based on your interests");
+        if (
+          error.name !== "CanceledError" &&
+          error.code !== "ERR_CANCELED" &&
+          isMounted
+        ) {
+          console.error(
+            "Failed to fetch interest-based recommendations:",
+            error
+          );
+          setError("Failed to load recommendations based on your interests");
+        }
         // Keep showing existing data if we have it
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     // Only fetch if authenticated
     if (isAuthenticated) {
       fetchRecommendations();
+    } else if (isMounted) {
+      setIsLoading(false);
     }
+
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
   }, [isAuthenticated, getInterestsRecommendations]);
 
   if (!isAuthenticated) return null;
-  
+
   // Don't render if we have no data and no error
   if (!isLoading && interestProducts.length === 0 && !error) return null;
 
   return (
-    <section className="mt-10">
-      <div className="flex items-center mb-6">
-        <div className="bg-fuchsia-100 p-2 rounded-md mr-3">
-          <Heart className="w-5 h-5 text-fuchsia-600" />
+    <SectionWrapper delay={0.4}>
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <span className="text-violet-600 mr-2">
+              <Star className="w-6 h-6" />
+            </span>
+            <h2 className="text-2xl font-bold text-gray-900">Based on Your Interests</h2>
+          </div>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900">Based on Your Interests</h2>
-      </div>
-
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <ProductCardList
+        <NumberedProductList
           products={interestProducts}
           isLoading={isLoading}
           emptyMessage="We're analyzing your interests to find the perfect products for you. Explore more to get better recommendations!"
@@ -85,8 +113,7 @@ const InterestBasedSection = () => {
           recommendationType="interests"
         />
       </div>
-    </section>
+    </SectionWrapper>
   );
 };
-
 export default InterestBasedSection;

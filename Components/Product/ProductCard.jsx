@@ -6,7 +6,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { FiArrowUp, FiEye } from "react-icons/fi";
 
-const ProductCard = ({ product }) => {
+// Memoize the component to prevent unnecessary re-renders
+const ProductCard = React.memo(function ProductCard({ product }) {
   // Destructure product data with fallbacks
   const {
     _id,
@@ -115,6 +116,6 @@ const ProductCard = ({ product }) => {
       `}</style>
     </motion.div>
   );
-};
+});
 
 export default ProductCard;

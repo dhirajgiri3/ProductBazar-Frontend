@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { MessageSquare, ArrowRight, Users } from 'lucide-react';
+import { MessageSquare, ArrowRight, Users, Clock, Tag } from 'lucide-react';
 
 // Sample data function to avoid duplication
 const getSampleThreads = () => [
@@ -91,7 +91,7 @@ const ForumThreadsSection = () => {
   };
 
   return (
-    <motion.section 
+    <motion.section
       className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -100,13 +100,13 @@ const ForumThreadsSection = () => {
       <div className="p-5 border-b border-gray-100">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center">
-            <div className="bg-blue-100 w-8 h-8 rounded-md mr-3 flex items-center justify-center shadow-sm">
-              <MessageSquare className="w-4 h-4 text-blue-600" />
+            <div className="bg-gradient-to-br from-violet-500 to-indigo-600 w-10 h-10 rounded-xl mr-3 flex items-center justify-center shadow-md text-white">
+              <MessageSquare className="w-5 h-5" />
             </div>
             <h2 className="text-xl font-bold text-gray-900">Active Discussions</h2>
           </div>
-          <motion.div whileHover={{ x: 3 }}>
-            <Link href="/forum" className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
+          <motion.div whileHover={{ x: 3 }} whileTap={{ scale: 0.97 }}>
+            <Link href="/forum" className="text-violet-600 hover:text-violet-800 text-sm font-medium flex items-center bg-violet-50 px-3 py-1.5 rounded-lg transition-colors">
               View All <ArrowRight className="ml-1 w-4 h-4" />
             </Link>
           </motion.div>
@@ -144,23 +144,27 @@ const ForumThreadsSection = () => {
             >
               <Link
                 href={`/forum/thread/${thread.id}`}
-                className="block p-5 border-b border-gray-100 last:border-b-0 hover:bg-violet-50/50 transition-colors duration-200"
+                className="block p-5 border-b border-gray-100 last:border-b-0 hover:bg-violet-50/30 transition-colors duration-200 group"
               >
-                <h3 className="font-medium text-gray-900 mb-2 line-clamp-1 group-hover:text-violet-700">{thread.title}</h3>
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-medium">
+                <h3 className="font-medium text-gray-900 mb-3 line-clamp-1 group-hover:text-violet-700 transition-colors">{thread.title}</h3>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="flex items-center bg-violet-50 text-violet-700 px-2.5 py-1 rounded-full text-xs font-medium">
+                      <Tag className="w-3 h-3 mr-1.5" />
                       {thread.category}
                     </span>
-                    <span className="flex items-center text-gray-500">
-                      <Users className="w-3 h-3 mr-1" />
+                    <span className="flex items-center text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">
+                      <Users className="w-3 h-3 mr-1.5" />
                       {thread.author}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-gray-500">
-                    <span>{formatTimeAgo(thread.createdAt)}</span>
-                    <span className="flex items-center bg-gray-100 px-2 py-1 rounded-lg">
-                      <MessageSquare className="w-3 h-3 mr-1" />
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <span className="flex items-center bg-gray-50 px-2.5 py-1 rounded-full">
+                      <Clock className="w-3 h-3 mr-1.5" />
+                      {formatTimeAgo(thread.createdAt)}
+                    </span>
+                    <span className="flex items-center bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full">
+                      <MessageSquare className="w-3 h-3 mr-1.5" />
                       {thread.commentCount}
                     </span>
                   </div>
@@ -171,11 +175,11 @@ const ForumThreadsSection = () => {
         </motion.div>
       )}
 
-      <div className="bg-gradient-to-r from-violet-50 to-indigo-50 p-4 text-center">
+      <div className="bg-gradient-to-r from-violet-500 to-indigo-600 p-5 text-center">
         <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
           <Link
             href="/forum/create"
-            className="inline-flex items-center px-4 py-2 bg-white font-medium text-sm text-violet-700 rounded-lg shadow-sm border border-violet-100 hover:bg-violet-50 transition-colors"
+            className="inline-flex items-center px-5 py-2.5 bg-white font-medium text-sm text-violet-700 rounded-xl shadow-md border border-violet-100 hover:bg-violet-50 transition-colors"
           >
             Start a new discussion <ArrowRight className="ml-2 w-4 h-4" />
           </Link>

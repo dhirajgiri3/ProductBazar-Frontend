@@ -1,8 +1,14 @@
 "use client";
 
 import Home from "../Components/Home/Home";
-import React from "react";
+import React, { useEffect } from "react";
 import "./globals.css";
+import runAllCleanup from "../Utils/cleanupUtils";
+
+useEffect(() => {
+  // Run cleanup on component mount
+  runAllCleanup();
+}, []);
 
 function page() {
   return (

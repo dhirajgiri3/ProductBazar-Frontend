@@ -38,8 +38,8 @@ const ProductCard = ({ product, onUpvote, onBookmark, onClick }) => {
       <div className="p-4">
         <div className="flex items-start">
           <div className="w-12 h-12 rounded-lg mr-3 relative overflow-hidden">
-            <Image 
-              src={product.thumbnail || "https://avatars.githubusercontent.com/u/14833627?s=64&v=4"} 
+            <Image
+              src={product.thumbnail || "https://avatars.githubusercontent.com/u/14833627?s=64&v=4"}
               alt={product.name || "Product Image"}
               width={48}
               height={48}
@@ -145,7 +145,7 @@ const Home = () => {
 
   const {
     getFeedRecommendations,
-    getNewProductRecommendations,
+    getNewRecommendations,
     recordInteraction,
   } = useRecommendation();
 
@@ -170,9 +170,9 @@ const Home = () => {
 
   // Update any product in all relevant lists
   const updateProductInAllLists = useCallback((slug, updater) => {
-    const updateList = (list) => 
+    const updateList = (list) =>
       list.map(product => product.slug === slug ? updater(product) : product);
-    
+
     setTrendingProducts(updateList(trendingProducts));
     setFeaturedProducts(updateList(featuredProducts));
     setNewProducts(updateList(newProducts));
@@ -202,7 +202,16 @@ const Home = () => {
           }));
 
           // Record interaction for recommendations
-          await recordInteraction(slug, "like");
+          if (recordInteraction) {
+            await recordInteraction(
+              slug,
+              result.upvoted ? "upvote" : "remove_upvote",
+              {
+                source: "home",
+                previousInteraction: !result.upvoted ? "upvoted" : "none",
+              }
+            );
+          }
 
           // Show success message
           toast.success(result.upvoted ? "Product upvoted!" : "Upvote removed");
@@ -249,7 +258,16 @@ const Home = () => {
           }));
 
           // Record interaction for recommendations
-          await recordInteraction(slug, "bookmark");
+          if (recordInteraction) {
+            await recordInteraction(
+              slug,
+              result.bookmarked ? "bookmark" : "remove_bookmark",
+              {
+                source: "home",
+                previousInteraction: !result.bookmarked ? "bookmarked" : "none",
+              }
+            );
+          }
 
           toast.success(
             result.bookmarked ? "Product bookmarked!" : "Bookmark removed"
@@ -337,13 +355,13 @@ const Home = () => {
         const results = await Promise.allSettled([
           getTrendingProducts(10),
           getFeaturedProducts(6),
-          getNewProductRecommendations(6),
+          getNewRecommendations(6),
           isAuthenticated() ? getFeedRecommendations(8) : Promise.resolve([])
         ]);
 
         // Handle results safely
         const [trending, featured, newProds, personalized] = results;
-        
+
         if (trending?.status === 'fulfilled') setTrendingProducts(trending.value || []);
         if (featured?.status === 'fulfilled') setFeaturedProducts(featured.value || []);
         if (newProds?.status === 'fulfilled') setNewProducts(newProds.value || []);
@@ -367,7 +385,7 @@ const Home = () => {
   }, [
     getTrendingProducts,
     getFeaturedProducts,
-    getNewProductRecommendations,
+    getNewRecommendations,
     getFeedRecommendations,
     isAuthenticated,
   ]);

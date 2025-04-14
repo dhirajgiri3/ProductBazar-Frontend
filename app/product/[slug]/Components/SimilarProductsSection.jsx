@@ -46,6 +46,15 @@ const SimilarProductsSection = ({ productId, limit = 5 }) => {
           throw new Error("Invalid response format from recommendations");
         }
 
+        // Log the recommendations to see if they include user interaction data
+        logger.debug('Similar products recommendations:',
+          recommendations.map(rec => ({
+            id: rec._id || rec.productId,
+            hasUpvoted: rec.productData?.userInteractions?.hasUpvoted || rec.productData?.upvotes?.userHasUpvoted,
+            hasBookmarked: rec.productData?.userInteractions?.hasBookmarked || rec.productData?.bookmarks?.userHasBookmarked
+          }))
+        );
+
         setSimilarProducts(recommendations);
       } catch (err) {
         logger.error("Error fetching similar products:", err);

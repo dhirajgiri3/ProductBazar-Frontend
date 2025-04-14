@@ -186,28 +186,50 @@ const CommentSection = ({ productSlug, productId }) => {
 
   // Fetch initial comments
   useEffect(() => {
+    let isMounted = true;
+    let controller = new AbortController();
+
     const loadInitialComments = async () => {
       if (!productSlug) return;
       setLoading(true);
+
       try {
-        const result = await getComments(productSlug, { page: 1 });
-        if (result.success) {
-          setComments(result.comments || []);
-          setPagination(result.pagination || null);
-          setPage(1);
-        } else {
-          showToast("error", result.message || "Failed to load comments");
-          setComments([]);
+        // Pass the abort signal to the API call
+        const result = await getComments(productSlug, { page: 1, signal: controller.signal });
+
+        // Only update state if component is still mounted
+        if (isMounted) {
+          if (result.success) {
+            setComments(result.comments || []);
+            setPagination(result.pagination || null);
+            setPage(1);
+          } else {
+            showToast("error", result.message || "Failed to load comments");
+            setComments([]);
+          }
         }
       } catch (error) {
-        console.error("Error fetching comments:", error);
-        showToast("error", "An error occurred while loading comments");
-        setComments([]);
+        // Only show error if it's not a cancellation and component is still mounted
+        if (error.name !== 'CanceledError' && error.code !== 'ERR_CANCELED' && isMounted) {
+          console.error("Error fetching comments for product " + productSlug + ":", error);
+          showToast("error", "An error occurred while loading comments");
+          setComments([]);
+        }
       } finally {
-        setLoading(false);
+        // Only update loading state if component is still mounted
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
+
     loadInitialComments();
+
+    // Cleanup function to abort any in-flight requests when component unmounts
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productSlug, getComments, showToast]);
 
@@ -215,10 +237,18 @@ const CommentSection = ({ productSlug, productId }) => {
   const loadMoreComments = useCallback(async () => {
     if (!pagination || !pagination.hasNextPage || loadingMore) return;
 
+    // Create an abort controller for this request
+    const controller = new AbortController();
     setLoadingMore(true);
     const nextPage = page + 1;
+
     try {
-      const result = await getComments(productSlug, { page: nextPage });
+      // Pass the abort signal to the API call
+      const result = await getComments(productSlug, {
+        page: nextPage,
+        signal: controller.signal
+      });
+
       if (result.success) {
         setComments((prev) => [...prev, ...(result.comments || [])]);
         setPagination(result.pagination || null);
@@ -227,11 +257,18 @@ const CommentSection = ({ productSlug, productId }) => {
         showToast("error", result.message || "Failed to load more comments");
       }
     } catch (error) {
-      console.error("Error fetching more comments:", error);
-      showToast("error", "An error occurred while loading more comments");
+      // Only show error if it's not a cancellation
+      if (error.name !== 'CanceledError' && error.code !== 'ERR_CANCELED') {
+        console.error("Error fetching more comments for product " + productSlug + ":", error);
+        showToast("error", "An error occurred while loading more comments");
+      }
     } finally {
       setLoadingMore(false);
     }
+
+    // Return a cleanup function that aborts the request if the component unmounts
+    // or if the function is called again before the previous request completes
+    return () => controller.abort();
   }, [productSlug, page, pagination, loadingMore, getComments, showToast]);
 
   // Authentication Check
@@ -545,7 +582,7 @@ const CommentSection = ({ productSlug, productId }) => {
 
   // Reply Actions
   const handleStartReply = useCallback(
-    (targetId, targetUsername) => {
+    (targetId, _targetUsername) => { // Prefix with underscore to indicate it's intentionally unused
       if (!user) {
         setShowLoginPrompt(true);
         return;

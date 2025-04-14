@@ -8,7 +8,7 @@ import React, {
   useCallback,
 } from "react";
 import { useRouter } from "next/navigation";
-import api from "../../Utils/api.js";
+import api, { makePriorityRequest } from "../../Utils/api.js";
 import logger from "../../Utils/logger.js";
 
 const AuthContext = createContext({});
@@ -65,7 +65,8 @@ export const AuthProvider = ({ children }) => {
   const fetchUserData = useCallback(
     async (token) => {
       try {
-        const response = await api.get("/auth/me", {
+        // Use makePriorityRequest to prevent this request from being canceled
+        const response = await makePriorityRequest('get', '/auth/me', {
           headers: { Authorization: `Bearer ${token || accessToken}` },
         });
 
@@ -95,7 +96,11 @@ export const AuthProvider = ({ children }) => {
         }
         throw new Error(response.data.message || "Failed to fetch user data");
       } catch (err) {
-        logger.error("Fetch user data failed:", err);
+        // Don't log canceled errors as they're expected during navigation
+        if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
+          logger.error("Fetch user data failed:", err);
+        }
+
         if (err.response?.status === 401) {
           clearAuthState();
         }
@@ -134,6 +139,11 @@ export const AuthProvider = ({ children }) => {
 
       setUser(userData);
       localStorage.setItem("user", JSON.stringify(userData));
+
+      // Store user ID separately for easier access by other components
+      if (userData._id) {
+        localStorage.setItem("userId", userData._id);
+      }
 
       if (data.data.accessToken) {
         setAccessToken(data.data.accessToken);
@@ -201,6 +211,7 @@ export const AuthProvider = ({ children }) => {
     setError("");
     localStorage.removeItem("accessToken");
     localStorage.removeItem("user");
+    localStorage.removeItem("userId");
     localStorage.removeItem("nextStep");
     // Note: We don't need to remove refreshToken from localStorage
     // as it's stored in an HTTP-only cookie and managed by the server

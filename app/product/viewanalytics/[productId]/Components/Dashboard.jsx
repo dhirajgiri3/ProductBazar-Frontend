@@ -1,4 +1,4 @@
-// File: frontend/app/dashboard/Components/Dashboard.jsx
+// File: frontend/app/product/viewanalytics/[productId]/Components/Dashboard.jsx
 
 "use client";
 
@@ -7,9 +7,6 @@ import withAuth from "../../../../auth/RouteProtector/withAuth";
 import ViewsAnalyticsDashboard from "../../../../../Components/View/ViewsAnalyticsDashboard";
 
 function Dashboard({ productId }) {
-  console.log("Current Product ID:", productId);
-  console.log("Rendering Dashboard for Product ID:", productId);
-
   if (!productId) {
     return <div className="text-red-500">No Product ID provided.</div>;
   }
