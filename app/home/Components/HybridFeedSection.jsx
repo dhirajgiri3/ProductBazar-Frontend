@@ -22,7 +22,6 @@ const SectionWrapper = ({ children, delay = 0, className = "" }) => (
 );
 
 const HybridFeedSection = ({ componentName = 'home' }) => {
-  const { isAuthenticated } = useAuth();
   const { getFeedRecommendations } = useRecommendation();
   const [isLoading, setIsLoading] = useState(true);
   const [hybridProducts, setHybridProducts] = useState([]);
@@ -30,6 +29,8 @@ const HybridFeedSection = ({ componentName = 'home' }) => {
 
   useEffect(() => {
     let isMounted = true;
+    let abortController = new AbortController();
+
     const fetchHybridFeed = async () => {
       // Only show loading state if we don't have any data yet
       if (hybridProducts.length === 0) {
@@ -37,6 +38,18 @@ const HybridFeedSection = ({ componentName = 'home' }) => {
       }
 
       try {
+        // Check if we've fetched recently to avoid excessive API calls
+        const lastFetchKey = `hybrid_feed_last_fetch_${componentName || 'home'}`;
+        const lastFetch = parseInt(sessionStorage.getItem(lastFetchKey) || '0');
+        const now = Date.now();
+        const refreshInterval = 2 * 60 * 1000; // 2 minutes
+
+        // If we have data and fetched recently, skip the fetch
+        if (hybridProducts.length > 0 && now - lastFetch < refreshInterval) {
+          if (isMounted) setIsLoading(false);
+          return;
+        }
+
         // Use the hybrid feed endpoint with discovery blend for more diverse recommendations
         const options = {
           blend: "discovery", // Use discovery blend for more diverse recommendations
@@ -46,7 +59,8 @@ const HybridFeedSection = ({ componentName = 'home' }) => {
             trending: 0.4, // 40% trending
             interests: 0.3, // 30% interests
             discovery: 0.3  // 30% discovery
-          }
+          },
+          signal: abortController.signal // Add abort signal for cleanup
         };
 
         // The context now handles caching, in-flight requests, and rate limiting
@@ -63,24 +77,36 @@ const HybridFeedSection = ({ componentName = 'home' }) => {
 
           setHybridProducts(distinctResults);
 
-          // Log the source distribution for debugging
-          const sourceDistribution = {};
-          distinctResults.forEach(item => {
-            const source = item.source || 'unknown';
-            sourceDistribution[source] = (sourceDistribution[source] || 0) + 1;
-          });
-
-          // Only log once per component mount
-          if (!window._loggedHybridFeedLoad) {
-            logger.debug(`Loaded ${distinctResults.length} hybrid feed recommendations`);
-            window._loggedHybridFeedLoad = true;
+          // Store the fetch time
+          try {
+            sessionStorage.setItem(lastFetchKey, now.toString());
+          } catch (e) {
+            // Ignore storage errors
           }
-          // Only log source distribution once per component mount
-          // Use a more specific key to avoid conflicts with other feed distribution logs
-          const distributionKey = `hybrid_feed_distribution_${componentName || 'home'}`;
-          if (!window[distributionKey]) {
-            logger.debug(`Feed recommendations source distribution: ${JSON.stringify(sourceDistribution)}`);
-            window[distributionKey] = true;
+
+          // Log the source distribution for debugging - but only in development
+          if (process.env.NODE_ENV === 'development') {
+            const sourceDistribution = {};
+            distinctResults.forEach(item => {
+              const source = item.source || 'unknown';
+              sourceDistribution[source] = (sourceDistribution[source] || 0) + 1;
+            });
+
+            // Only log once per component mount and only in development
+            const logKey = `hybrid_feed_log_${componentName || 'home'}`;
+            const lastLog = parseInt(sessionStorage.getItem(logKey) || '0');
+
+            // Only log once every 30 seconds
+            if (now - lastLog > 30000) {
+              logger.debug(`Loaded ${distinctResults.length} hybrid feed recommendations`);
+              logger.debug(`Feed recommendations source distribution: ${JSON.stringify(sourceDistribution)}`);
+
+              try {
+                sessionStorage.setItem(logKey, now.toString());
+              } catch (e) {
+                // Ignore storage errors
+              }
+            }
           }
         } else if (isMounted) {
           logger.warn("No hybrid feed recommendations returned");
@@ -89,6 +115,7 @@ const HybridFeedSection = ({ componentName = 'home' }) => {
         if (
           error.name !== "CanceledError" &&
           error.code !== "ERR_CANCELED" &&
+          !abortController.signal.aborted &&
           isMounted
         ) {
           logger.error("Failed to fetch hybrid feed recommendations:", error);
@@ -105,16 +132,17 @@ const HybridFeedSection = ({ componentName = 'home' }) => {
     // Cleanup function to prevent state updates after unmount
     return () => {
       isMounted = false;
+      abortController.abort();
     };
-  }, [getFeedRecommendations]);
+  }, [getFeedRecommendations, hybridProducts.length, componentName]);
 
   // Don't render if we have no data and no error
   if (!isLoading && hybridProducts.length === 0 && !error) return null;
 
   return (
     <SectionWrapper delay={0.6}>
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 overflow-hidden">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white rounded-xl overflow-hidden p-6">
+        <div className="flex items-center justify-between">
           <div className="flex items-center">
             <span className="text-violet-600 mr-2">
               <Zap className="w-6 h-6" />

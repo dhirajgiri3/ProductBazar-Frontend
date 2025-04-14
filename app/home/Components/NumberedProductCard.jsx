@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,18 +25,29 @@ const NumberedProductCard = React.memo(function NumberedProductCard({
   const { recordInteraction } = useRecommendation();
   const { subscribeToProductUpdates } = useSocket();
 
+  // Store product ID in a ref to avoid re-subscriptions when only other props change
+  const productIdRef = useRef(product?._id);
+
+  // Update the ref if the product ID changes
+  useEffect(() => {
+    if (product?._id && product._id !== productIdRef.current) {
+      productIdRef.current = product._id;
+    }
+  }, [product?._id]);
+
   // Subscribe to socket updates for this product - only once per product ID
   useEffect(() => {
-    if (!product?._id || !subscribeToProductUpdates) return;
+    const productId = productIdRef.current;
+    if (!productId || !subscribeToProductUpdates) return;
 
     // Subscribe to product updates via socket
-    const unsubscribe = subscribeToProductUpdates(product._id);
+    const unsubscribe = subscribeToProductUpdates(productId);
 
     // Cleanup subscription on unmount
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [product?._id, subscribeToProductUpdates]);
+  }, [subscribeToProductUpdates]); // Only depend on subscribeToProductUpdates, not product ID
 
   if (!product) return null;
 
@@ -58,8 +69,9 @@ const NumberedProductCard = React.memo(function NumberedProductCard({
     }, 10); // Very small delay to ensure it doesn't block navigation
   }, [isAuthenticated, recordInteraction, product._id, recommendationType, position]);
 
-  // Empty success handler - the global cache handles updates
-  const handleInteractionSuccess = () => {};
+  // Memoized empty success handler - the global cache handles updates
+  // Using useCallback to prevent recreation on each render
+  const handleInteractionSuccess = useCallback(() => {}, []);
 
   // Data preparation with fallbacks
   const imageUrl =
@@ -106,24 +118,24 @@ const NumberedProductCard = React.memo(function NumberedProductCard({
       onClick={handleProductView}
       className="group bg-white rounded-xl border border-gray-100 transition-all duration-300 overflow-hidden hover:border-violet-200"
     >
-      <div className="flex items-start p-5">
-        {/* Left side - Number */}
-        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-violet-50 text-violet-600 font-bold flex items-center justify-center text-lg mr-4">
+      <div className="flex items-start p-4 sm:p-5">
+        {/* Left side - Number with enhanced styling */}
+        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-violet-50 to-violet-100 text-violet-600 font-bold flex items-center justify-center text-lg mr-3 sm:mr-4 shadow-sm">
           {position + 1}
         </div>
 
-        {/* Middle - Content */}
+        {/* Middle - Content with improved responsive layout */}
         <div className="flex-1 min-w-0">
           <Link href={`/product/${slug}`} className="block">
             <div className="flex items-center mb-2">
-              {/* Product Image */}
-              <div className="relative h-12 w-12 rounded-lg overflow-hidden border border-gray-100 flex-shrink-0 mr-3">
+              {/* Product Image with enhanced styling */}
+              <div className="relative h-12 w-12 rounded-lg overflow-hidden border border-gray-100 flex-shrink-0 mr-3 shadow-sm group-hover:shadow transition-shadow duration-300">
                 <Image
                   src={imageUrl}
                   alt={productName}
                   fill
-                  sizes="48px"
-                  className="object-cover"
+                  sizes="(max-width: 640px) 48px, 48px"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
                   priority={position < 3}
                   onError={(e) => {
                     e.target.src = "/images/product-placeholder.png";
@@ -131,38 +143,38 @@ const NumberedProductCard = React.memo(function NumberedProductCard({
                 />
               </div>
 
-              <h3 className="text-lg font-bold text-gray-900 group-hover:text-violet-700 transition-colors duration-200">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 group-hover:text-violet-700 transition-colors duration-200 line-clamp-1">
                 {productName}
               </h3>
             </div>
 
-            <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+            <p className="text-sm text-gray-600 mb-3 line-clamp-2 group-hover:text-gray-700 transition-colors duration-200">
               {truncatedTagline}
             </p>
 
-            {/* Tags */}
+            {/* Tags with improved responsive layout */}
             <div className="flex flex-wrap gap-1.5 mb-3">
-              <span className="px-2 py-0.5 bg-violet-50 text-violet-600 text-xs rounded-full">
+              <span className="px-2 py-0.5 bg-violet-50 text-violet-600 text-xs rounded-full group-hover:bg-violet-100 transition-colors duration-200">
                 #{categoryName}
               </span>
               {tags.slice(0, 2).map((tag, index) => (
                 <span
                   key={index}
-                  className="px-2 py-0.5 bg-gray-50 text-gray-500 text-xs rounded-full"
+                  className="px-2 py-0.5 bg-gray-50 text-gray-500 text-xs rounded-full group-hover:bg-gray-100 transition-colors duration-200"
                 >
                   #{tag}
                 </span>
               ))}
               {tags.length > 2 && (
-                <span className="px-2 py-0.5 bg-gray-50 text-gray-500 text-xs rounded-full">
+                <span className="px-2 py-0.5 bg-gray-50 text-gray-500 text-xs rounded-full group-hover:bg-gray-100 transition-colors duration-200">
                   +{tags.length - 2}
                 </span>
               )}
             </div>
           </Link>
 
-          {/* Action Row */}
-          <div className="flex items-center justify-between">
+          {/* Action Row with improved responsive layout */}
+          <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-y-2">
             <div className="flex items-center gap-3">
               {/* Upvote Button */}
               <UpvoteButton
@@ -191,10 +203,10 @@ const NumberedProductCard = React.memo(function NumberedProductCard({
               )}
             </div>
 
-            {/* View Product Link */}
+            {/* View Product Link with enhanced styling */}
             <Link
               href={`/product/${slug}`}
-              className="text-sm text-violet-600 hover:text-violet-800 font-medium flex items-center"
+              className="text-sm text-violet-600 hover:text-violet-800 font-medium flex items-center bg-violet-50 hover:bg-violet-100 px-3 py-1 rounded-lg transition-colors duration-200"
               onClick={(e) => e.stopPropagation()}
             >
               View Product
@@ -204,9 +216,9 @@ const NumberedProductCard = React.memo(function NumberedProductCard({
         </div>
       </div>
 
-      {/* External link if available */}
+      {/* External link if available - enhanced styling */}
       {product.links?.website && (
-        <div className="px-5 py-2 border-t border-gray-100 bg-gray-50">
+        <div className="px-5 py-2 border-t border-gray-100 bg-gray-50 group-hover:bg-gray-100 transition-colors duration-200">
           <a
             href={product.links.website}
             target="_blank"
@@ -220,10 +232,10 @@ const NumberedProductCard = React.memo(function NumberedProductCard({
         </div>
       )}
 
-      {/* Explanation Text (if available) */}
+      {/* Explanation Text with enhanced styling */}
       {explanationText && (
         <div
-          className="px-5 py-2 border-t border-gray-100 bg-violet-50 text-xs text-violet-700 cursor-pointer"
+          className="px-5 py-2 border-t border-gray-100 bg-violet-50 text-xs text-violet-700 cursor-pointer group-hover:bg-violet-100 transition-colors duration-200"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();

@@ -256,23 +256,36 @@ export const SocketProvider = ({ children }) => {
     }
   }, [updateProductInCache]);
 
-  // Subscribe to product updates with deduplication
+  // Reference counter for product subscriptions to handle multiple components subscribing to the same product
+  const subscriptionCounts = useRef({});
+
+  // Subscribe to product updates with deduplication and reference counting
   const subscribeToProductUpdates = useCallback((productId) => {
     if (!productId || !isConnected) return;
 
+    // Initialize or increment the reference count
+    subscriptionCounts.current[productId] = (subscriptionCounts.current[productId] || 0) + 1;
+
     // Check if already subscribed to avoid duplicate subscriptions
     if (subscribedProducts.current.has(productId)) {
-      logger.debug(`Already subscribed to product ${productId}, skipping duplicate subscription`);
+      // Only log once per session to reduce noise
+      if (subscriptionCounts.current[productId] === 2) {
+        logger.debug(`Already subscribed to product ${productId}, using existing subscription`);
+      }
 
-      // Still return an unsubscribe function for consistency
+      // Return an unsubscribe function that decrements the reference count
       return () => {
-        // Only actually unsubscribe if this is the last subscriber
-        // This prevents premature unsubscription when multiple components
-        // are interested in the same product
-        if (subscribedProducts.current.has(productId)) {
-          unsubscribeFromProduct(productId);
-          subscribedProducts.current.delete(productId);
-          logger.info(`Unsubscribed from updates for product ${productId}`);
+        // Decrement reference count
+        if (subscriptionCounts.current[productId]) {
+          subscriptionCounts.current[productId]--;
+
+          // Only unsubscribe if no components are using this subscription anymore
+          if (subscriptionCounts.current[productId] <= 0) {
+            delete subscriptionCounts.current[productId];
+            unsubscribeFromProduct(productId);
+            subscribedProducts.current.delete(productId);
+            logger.info(`Unsubscribed from updates for product ${productId}`);
+          }
         }
       };
     }
@@ -285,11 +298,20 @@ export const SocketProvider = ({ children }) => {
 
     logger.info(`Subscribed to updates for product ${productId}`);
 
-    // Return unsubscribe function
+    // Return unsubscribe function that decrements the reference count
     return () => {
-      unsubscribeFromProduct(productId);
-      subscribedProducts.current.delete(productId);
-      logger.info(`Unsubscribed from updates for product ${productId}`);
+      // Decrement reference count
+      if (subscriptionCounts.current[productId]) {
+        subscriptionCounts.current[productId]--;
+
+        // Only unsubscribe if no components are using this subscription anymore
+        if (subscriptionCounts.current[productId] <= 0) {
+          delete subscriptionCounts.current[productId];
+          unsubscribeFromProduct(productId);
+          subscribedProducts.current.delete(productId);
+          logger.info(`Unsubscribed from updates for product ${productId}`);
+        }
+      }
     };
   }, [isConnected]);
 

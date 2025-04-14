@@ -77,29 +77,40 @@ const HeroSection = ({ onSearch }) => {
 
   return (
     <motion.div
-      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-violet-500 to-indigo-600 px-8 py-16 md:py-24 text-center shadow-xl mb-12"
+      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-violet-500 to-indigo-600 px-6 sm:px-8 py-12 sm:py-16 md:py-24 text-center shadow-xl mb-12 border border-violet-400/20"
       variants={heroVariants}
       initial="hidden"
       animate="visible"
+      id="hero"
     >
-      {/* Background decoration elements */}
+      {/* Enhanced background decoration elements with more visual interest */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[10%] left-[5%] w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-[10%] right-[5%] w-72 h-72 bg-indigo-400/20 rounded-full blur-3xl"></div>
-        <div className="absolute top-[40%] right-[15%] w-40 h-40 bg-purple-300/10 rounded-full blur-2xl"></div>
+        <div className="absolute top-[10%] left-[5%] w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse-slow"></div>
+        <div className="absolute bottom-[10%] right-[5%] w-72 h-72 bg-indigo-400/20 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute top-[40%] right-[15%] w-40 h-40 bg-purple-300/10 rounded-full blur-2xl animate-pulse-slow"></div>
+        <div className="absolute bottom-[30%] left-[15%] w-32 h-32 bg-violet-300/10 rounded-full blur-2xl animate-float-delayed"></div>
+
+        {/* Additional decorative elements */}
+        <div className="absolute top-[20%] right-[30%] w-24 h-24 bg-white/5 rounded-full blur-xl animate-float-slow"></div>
+        <div className="absolute bottom-[15%] left-[30%] w-20 h-20 bg-indigo-300/10 rounded-full blur-xl animate-pulse-delayed"></div>
+
+        {/* Subtle grid pattern overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-black/0 opacity-30"></div>
+        <div className="absolute inset-0 bg-[url('https://sdmntprwestus.oaiusercontent.com/files/00000000-9ea8-6230-8198-1fa857bd40c1/raw?se=2025-04-14T15%3A38%3A42Z&sp=r&sv=2024-08-04&sr=b&scid=3328526e-d174-561d-9b28-5d0135323a84&skoid=72d71449-cf2f-4f10-a498-f160460104ee&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-04-14T08%3A57%3A00Z&ske=2025-04-15T08%3A57%3A00Z&sks=b&skv=2024-08-04&sig=%2BgwJuHN07Mi8j1/ajKYwHqPRvDISOyWFc1ETeO1Sj%2BE%3D')] bg-repeat bg-[length:100px_100px] opacity-10"></div>
       </div>
 
       <motion.div
         className="relative z-10 max-w-4xl mx-auto"
         variants={itemVariants}
       >
-        {/* Eyebrow label */}
+        {/* Enhanced eyebrow label */}
         <motion.div
-          className="inline-flex items-center px-4 py-1.5 mb-6 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 text-white/90"
+          className="inline-flex items-center px-4 py-1.5 mb-6 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 text-white/90 shadow-lg"
           variants={itemVariants}
           whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.98 }}
         >
-          <Sparkles className="w-4 h-4 mr-2" />
+          <Sparkles className="w-4 h-4 mr-2 animate-pulse-slow" />
           <span className="text-sm font-medium">Discover What's Next</span>
         </motion.div>
 
@@ -111,7 +122,7 @@ const HeroSection = ({ onSearch }) => {
         </motion.h1>
 
         <motion.p
-          className="text-lg md:text-xl text-white/80 mx-auto mb-10 md:mb-12 max-w-2xl leading-relaxed"
+          className="text-lg md:text-xl text-white/80 mx-auto mb-8 md:mb-10 max-w-2xl leading-relaxed"
           variants={itemVariants}
         >
           {heroContent.subheadline}
@@ -121,34 +132,55 @@ const HeroSection = ({ onSearch }) => {
           className="w-full max-w-2xl mx-auto"
           variants={itemVariants}
         >
-          <form onSubmit={handleSubmit} className="relative">
+          {/* Enhanced search form with improved visual design */}
+          <form onSubmit={handleSubmit} className="relative group">
+            <div className="absolute inset-0 bg-white/20 rounded-full blur-md group-hover:blur-lg transition-all duration-300 opacity-70 group-hover:opacity-100 -z-10 group-focus-within:opacity-100 group-focus-within:blur-lg"></div>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for products, startups, skills, jobs..."
-              className="w-full pl-6 pr-16 py-5 rounded-full text-gray-700 focus:outline-none focus:ring-4 focus:ring-white/30 shadow-xl bg-white text-base"
+              placeholder={userType === "jobSeeker" ? "Search for jobs, companies, skills..." :
+                          userType === "investor" ? "Search for startups, founders, industries..." :
+                          userType === "startupOwner" ? "Search for tools, talent, investors..." :
+                          "Search for products, startups, skills, jobs..."}
+              className="w-full pl-6 pr-16 py-4 sm:py-5 rounded-full text-gray-700 focus:outline-none focus:ring-4 focus:ring-white/30 shadow-xl bg-white text-base transition-all duration-300 border border-transparent focus:border-violet-200 group-hover:shadow-violet-500/20"
+              aria-label="Search query"
             />
-            <button
+            <motion.button
               type="submit"
-              className="absolute right-2.5 top-2.5 bg-violet-700 hover:bg-violet-800 active:bg-violet-900 text-white p-2.5 rounded-full transition-colors shadow-lg"
+              className="absolute right-2.5 top-2.5 bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 active:from-violet-800 active:to-violet-900 text-white p-2.5 rounded-full transition-all duration-300 shadow-lg hover:shadow-violet-500/50"
               aria-label="Search"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               <Search className="w-5 h-5" />
-            </button>
+            </motion.button>
           </form>
+
+          {/* Enhanced quick search tags with personalized suggestions */}
           <div className="mt-4 flex flex-wrap justify-center gap-2">
-            {["AI Tools", "SaaS", "Design", "Dev Tools", "Productivity"].map(
-              (tag) => (
+            {/* Dynamic tags based on user type */}
+            {(userType === "jobSeeker" ?
+              ["Remote Jobs", "Tech Startups", "Developer", "Product Manager", "Marketing"] :
+             userType === "investor" ?
+              ["AI Startups", "Fintech", "SaaS", "Pre-seed", "B2B"] :
+             userType === "startupOwner" ?
+              ["Funding", "Growth Tools", "Marketing", "Talent", "SaaS Tools"] :
+              ["AI Tools", "SaaS", "Design", "Dev Tools", "Productivity"]
+            ).map(
+              (tag, index) => (
                 <motion.button
                   key={tag}
-                  whileHover={{ scale: 1.05 }}
+                  whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.98 }}
-                  className="px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white/90 text-sm rounded-full transition-colors backdrop-blur-sm"
+                  className="px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white/90 text-sm rounded-full transition-all duration-300 backdrop-blur-sm border border-white/10 hover:border-white/30 shadow-sm hover:shadow-white/10"
                   onClick={() => {
                     setSearchQuery(tag);
                     onSearch(tag);
                   }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 + (index * 0.1) }}
                 >
                   {tag}
                 </motion.button>
@@ -157,17 +189,29 @@ const HeroSection = ({ onSearch }) => {
           </div>
         </motion.div>
 
+        {/* Enhanced scroll indicator with improved visual design */}
         <motion.div
           className="mt-10 flex justify-center"
           variants={itemVariants}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2 }}
         >
-          <a
+          <motion.a
             href="#trending"
-            className="flex items-center text-white/80 hover:text-white transition-colors gap-1"
+            className="flex items-center text-white/90 hover:text-white transition-colors gap-2 px-5 py-2 rounded-full hover:bg-white/10 backdrop-blur-sm border border-white/10 hover:border-white/30 shadow-sm hover:shadow-white/10 group"
+            whileHover={{ y: 3 }}
+            whileTap={{ scale: 0.95 }}
           >
-            <span>Scroll to discover</span>
-            <ArrowRight className="w-4 h-4 animate-pulse" />
-          </a>
+            <span className="font-medium">Explore trending products</span>
+            <motion.span
+              animate={{ x: [0, 5, 0] }}
+              transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+              className="inline-block"
+            >
+              <ArrowRight className="w-4 h-4 group-hover:text-violet-200 transition-colors" />
+            </motion.span>
+          </motion.a>
         </motion.div>
       </motion.div>
     </motion.div>

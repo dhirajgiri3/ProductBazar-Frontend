@@ -1,7 +1,67 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { demoProducts } from "../trending/data/demoData";
+// Mock data for products page
+const demoProducts = [
+  // Sample product data
+  {
+    id: 1,
+    slug: "ai-copilot-pro",
+    name: "AI Copilot Pro",
+    tagline: "Your AI-powered programming assistant",
+    description: "Helps developers write code faster with real-time suggestions.",
+    thumbnail: "https://picsum.photos/seed/ai-copilot-pro/800/500",
+    upvotes: 1287,
+    hasUpvoted: false,
+    featured: true,
+    maker: {
+      username: "techsmith",
+      name: "Sarah Chen",
+      avatar: "https://i.pravatar.cc/150?u=sarah",
+      title: "Founder & CEO"
+    },
+    tags: ["ai", "developer-tools"],
+    createdAt: "2024-01-15T09:00:00Z"
+  },
+  {
+    id: 2,
+    slug: "startup-finance-os",
+    name: "Startup Finance OS",
+    tagline: "All-in-one financial management for startups",
+    description: "Track expenses, manage investments, and forecast growth.",
+    thumbnail: "https://picsum.photos/seed/startup-finance-os/800/500",
+    upvotes: 892,
+    hasUpvoted: false,
+    featured: false,
+    maker: {
+      username: "finwhiz",
+      name: "Michael Roberts",
+      avatar: "https://i.pravatar.cc/150?u=michael",
+      title: "Finance Expert"
+    },
+    tags: ["fintech", "saas"],
+    createdAt: "2024-01-20T10:00:00Z"
+  },
+  {
+    id: 3,
+    slug: "design-hub",
+    name: "Design Hub",
+    tagline: "Collaborative design for modern teams",
+    description: "Streamline your design process with live collaboration.",
+    thumbnail: "https://picsum.photos/seed/design-hub/800/500",
+    upvotes: 1050,
+    hasUpvoted: false,
+    featured: true,
+    maker: {
+      username: "creativedan",
+      name: "Danielle Lee",
+      avatar: "https://i.pravatar.cc/150?u=danielle",
+      title: "Creative Director"
+    },
+    tags: ["design", "collaboration"],
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+  }
+];
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -180,10 +240,10 @@ export default function ProductsPage() {
                   placeholder="Search products..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full lg:w-80 px-6 py-3.5 rounded-2xl border border-gray-200 
-                    bg-white/70 backdrop-blur-sm placeholder-gray-400 text-gray-900 
-                    text-sm font-medium group-hover:border-purple-300 
-                    focus:border-purple-400 focus:ring-4 focus:ring-purple-100 
+                  className="w-full lg:w-80 px-6 py-3.5 rounded-2xl border border-gray-200
+                    bg-white/70 backdrop-blur-sm placeholder-gray-400 text-gray-900
+                    text-sm font-medium group-hover:border-purple-300
+                    focus:border-purple-400 focus:ring-4 focus:ring-purple-100
                     transition-all duration-300"
                 />
                 <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400">
@@ -195,9 +255,9 @@ export default function ProductsPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-6 py-3.5 text-sm rounded-2xl border border-gray-200 
-                  bg-white/70 backdrop-blur-sm focus:border-purple-400 
-                  focus:ring-4 focus:ring-purple-100 transition-all duration-300 
+                className="px-6 py-3.5 text-sm rounded-2xl border border-gray-200
+                  bg-white/70 backdrop-blur-sm focus:border-purple-400
+                  focus:ring-4 focus:ring-purple-100 transition-all duration-300
                   cursor-pointer font-medium"
               >
                 {sortOptions.map((option) => (
@@ -237,7 +297,7 @@ export default function ProductsPage() {
           <div className="flex items-center justify-center py-32">
             <div className="relative">
               <div
-                className="w-16 h-16 border-4 border-purple-100 border-t-purple-500 
+                className="w-16 h-16 border-4 border-purple-100 border-t-purple-500
                                       rounded-full animate-spin"
               ></div>
             </div>
@@ -249,8 +309,8 @@ export default function ProductsPage() {
               {products.map((product, index) => (
                 <div
                   key={product.id}
-                  className="product-card group relative bg-white rounded-2xl 
-                    hover:shadow-[0_8px_40px_rgb(0,0,0,0.05)] transition-all duration-300 
+                  className="product-card group relative bg-white rounded-2xl
+                    hover:shadow-[0_8px_40px_rgb(0,0,0,0.05)] transition-all duration-300
                     hover:-translate-y-1 overflow-hidden flex flex-col"
                 >
                   {/* Image Container */}
@@ -258,15 +318,15 @@ export default function ProductsPage() {
                     <img
                       src={product.thumbnail}
                       alt={product.name}
-                      className="w-full h-full object-cover transform group-hover:scale-105 
+                      className="w-full h-full object-cover transform group-hover:scale-105
                         transition-transform duration-500 ease-out"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent"></div>
-                    
+
                     {/* Featured Badge */}
                     {product.featured && (
                       <div className="absolute top-4 left-4 z-10">
-                        <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-md 
+                        <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-md
                           px-3 py-1.5 rounded-full border border-purple-100/50 shadow-sm">
                           <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
                           <span className="text-xs font-medium text-purple-900">Featured</span>
@@ -275,21 +335,21 @@ export default function ProductsPage() {
                     )}
 
                     {/* Quick Action Buttons */}
-                    <div className="absolute top-4 right-4 z-10 flex items-center gap-2 opacity-0 
+                    <div className="absolute top-4 right-4 z-10 flex items-center gap-2 opacity-0
                       group-hover:opacity-100 transition-opacity duration-300">
-                      <button className="p-2 bg-white/90 rounded-full hover:bg-white 
-                        transition-colors duration-200 backdrop-blur-md shadow-sm 
+                      <button className="p-2 bg-white/90 rounded-full hover:bg-white
+                        transition-colors duration-200 backdrop-blur-md shadow-sm
                         border border-purple-100/50">
                         <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                             d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
                         </svg>
                       </button>
-                      <button className="p-2 bg-white/90 rounded-full hover:bg-white 
-                        transition-colors duration-200 backdrop-blur-md shadow-sm 
+                      <button className="p-2 bg-white/90 rounded-full hover:bg-white
+                        transition-colors duration-200 backdrop-blur-md shadow-sm
                         border border-purple-100/50">
                         <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                             d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"/>
                         </svg>
                       </button>
@@ -303,8 +363,8 @@ export default function ProductsPage() {
                       {product.tags.slice(0, 3).map((tag) => (
                         <span
                           key={tag}
-                          className="px-2.5 py-1 bg-gray-50 text-gray-600 rounded-md text-[11px] 
-                            font-medium tracking-wide hover:bg-gray-100 transition-colors 
+                          className="px-2.5 py-1 bg-gray-50 text-gray-600 rounded-md text-[11px]
+                            font-medium tracking-wide hover:bg-gray-100 transition-colors
                             duration-200 cursor-default"
                         >
                           {tag}
@@ -314,15 +374,15 @@ export default function ProductsPage() {
 
                     {/* Title and Upvotes */}
                     <div className="flex items-start justify-between gap-4">
-                      <h3 className="text-lg font-semibold text-gray-900 leading-tight 
+                      <h3 className="text-lg font-semibold text-gray-900 leading-tight
                         group-hover:text-purple-600 transition-colors duration-200">
                         {product.name}
                       </h3>
                       <div className="flex items-center gap-1 min-w-[3rem]">
-                        <button className="flex items-center gap-1.5 text-gray-500 
+                        <button className="flex items-center gap-1.5 text-gray-500
                           hover:text-purple-600 transition-colors duration-200">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                               d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
                           </svg>
                           <span className="text-sm font-medium">{product.upvotes}</span>
@@ -352,11 +412,11 @@ export default function ProductsPage() {
                           </p>
                         </div>
                       </div>
-                      
-                      <button className="p-2 text-gray-400 hover:text-purple-600 
+
+                      <button className="p-2 text-gray-400 hover:text-purple-600
                         transition-colors duration-200 rounded-lg hover:bg-purple-50">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" 
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
                             d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"/>
                         </svg>
                       </button>

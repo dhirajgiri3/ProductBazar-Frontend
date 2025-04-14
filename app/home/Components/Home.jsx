@@ -1,25 +1,32 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+  lazy,
+  Suspense,
+} from "react";
 import { useAuth } from "../../../Contexts/Auth/AuthContext";
 import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext";
 import { useToast } from "../../../Contexts/Toast/ToastContext";
 import { motion, AnimatePresence } from "framer-motion";
 import HeroSection from "./HeroSection";
-import TrendingProductsSection from "./TrendingProductSection";
-import PersonalizedSection from "./PersonalizedSection";
-import NewProductsSection from "./NewProductsSection";
-import HybridFeedSection from "./HybridFeedSection";
-import InterestBasedSection from "./InterestBasedSection";
-import ForumThreadsSection from "./ForumThreadsSection";
 import CategoryList from "./CategoryList";
 import NewsletterSignup from "../../../Components/common/Auth/NewsletterSignup";
 import logger from "../../../Utils/logger";
-import {
-  ArrowUp,
-  Clock,
-  AlertCircle,
-} from "lucide-react";
+import { ArrowUp, Clock, AlertCircle } from "lucide-react";
+
+// Lazy load components for better performance
+const TrendingProductsSection = lazy(() => import("./TrendingProductSection"));
+const PersonalizedSection = lazy(() => import("./PersonalizedSection"));
+const NewProductsSection = lazy(() => import("./NewProductsSection"));
+const HybridFeedSection = lazy(() => import("./HybridFeedSection"));
+const InterestBasedSection = lazy(() => import("./InterestBasedSection"));
+const ForumThreadsSection = lazy(() => import("./ForumThreadsSection"));
+const CommunityPicksSection = lazy(() => import("./CommunityPicksSection"));
 
 // Loading fallback for lazy-loaded components
 const SectionSkeleton = ({ height = "h-64" }) => (
@@ -50,8 +57,6 @@ const SectionDivider = () => (
   <div className="my-12 border-t border-gray-100"></div>
 );
 
-
-
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
   const { recordInteraction } = useRecommendation();
@@ -60,26 +65,10 @@ export default function Home() {
   const [pageLoaded, setPageLoaded] = useState(false);
   const rateLimitWarningShown = useRef(false);
 
-
   // Determine user type for personalized content
   useEffect(() => {
     if (user?.role) {
-      switch (user.role) {
-        case "startupOwner":
-          setUserType("startupOwner");
-          break;
-        case "investor":
-          setUserType("investor");
-          break;
-        case "jobseeker":
-          setUserType("jobSeeker");
-          break;
-        case "freelancer":
-          setUserType("freelancer");
-          break;
-        default:
-          setUserType("general");
-      }
+      setUserType(user.role === "jobseeker" ? "jobSeeker" : user.role);
     } else {
       setUserType("general");
     }
@@ -87,104 +76,77 @@ export default function Home() {
 
   // Track page view for recommendations with debouncing
   useEffect(() => {
-    // Use a debounced function to avoid multiple calls
     const trackPageView = async () => {
-      try {
-        // Only track if authenticated and after a short delay
-        if (isAuthenticated && recordInteraction) {
-          // Check if we've already tracked a page view in this session
-          const pageViewKey = "homepage_view_tracked";
-          const lastTracked = sessionStorage.getItem(pageViewKey);
-          const now = Date.now();
+      if (!isAuthenticated || !recordInteraction) return;
 
-          // Only track once per 5 minutes per session
-          if (!lastTracked || now - parseInt(lastTracked) > 5 * 60 * 1000) {
-            // Use non-blocking approach with a single tracking attempt
-            if (!window._homepageViewTracking) {
-              window._homepageViewTracking = true;
+      const pageViewKey = "homepage_view_tracked";
+      const lastTracked = sessionStorage.getItem(pageViewKey);
+      const now = Date.now();
 
-              setTimeout(async () => {
-                try {
-                  const result = await recordInteraction(
-                    "homepage",
-                    "page_view",
-                    {
-                      pageType: "homepage",
-                      userType,
-                      section: "main",
-                      timestamp: new Date().toISOString(),
-                      path: window.location.pathname,
-                    }
-                  );
+      if (!lastTracked || now - parseInt(lastTracked) > 5 * 60 * 1000) {
+        if (!window._homepageViewTracking) {
+          window._homepageViewTracking = true;
 
-                  if (result.success) {
-                    // Store timestamp of successful tracking
-                    sessionStorage.setItem(pageViewKey, now.toString());
-                    logger.debug(
-                      "Homepage view tracked" +
-                        (result.rateLimited ? " (rate limited)" : "")
-                    );
-                  } else if (result.error) {
-                    logger.warn("Homepage view tracking failed:", result.error);
-                  }
+          setTimeout(async () => {
+            try {
+              const result = await recordInteraction("homepage", "page_view", {
+                pageType: "homepage",
+                userType,
+                section: "main",
+                timestamp: new Date().toISOString(),
+                path: window.location.pathname,
+              });
 
-                  // Clear the tracking flag after a delay
-                  setTimeout(() => {
-                    window._homepageViewTracking = false;
-                  }, 10000); // Clear flag after 10 seconds
-
-                } catch (error) {
-                  logger.error("Unexpected error tracking homepage view:", error);
-                  window._homepageViewTracking = false;
-                }
-              }, 1000); // Delay tracking by 1 second to prioritize content loading
+              if (result.success) {
+                sessionStorage.setItem(pageViewKey, now.toString());
+                logger.debug(
+                  `Homepage view tracked${
+                    result.rateLimited ? " (rate limited)" : ""
+                  }`
+                );
+              } else if (result.error) {
+                logger.warn("Homepage view tracking failed:", result.error);
+              }
+            } catch (error) {
+              logger.error("Unexpected error tracking homepage view:", error);
+            } finally {
+              window._homepageViewTracking = false;
             }
-          } else {
-            // Only log this message if we haven't logged it recently
-            // Use a window variable to track this
-            if (!window._loggedHomepageViewSkipped) {
-              logger.debug(
-                "Homepage view tracking skipped (already tracked recently)"
-              );
-              window._loggedHomepageViewSkipped = true;
-
-              // Reset the flag after 30 seconds
-              setTimeout(() => {
-                window._loggedHomepageViewSkipped = false;
-              }, 30000);
-            }
-          }
+          }, 1000);
         }
-      } catch (error) {
-        // Catch any errors in sessionStorage access
-        logger.error("Error in page view tracking setup:", error);
+      } else if (!window._loggedHomepageViewSkipped) {
+        logger.debug(
+          "Homepage view tracking skipped (already tracked recently)"
+        );
+        window._loggedHomepageViewSkipped = true;
+        setTimeout(() => {
+          window._loggedHomepageViewSkipped = false;
+        }, 30000);
       }
     };
 
-    // Only track page view when component mounts
     trackPageView();
 
-    // Clean up tracking flags on unmount
     return () => {
       window._homepageViewTracking = false;
       window._loggedHomepageViewSkipped = false;
     };
   }, [isAuthenticated, userType, recordInteraction]);
 
-  // Set page loaded state after initial render
+  // Set page loaded state and check for rate limiting
   useEffect(() => {
     setPageLoaded(true);
 
-    // Check for rate limiting warnings
     const checkRateLimiting = () => {
       try {
-        // Check if we're experiencing rate limiting
-        const trendingRequestCount = parseInt(sessionStorage.getItem('request_count_trending') || '0');
-        const feedRequestCount = parseInt(sessionStorage.getItem('request_count_feed') || '0');
-        const personalizedRequestCount = parseInt(sessionStorage.getItem('request_count_personalized') || '0');
+        const counts = ["trending", "feed", "personalized"].map((type) =>
+          parseInt(sessionStorage.getItem(`request_count_${type}`) || "0")
+        );
 
-        // If any endpoint is being called excessively, show a warning
-        if ((trendingRequestCount > 5 || feedRequestCount > 5 || personalizedRequestCount > 5) && !rateLimitWarningShown.current) {
+        if (
+          counts.some((count) => count > 5) &&
+          !rateLimitWarningShown.current
+        ) {
           showToast(
             "warning",
             "Refreshing too frequently. Please wait a moment before refreshing again.",
@@ -192,22 +154,17 @@ export default function Home() {
             5000
           );
           rateLimitWarningShown.current = true;
-
-          // Reset the warning flag after some time
           setTimeout(() => {
             rateLimitWarningShown.current = false;
-          }, 30000); // Only show warning once every 30 seconds
+          }, 30000);
         }
       } catch (e) {
-        // Ignore storage errors
+        logger.error("Error checking rate limiting:", e);
       }
     };
 
-    // Check for rate limiting when component mounts
     checkRateLimiting();
-
-    // Also set up an interval to check periodically
-    const interval = setInterval(checkRateLimiting, 10000); // Check every 10 seconds
+    const interval = setInterval(checkRateLimiting, 10000);
 
     return () => clearInterval(interval);
   }, [showToast]);
@@ -219,67 +176,158 @@ export default function Home() {
     }
   }, []);
 
-  // Group sections by priority for better organization
+  // Group sections by priority for better organization and user experience
   const renderMainContent = () => (
-    <div className="lg:col-span-2 space-y-12">
-      <SectionWrapper>
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 overflow-hidden">
-          <TrendingProductsSection />
-        </div>
-      </SectionWrapper>
-
-      <SectionWrapper delay={0.1}>
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 overflow-hidden">
-          <HybridFeedSection />
-        </div>
-      </SectionWrapper>
-
-      {isAuthenticated && (
-        <SectionWrapper delay={0.2}>
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 overflow-hidden">
-            <PersonalizedSection componentName="home" />
+    <div className="lg:col-span-2 space-y-8">
+      <Suspense fallback={<SectionSkeleton height="h-96" />}>
+        {/* Trending Section - Always first for maximum visibility */}
+        <SectionWrapper>
+          <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
+            <TrendingProductsSection />
           </div>
         </SectionWrapper>
-      )}
 
-      <SectionDivider />
+        {/* Personalized Section - High priority for authenticated users */}
+        {isAuthenticated && (
+          <SectionWrapper delay={0.1}>
+            <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
+              <PersonalizedSection componentName="home" />
+            </div>
+          </SectionWrapper>
+        )}
 
-      <SectionWrapper delay={0.3}>
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 overflow-hidden">
-          <div className="flex items-center mb-6">
-            <span className="text-green-600 mr-2">
-              <Clock className="w-6 h-6" />
-            </span>
-            <h2 className="text-2xl font-bold text-gray-900">New Arrivals</h2>
-          </div>
-          <NewProductsSection />
-        </div>
-      </SectionWrapper>
-
-      {isAuthenticated && (
-        <SectionWrapper delay={0.4}>
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 overflow-hidden">
-            <InterestBasedSection componentName="home" />
+        {/* New Arrivals Section - Important for discovery */}
+        <SectionWrapper delay={isAuthenticated ? 0.2 : 0.1}>
+          <div className="bg-white rounded-xl overflow-hidden border border-gray-100 px-6">
+            <div className="flex-col items-center pt-6 ">
+              <div className="flex items-center">
+                <span className="text-green-600 mr-2">
+                  <Clock className="w-6 h-6" />
+                </span>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  New Arrivals
+                </h2>
+              </div>
+              <p className="text-gray-600 mt-1 text-sm">
+                Recently launched products
+              </p>
+            </div>
+            <NewProductsSection />
           </div>
         </SectionWrapper>
-      )}
+
+        {/* Community Picks - Social proof for authenticated users */}
+        {isAuthenticated && (
+          <SectionWrapper delay={0.3}>
+            <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
+              <CommunityPicksSection componentName="home" />
+            </div>
+          </SectionWrapper>
+        )}
+
+        {/* Hybrid Feed Section - Diverse content for all users */}
+        <SectionWrapper delay={isAuthenticated ? 0.3 : 0.2}>
+          <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
+            <HybridFeedSection componentName="home" />
+          </div>
+        </SectionWrapper>
+
+        {/* Interest Based Section - Personalized content for authenticated users */}
+        {isAuthenticated && (
+          <SectionWrapper delay={0.4}>
+            <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
+              <InterestBasedSection componentName="home" />
+            </div>
+          </SectionWrapper>
+        )}
+
+        {/* Sign Up Prompt for non-authenticated users */}
+        {!isAuthenticated && (
+          <SectionWrapper delay={0.3}>
+            <div className="bg-white rounded-xl overflow-hidden border border-violet-100 p-8 text-center">
+              <h3 className="text-xl font-bold text-violet-700 mb-3">
+                Join Our Community
+              </h3>
+              <p className="text-violet-600 mb-4">
+                Sign up to discover personalized recommendations and connect
+                with other users.
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
+                onClick={() => (window.location.href = "/auth/signup")}
+              >
+                Sign Up Now
+              </motion.button>
+            </div>
+          </SectionWrapper>
+        )}
+      </Suspense>
     </div>
   );
 
-  // Sidebar content
+  // Minimalistic sidebar content with clean design
   const renderSidebar = () => (
-    <div className="space-y-8 sticky top-20 self-start max-h-[calc(100vh-2rem)] overflow-y-auto pr-2 pb-6">
-      <SectionWrapper>
-        <CategoryList />
-      </SectionWrapper>
+    <div className="space-y-6 sticky top-20 self-start max-h-[calc(100vh-2rem)] overflow-y-auto pb-6">
+      <Suspense fallback={<SectionSkeleton height="h-64" />}>
+        {/* Categories - Important for navigation */}
+        <SectionWrapper>
+          <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
+            <CategoryList />
+          </div>
+        </SectionWrapper>
 
-      <SectionWrapper delay={0.1}>
-        <ForumThreadsSection />
-      </SectionWrapper>
+        {/* Newsletter Signup - Moved up for better conversion */}
+        <SectionWrapper delay={0.1}>
+          <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
+            <NewsletterSignup />
+          </div>
+        </SectionWrapper>
 
-      <SectionWrapper delay={0.2}>
-        <NewsletterSignup />
-      </SectionWrapper>
+        {/* Forum Threads - Community engagement */}
+        <SectionWrapper delay={0.2}>
+          <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
+            <ForumThreadsSection />
+          </div>
+        </SectionWrapper>
+
+        {/* Quick links section */}
+        <SectionWrapper delay={0.3}>
+          <div className="bg-white rounded-xl overflow-hidden border border-gray-100 p-5">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">
+              Quick Links
+            </h3>
+            <div className="space-y-2.5">
+              <a
+                href="/products"
+                className="flex items-center text-gray-600 hover:text-violet-600 transition-colors"
+              >
+                <span className="mr-2 text-violet-500">→</span> All Products
+              </a>
+              <a
+                href="/categories"
+                className="flex items-center text-gray-600 hover:text-violet-600 transition-colors"
+              >
+                <span className="mr-2 text-violet-500">→</span> Browse
+                Categories
+              </a>
+              <a
+                href="/jobs"
+                className="flex items-center text-gray-600 hover:text-violet-600 transition-colors"
+              >
+                <span className="mr-2 text-violet-500">→</span> Find Jobs
+              </a>
+              <a
+                href="/forum"
+                className="flex items-center text-gray-600 hover:text-violet-600 transition-colors"
+              >
+                <span className="mr-2 text-violet-500">→</span> Community Forum
+              </a>
+            </div>
+          </div>
+        </SectionWrapper>
+      </Suspense>
     </div>
   );
 
@@ -290,33 +338,33 @@ export default function Home() {
       transition={{ duration: 0.8 }}
       className="min-h-screen bg-slate-50"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 pt-6 relative">
-        {/* Hero Section - Full width */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 pt-6 relative">
+        {/* Hero Section - Full width with minimalistic spacing */}
         <SectionWrapper>
           <HeroSection onSearch={handleSearch} />
         </SectionWrapper>
 
-        <SectionDivider />
+        <div className="my-8 border-t border-gray-100"></div>
 
-        {/* Floating action button for mobile */}
+        {/* Floating action button for mobile with minimalistic design */}
         <div className="lg:hidden fixed bottom-20 right-4 z-40">
           <motion.button
-            className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white p-3 rounded-full shadow-lg flex items-center justify-center"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            className="bg-violet-600 text-white p-3 rounded-full flex items-center justify-center"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           >
             <ArrowUp className="h-5 w-5" />
           </motion.button>
         </div>
 
-        {/* Main Content Grid - Responsive layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+        {/* Main Content Grid - Responsive layout with minimalistic spacing */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Left column - Main content */}
           {pageLoaded ? (
             renderMainContent()
           ) : (
-            <div className="lg:col-span-2 space-y-12">
+            <div className="lg:col-span-2 space-y-6">
               <SectionSkeleton height="h-96" />
               <SectionSkeleton height="h-96" />
             </div>
@@ -326,31 +374,140 @@ export default function Home() {
           {pageLoaded ? (
             renderSidebar()
           ) : (
-            <div className="space-y-12">
+            <div className="space-y-6">
               <SectionSkeleton height="h-96" />
               <SectionSkeleton height="h-64" />
             </div>
           )}
         </div>
+
+        {/* Minimalistic footer */}
+        <div className="mt-16 pt-6 border-t border-gray-100">
+          <div className="flex flex-wrap justify-between">
+            <div className="w-full md:w-auto mb-6 md:mb-0">
+              <h4 className="font-medium text-gray-800 mb-3">ProductBazar</h4>
+              <p className="text-sm text-gray-500 max-w-xs">
+                Discover innovative products and connect with creators from
+                around the world.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-x-12 gap-y-6">
+              <div>
+                <h5 className="font-medium text-gray-700 mb-3 text-sm">
+                  Products
+                </h5>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <a
+                      href="/products/trending"
+                      className="text-gray-500 hover:text-violet-600 transition-colors"
+                    >
+                      Trending
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/products/new"
+                      className="text-gray-500 hover:text-violet-600 transition-colors"
+                    >
+                      New Arrivals
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/categories"
+                      className="text-gray-500 hover:text-violet-600 transition-colors"
+                    >
+                      Categories
+                    </a>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h5 className="font-medium text-gray-700 mb-3 text-sm">
+                  Community
+                </h5>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <a
+                      href="/forum"
+                      className="text-gray-500 hover:text-violet-600 transition-colors"
+                    >
+                      Forum
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/events"
+                      className="text-gray-500 hover:text-violet-600 transition-colors"
+                    >
+                      Events
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/blog"
+                      className="text-gray-500 hover:text-violet-600 transition-colors"
+                    >
+                      Blog
+                    </a>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h5 className="font-medium text-gray-700 mb-3 text-sm">
+                  Company
+                </h5>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <a
+                      href="/about"
+                      className="text-gray-500 hover:text-violet-600 transition-colors"
+                    >
+                      About
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/contact"
+                      className="text-gray-500 hover:text-violet-600 transition-colors"
+                    >
+                      Contact
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/help"
+                      className="text-gray-500 hover:text-violet-600 transition-colors"
+                    >
+                      Help
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div className="mt-8 pt-4 border-t border-gray-50 text-center text-sm text-gray-400">
+            <p>
+              © {new Date().getFullYear()} ProductBazar. All rights reserved.
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Back to top button - appears when scrolling down */}
+      {/* Back to top button with minimalistic design */}
       <BackToTopButton />
     </motion.div>
   );
 }
 
-// Back to top button component that appears when scrolling
+// Minimalistic back to top button component
 const BackToTopButton = () => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     const toggleVisibility = () => {
-      if (window.pageYOffset > 500) {
-        setIsVisible(true);
-      } else {
-        setIsVisible(false);
-      }
+      setIsVisible(window.pageYOffset > 500);
     };
 
     window.addEventListener("scroll", toggleVisibility);
@@ -368,15 +525,15 @@ const BackToTopButton = () => {
     <AnimatePresence>
       {isVisible && (
         <motion.button
-          initial={{ opacity: 0, scale: 0.8, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.8, y: 20 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.3 }}
           onClick={scrollToTop}
-          className="fixed bottom-8 right-8 p-4 rounded-full shadow-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white z-50 hover:shadow-violet-200/50 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 hidden lg:flex"
+          className="fixed bottom-8 right-8 p-3 rounded-full bg-violet-600 text-white z-50 border border-violet-500 hidden lg:flex"
           aria-label="Back to top"
-          whileHover={{ y: -5 }}
-          whileTap={{ scale: 0.9 }}
+          whileHover={{ y: -2 }}
+          whileTap={{ scale: 0.98 }}
         >
           <ArrowUp className="h-5 w-5" />
         </motion.button>

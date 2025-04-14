@@ -5,12 +5,12 @@ import React, { useEffect } from "react";
 import "./globals.css";
 import runAllCleanup from "../Utils/cleanupUtils";
 
-useEffect(() => {
-  // Run cleanup on component mount
-  runAllCleanup();
-}, []);
-
 function page() {
+  useEffect(() => {
+    // Run cleanup on component mount
+    runAllCleanup();
+  }, []);
+
   return (
     <div>
       <Home />

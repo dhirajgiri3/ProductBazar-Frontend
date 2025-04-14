@@ -345,14 +345,31 @@ const UpvoteButton = ({
     lg: "text-base",
   };
 
-  // Log when the upvoted state changes (for debugging)
+  // Log when the upvoted state changes (for debugging) - but only in development and with rate limiting
   useEffect(() => {
-    logger.debug(`UpvoteButton UI state for ${productSlug}:`, {
-      isUpvoted,
-      count,
-      productId: product?._id,
-      timestamp: Date.now()
-    });
+    // Only log in development mode and limit frequency
+    if (process.env.NODE_ENV !== 'development') return;
+
+    // Use a debounce mechanism to avoid excessive logging
+    const logKey = `upvote_log_${productSlug || product?._id}`;
+    const lastLog = parseInt(sessionStorage.getItem(logKey) || '0');
+    const now = Date.now();
+
+    // Only log once every 2 seconds per product
+    if (now - lastLog > 2000) {
+      logger.debug(`UpvoteButton UI state for ${productSlug}:`, {
+        isUpvoted,
+        count,
+        productId: product?._id,
+        timestamp: now
+      });
+
+      try {
+        sessionStorage.setItem(logKey, now.toString());
+      } catch (e) {
+        // Ignore storage errors
+      }
+    }
   }, [isUpvoted, count, productSlug, product?._id]);
 
   return (

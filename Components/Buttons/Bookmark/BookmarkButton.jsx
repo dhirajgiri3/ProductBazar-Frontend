@@ -76,6 +76,9 @@ const BookmarkButton = ({
   // Track component mounted state to prevent updates after unmount
   const isMounted = useRef(true);
 
+  // Check if the current user is the maker/owner of the product
+  const isOwner = user && product && (user._id === product.maker || product?.maker?._id === user?._id);
+
   // Listen for global bookmark events
   useEffect(() => {
     // Subscribe to bookmark events
@@ -239,6 +242,12 @@ const BookmarkButton = ({
       return;
     }
 
+    // Prevent action if user is the owner
+    if (isOwner) {
+      showToast("error", "You cannot bookmark your own product");
+      return;
+    }
+
     // Prevent rapid clicks
     if (isLoading || isProcessing) return;
 
@@ -360,28 +369,59 @@ const BookmarkButton = ({
     lg: "w-5 h-5",
   };
 
-  // Log when the bookmarked state changes (for debugging)
+  // Log when the bookmarked state changes (for debugging) - but only in development and with rate limiting
   useEffect(() => {
-    logger.debug(`BookmarkButton UI state for ${productSlug}:`, {
-      isBookmarked,
-      count,
-      productId: product?._id,
-      timestamp: Date.now()
-    });
+    // Only log in development mode and limit frequency
+    if (process.env.NODE_ENV !== 'development') return;
+
+    // Use a debounce mechanism to avoid excessive logging
+    const logKey = `bookmark_log_${productSlug || product?._id}`;
+    const lastLog = parseInt(sessionStorage.getItem(logKey) || '0');
+    const now = Date.now();
+
+    // Only log once every 2 seconds per product
+    if (now - lastLog > 2000) {
+      logger.debug(`BookmarkButton UI state for ${productSlug}:`, {
+        isBookmarked,
+        count,
+        productId: product?._id,
+        timestamp: now
+      });
+
+      try {
+        sessionStorage.setItem(logKey, now.toString());
+      } catch (e) {
+        // Ignore storage errors
+      }
+    }
   }, [isBookmarked, count, productSlug, product?._id]);
 
   return (
     <div className="flex items-center gap-1.5">
       <button
         onClick={handleBookmark}
-        disabled={disabled || isLoading}
+        disabled={disabled || isLoading || isOwner}
         className={`transition-all duration-200 ${
           isBookmarked
             ? "bg-violet-100 text-violet-700"
             : "text-gray-500 hover:bg-violet-50 hover:text-violet-600"
-        } ${sizeClasses[size] || sizeClasses.md} ${className}`}
-        title={isBookmarked ? "Remove bookmark" : "Save for later"}
-        aria-label={isBookmarked ? "Remove bookmark" : "Save for later"}
+        } ${sizeClasses[size] || sizeClasses.md} ${className} ${
+          isOwner ? "opacity-50 cursor-not-allowed" : ""
+        }`}
+        title={
+          isOwner
+            ? "Cannot bookmark your own product"
+            : isBookmarked
+            ? "Remove bookmark"
+            : "Save for later"
+        }
+        aria-label={
+          isOwner
+            ? "Cannot bookmark your own product"
+            : isBookmarked
+            ? "Remove bookmark"
+            : "Save for later"
+        }
       >
         {isBookmarked ? (
           <BookmarkCheck
@@ -398,7 +438,7 @@ const BookmarkButton = ({
         )}
         {showText && (
           <span className="ml-1.5">
-            {isBookmarked ? "Saved" : "Save"}
+            {isOwner ? "Own Product" : isBookmarked ? "Saved" : "Save"}
           </span>
         )}
       </button>

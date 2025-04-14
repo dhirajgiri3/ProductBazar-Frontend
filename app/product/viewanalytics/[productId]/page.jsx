@@ -10,7 +10,6 @@ import UserViewHistory from "../../../../Components/View/UserViewHistory";
 
 function page() {
     const { productId } = useParams();
-    console.log("Product ID:", productId);
     return (
         <>
             <Dashboard productId={productId} />

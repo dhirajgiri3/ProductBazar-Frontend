@@ -1,85 +1,137 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Users } from "lucide-react";
 import { motion } from "framer-motion";
-import ProductCardList from "./ProductCardList";
+import NumberedProductList from "./NumberedProductList";
 import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext";
+import { useAuth } from "../../../Contexts/Auth/AuthContext";
+import { globalRecommendationTracker } from "../../../Utils/recommendationUtils";
+import logger from "../../../Utils/logger";
 
-// Section wrapper for consistent styling and animations
-const SectionWrapper = ({ children, delay = 0, className = "" }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.6, delay }}
-    className={`w-full ${className}`}
-  >
-    {children}
-  </motion.div>
-);
-
-const CommunityPicksSection = () => {
+const CommunityPicksSection = ({ componentName = 'home' }) => {
   const { getCollaborativeRecommendations } = useRecommendation();
+  const { isAuthenticated } = useAuth();
   const [communityPicks, setCommunityPicks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
+    let abortController = new AbortController();
+
     const fetchCommunityPicks = async () => {
       // Only show loading state if we don't have any data yet
       if (communityPicks.length === 0) {
         if (isMounted) setIsLoading(true);
       }
 
-      try {
-        // The context now handles caching, in-flight requests, and rate limiting
-        const results = await getCollaborativeRecommendations(6, 0, false);
+      setError(null);
 
-        // Only update state if component is still mounted and we got results
-        if (isMounted && results && results.length > 0) {
-          setCommunityPicks(results);
+      try {
+        // Check if we've fetched recently to avoid excessive API calls
+        const lastFetchKey = `community_picks_last_fetch_${componentName}`;
+        const lastFetch = parseInt(sessionStorage.getItem(lastFetchKey) || '0');
+        const now = Date.now();
+        const refreshInterval = 2 * 60 * 1000; // 2 minutes
+
+        // If we have data and fetched recently, skip the fetch
+        if (communityPicks.length > 0 && now - lastFetch < refreshInterval) {
+          if (isMounted) setIsLoading(false);
+          return;
         }
-      } catch (error) {
-        if (error.name !== 'CanceledError' && error.code !== 'ERR_CANCELED' && isMounted) {
-          console.error("Failed to fetch community picks:", error);
+
+        // Call the getCollaborativeRecommendations function directly
+        // It already has caching and error handling built in
+        const recommendations = await getCollaborativeRecommendations(10, 0, false);
+
+        // Note: The signal is handled internally by the fetchRecommendations function
+
+        if (isMounted && recommendations && recommendations.length > 0) {
+          setCommunityPicks(recommendations);
+          // Mark these recommendations as seen to prevent duplicates in other sections
+          globalRecommendationTracker.markAsSeen(recommendations);
+
+          // Store the fetch time
+          try {
+            sessionStorage.setItem(lastFetchKey, now.toString());
+          } catch (e) {
+            // Ignore storage errors
+          }
+
+          // Only log in development and with rate limiting
+          if (process.env.NODE_ENV === 'development') {
+            const logKey = `community_picks_log_${componentName}`;
+            const lastLog = parseInt(sessionStorage.getItem(logKey) || '0');
+
+            // Only log once every 30 seconds
+            if (now - lastLog > 30000) {
+              logger.debug(`Loaded ${recommendations.length} community picks recommendations for ${componentName}`);
+
+              try {
+                sessionStorage.setItem(logKey, now.toString());
+              } catch (e) {
+                // Ignore storage errors
+              }
+            }
+          }
+        } else if (isMounted && (!recommendations || recommendations.length === 0)) {
+          // Only log a warning if we don't have existing data
+          if (communityPicks.length === 0) {
+            logger.warn("No community picks found or invalid response format");
+          }
         }
-        // Keep showing existing data if we have it
+      } catch (err) {
+        if (isMounted && !abortController.signal.aborted) {
+          logger.error("Error fetching community picks:", err);
+          // Only set error if we don't have existing data
+          if (communityPicks.length === 0) {
+            setError("Failed to load community picks. Please try again later.");
+          }
+        }
       } finally {
         if (isMounted) setIsLoading(false);
       }
     };
 
-    fetchCommunityPicks();
+    if (isAuthenticated) {
+      fetchCommunityPicks();
+    } else {
+      setIsLoading(false);
+    }
 
-    // Cleanup function to prevent state updates after unmount
     return () => {
       isMounted = false;
+      abortController.abort();
     };
-  }, [getCollaborativeRecommendations]);
+  }, [getCollaborativeRecommendations, isAuthenticated, communityPicks.length, componentName]);
 
-  // Don't render if we have no data
-  if (!isLoading && communityPicks.length === 0) return null;
+  if (!isAuthenticated) return null;
+
+  // Don't render if we have no data and no error
+  if (!isLoading && communityPicks.length === 0 && !error) return null;
 
   return (
-    <SectionWrapper delay={0.6}>
-      <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 overflow-hidden">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <div className="bg-indigo-100 text-indigo-600 w-10 h-10 rounded-xl mr-3 flex items-center justify-center shadow-sm">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900">Community Picks</h2>
-          </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="bg-white rounded-xl overflow-hidden"
+    >
+      <div className="p-6">
+        <div className="flex items-center">
+          <Users className="w-6 h-6 text-violet-600 mr-2" />
+          <h2 className="text-2xl font-bold text-gray-900">Community Picks</h2>
         </div>
-        <ProductCardList
+        <NumberedProductList
           products={communityPicks}
           isLoading={isLoading}
-          emptyMessage="Community picks are being gathered. Check back later!"
-          viewAllLink="/community-picks"
-          recommendationType="collaborative"
+          emptyMessage="We're gathering community favorites. Check back soon!"
+          viewAllLink="/recommendations?filter=community"
+          recommendationType="community"
         />
       </div>
-    </SectionWrapper>
+    </motion.div>
   );
 };
 

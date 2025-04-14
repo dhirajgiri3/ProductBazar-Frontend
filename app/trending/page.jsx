@@ -9,7 +9,81 @@ import TrendingFilters from "./components/TrendingFilters";
 import ProductCard from "./components/ProductCard";
 import TrendingStats from "./components/TrendingStats";
 import LoaderComponent from "../../Components/UI/LoaderComponent";
-import { demoProducts, demoStats } from "./data/demoData";
+// Mock data for trending page
+const demoProducts = [
+  // Sample product data
+  {
+    id: 1,
+    slug: "ai-copilot-pro",
+    name: "AI Copilot Pro",
+    tagline: "Your AI-powered programming assistant",
+    description: "Helps developers write code faster with real-time suggestions.",
+    thumbnail: "https://picsum.photos/seed/ai-copilot-pro/800/500",
+    upvotes: 1287,
+    hasUpvoted: false,
+    featured: true,
+    maker: {
+      username: "techsmith",
+      name: "Sarah Chen",
+      avatar: "https://i.pravatar.cc/150?u=sarah"
+    },
+    tags: ["ai", "developer-tools"],
+    createdAt: "2024-01-15T09:00:00Z"
+  },
+  {
+    id: 2,
+    slug: "startup-finance-os",
+    name: "Startup Finance OS",
+    tagline: "All-in-one financial management for startups",
+    description: "Track expenses, manage investments, and forecast growth.",
+    thumbnail: "https://picsum.photos/seed/startup-finance-os/800/500",
+    upvotes: 892,
+    hasUpvoted: false,
+    featured: false,
+    maker: {
+      username: "finwhiz",
+      name: "Michael Roberts",
+      avatar: "https://i.pravatar.cc/150?u=michael"
+    },
+    tags: ["fintech", "saas"],
+    createdAt: "2024-01-20T10:00:00Z"
+  },
+  {
+    id: 3,
+    slug: "design-hub",
+    name: "Design Hub",
+    tagline: "Collaborative design for modern teams",
+    description: "Streamline your design process with live collaboration.",
+    thumbnail: "https://picsum.photos/seed/design-hub/800/500",
+    upvotes: 1050,
+    hasUpvoted: false,
+    featured: true,
+    maker: {
+      username: "creativedan",
+      name: "Danielle Lee",
+      avatar: "https://i.pravatar.cc/150?u=danielle"
+    },
+    tags: ["design", "collaboration"],
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+  }
+];
+
+const demoStats = {
+  currentStats: {
+    totalProducts: "10,000+",
+    activeStartups: "3,200+",
+    monthlyUsers: "120K+",
+    investorNetwork: "2,000+"
+  },
+  trending: {
+    categories: [
+      { name: "AI", growth: "+156%", count: 450 },
+      { name: "SaaS", growth: "+89%", count: 380 },
+      { name: "Fintech", growth: "+67%", count: 290 },
+      { name: "Design", growth: "+45%", count: 270 }
+    ]
+  }
+};
 import { useAuth } from "../../Contexts/Auth/AuthContext";
 import { useProduct } from "../../Contexts/Product/ProductContext";
 

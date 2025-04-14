@@ -89,22 +89,24 @@ const PersonalizedSection = () => {
 
   return (
     <SectionWrapper delay={0.2}>
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 overflow-hidden">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white rounded-xl overflow-hidden h-full">
+        <div className="flex items-center justify-between mt-6 px-6">
           <div className="flex items-center">
-            <span className="text-pink-600 mr-2">
+            <span className="text-pink-600 mr-3">
               <Heart className="w-6 h-6" />
             </span>
             <h2 className="text-2xl font-bold text-gray-900">For You</h2>
           </div>
         </div>
-        <NumberedProductList
-          products={personalized}
-          isLoading={isLoading}
-          emptyMessage="We're working on your personalized recommendations! Explore more products to get tailored suggestions."
-          viewAllLink="/recommendations"
-          recommendationType="personalized"
-        />
+        <div className="px-6">
+          <NumberedProductList
+            products={personalized}
+            isLoading={isLoading}
+            emptyMessage="We're working on your personalized recommendations! Explore more products to get tailored suggestions."
+            viewAllLink="/recommendations"
+            recommendationType="personalized"
+          />
+        </div>
       </div>
     </SectionWrapper>
   );

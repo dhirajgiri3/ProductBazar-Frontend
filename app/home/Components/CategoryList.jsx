@@ -76,17 +76,18 @@ const CategoryList = () => {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="p-5 border-b border-gray-100 flex justify-between items-center">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-300">
+      <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-violet-50 to-white">
         <div className="flex items-center">
           <h3 className="text-xl font-bold text-gray-900">Categories</h3>
         </div>
         {categories.length > 6 && (
           <motion.button
             onClick={() => setExpanded(!expanded)}
-            className="text-violet-600 hover:text-violet-800 p-1.5 rounded-full hover:bg-violet-50 transition-colors"
-            whileHover={{ scale: 1.1 }}
+            className="text-violet-600 hover:text-violet-800 p-1.5 rounded-full hover:bg-violet-100 transition-all duration-300"
+            whileHover={{ scale: 1.1, rotate: expanded ? 0 : 90 }}
             whileTap={{ scale: 0.95 }}
+            aria-label={expanded ? "Show fewer categories" : "Show more categories"}
           >
             {expanded ? <Minus size={16} /> : <Plus size={16} />}
           </motion.button>
@@ -116,10 +117,10 @@ const CategoryList = () => {
                 >
                   <Link
                     href={href}
-                    className={`flex items-center justify-between px-4 py-2.5 rounded-lg transition-all group ${activeCategory === slug ? 'bg-violet-50 text-violet-700 font-medium' : 'hover:bg-gray-50 text-gray-700'}`}
+                    className={`flex items-center justify-between px-4 py-2.5 rounded-lg transition-all duration-300 group ${activeCategory === slug ? 'bg-violet-50 text-violet-700 font-medium shadow-sm' : 'hover:bg-gray-50 text-gray-700 hover:shadow-sm'}`}
                   >
                     <span className="transition-colors group-hover:text-gray-900 flex items-center">
-                      <span className="text-violet-500 mr-1.5">#</span>
+                      <span className="text-violet-500 mr-1.5 group-hover:text-violet-600 transition-colors duration-300">#</span>
                       {category.name}
                     </span>
                     <motion.div
@@ -142,8 +143,8 @@ const CategoryList = () => {
         {!expanded && categories.length > 6 && (
           <motion.button
             onClick={() => setExpanded(true)}
-            className="w-full mt-4 text-center text-sm text-violet-600 py-2.5 rounded-lg hover:bg-violet-50 transition-colors"
-            whileHover={{ y: -1 }}
+            className="w-full mt-4 text-center text-sm text-violet-600 py-2.5 rounded-lg hover:bg-violet-50 transition-all duration-300 border border-transparent hover:border-violet-100"
+            whileHover={{ y: -2 }}
             whileTap={{ scale: 0.98 }}
           >
             <span className="flex items-center justify-center">

@@ -1,10 +1,18 @@
-import React from 'react'
-import Home from './Components/Home'
+"use client";
+
+import React, { useEffect } from 'react';
+import Home from './Components/Home';
+import { runAllCleanup } from '../../Utils/cleanupUtils';
 
 function page() {
+  useEffect(() => {
+    // Run cleanup on component mount
+    runAllCleanup();
+  }, []);
+
   return (
-      <Home />
-  )
+    <Home />
+  );
 }
 
-export default page
+export default page;

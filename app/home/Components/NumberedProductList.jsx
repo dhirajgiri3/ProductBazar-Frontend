@@ -29,7 +29,7 @@ const NumberedProductList = ({
   // Loading State
   if (isLoading) {
     return (
-      <div className="w-full">
+      <div className="w-full h-full">
         {title && (
           <div className="flex justify-between items-center mb-6">
             <div>
@@ -77,7 +77,7 @@ const NumberedProductList = ({
   // Empty State
   if (!products || products.length === 0) {
     return (
-      <div className="w-full">
+      <div className="w-full h-full">
         {title && (
           <div className="flex justify-between items-center mb-6">
             <div>
@@ -153,7 +153,7 @@ const NumberedProductList = ({
 
   // Render List
   return (
-    <div className="w-full">
+    <div className="w-full h-full">
       {title && (
         <div className="flex justify-between items-center mb-6">
           <div>

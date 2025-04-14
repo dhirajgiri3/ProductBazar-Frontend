@@ -1,7 +1,7 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import StyledComponentsRegistry from "../Lib/registry";
-import GlobalStyle from "../public/Assets/Style/GlobalStyle";
+import GlobalStyle from "../public/Assets/Style/GlobalStyle.jsx";
 import Footer from "../Components/Footer/Footer";
 import { AuthProvider } from "../Contexts/Auth/AuthContext";
 import { Toaster } from "react-hot-toast";
