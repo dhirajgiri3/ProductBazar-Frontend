@@ -74,6 +74,12 @@ const CompleteProfileContainer = () => {
   };
 
   useEffect(() => {
+    // Reset role data loaded state when auth state changes
+    if (authLoading) {
+      setRoleDataLoaded(false);
+      return;
+    }
+
     if (user) {
       const initialData = {
         firstName: user.firstName || "", lastName: user.lastName || "", email: user.email || "",
@@ -116,15 +122,19 @@ const CompleteProfileContainer = () => {
             logger.info(`Merged role details for ${user.role}`);
           }
           setRoleDataLoaded(true);
+        })
+        .catch(err => {
+          logger.error(`Error fetching role details: ${err.message}`);
+          setRoleDataLoaded(true); // Still mark as loaded even if there's an error
         });
       } else {
         setRoleDataLoaded(true);
       }
     } else {
-        // If no user, set roleDataLoaded to true to prevent infinite loading
-        if (!authLoading) {
-            setRoleDataLoaded(true);
-        }
+      // If no user, set roleDataLoaded to true to prevent infinite loading
+      if (!authLoading) {
+        setRoleDataLoaded(true);
+      }
     }
   }, [user, authLoading]); // Depend on user and authLoading
 
@@ -552,28 +562,39 @@ const CompleteProfileContainer = () => {
     }, [totalSteps, user?.role]);
 
   // --- Render Logic ---
-  if (authLoading || !roleDataLoaded) {
+  // Show loading state while authentication is in progress
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <LoaderComponent text="Loading authentication data..." size="large" color="violet" />
+      </div>
+    );
+  }
+
+  // Only show error if auth is initialized but no user is found
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6 text-center">
+        <h2 className="text-xl font-semibold text-red-600 mb-4">Authentication Error</h2>
+        <p className="text-gray-700 mb-6">Could not load user data. You might need to log in again.</p>
+        <button
+            onClick={() => window.location.href = '/auth/login'} // Redirect to login with correct path
+            className="px-6 py-2 bg-violet-600 text-white rounded-md hover:bg-violet-700 transition-colors"
+        >
+            Go to Login
+        </button>
+      </div>
+    );
+  }
+
+  // Show loading while role data is being fetched
+  if (!roleDataLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <LoaderComponent text="Loading profile data..." size="large" color="violet" />
       </div>
     );
   }
-
-    if (!user) {
-     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6 text-center">
-        <h2 className="text-xl font-semibold text-red-600 mb-4">Authentication Error</h2>
-        <p className="text-gray-700 mb-6">Could not load user data. You might need to log in again.</p>
-        <button
-            onClick={() => window.location.href = '/login'} // Redirect to login
-            className="px-6 py-2 bg-violet-600 text-white rounded-md hover:bg-violet-700 transition-colors"
-        >
-            Go to Login
-        </button>
-      </div>
-     );
-   }
 
 
   return (
@@ -590,18 +611,29 @@ const CompleteProfileContainer = () => {
 
         {/* Main Card */}
         <motion.div
-          className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col h-[80vh] max-h-[800px]" // Added max-height
+          className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col h-[80vh] max-h-[800px] border border-gray-200"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
         >
           {/* Card Header */}
-          <div className="border-b border-gray-100 flex-shrink-0 px-6 py-5">
-             <motion.h2 className="text-xl font-medium text-gray-800 mb-1" initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <div className="border-b border-gray-200 flex-shrink-0 px-6 py-5 bg-gradient-to-r from-violet-50 to-white">
+             <motion.h2
+               className="text-xl font-semibold text-gray-800 mb-1 flex items-center"
+               initial={{ opacity: 0, y: -5 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ duration: 0.3 }}
+             >
+               <span className="w-1.5 h-6 bg-violet-600 rounded-full mr-3"></span>
                Complete Your Profile
              </motion.h2>
-             <motion.p className="text-gray-500 text-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.1 }}>
-               Step {currentStep} of {totalSteps}: {getStepLabel(currentStep)}
+             <motion.p
+               className="text-gray-600 text-sm ml-4"
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               transition={{ duration: 0.3, delay: 0.1 }}
+             >
+               Step {currentStep} of {totalSteps}: <span className="text-violet-700 font-medium">{getStepLabel(currentStep)}</span>
              </motion.p>
           </div>
 
@@ -612,12 +644,20 @@ const CompleteProfileContainer = () => {
              <AnimatePresence mode="wait">
                 {(authError || apiError) && (
                   <motion.div
-                    initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                    className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg border border-red-100 shadow-sm text-sm"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                    className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg border border-red-200 shadow-sm"
                   >
-                    <div className="flex items-center">
-                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-                       {apiError || authError}
+                    <div className="flex items-start">
+                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 mt-0.5 flex-shrink-0 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                       </svg>
+                       <div>
+                         <h4 className="font-medium text-red-800 mb-1">Error</h4>
+                         <p className="text-sm">{apiError || authError}</p>
+                       </div>
                     </div>
                   </motion.div>
                 )}
@@ -680,17 +720,29 @@ const CompleteProfileContainer = () => {
           </div>
 
           {/* Fixed Footer with Navigation */}
-          <div className="border-t border-gray-100 px-6 py-4 flex justify-between items-center flex-shrink-0 bg-white">
-             <motion.div className="text-xs text-gray-400" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.2 }}>
-                {new Date().getFullYear()} © ProductBazar
+          <div className="border-t border-gray-200 px-6 py-4 flex justify-between items-center flex-shrink-0 bg-white shadow-sm">
+             <motion.div
+               className="text-xs text-gray-500 flex items-center"
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               transition={{ duration: 0.3, delay: 0.2 }}
+             >
+               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+               </svg>
+               {new Date().getFullYear()} © ProductBazar
             </motion.div>
-             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.3 }}>
+             <motion.div
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               transition={{ duration: 0.3, delay: 0.3 }}
+             >
                  <NavigationButtons
                     currentStep={currentStep}
                     totalSteps={totalSteps}
                     onBack={handleBack}
-                    onNext={handleNext} // Use next handler instead of direct step change
-                    onSubmit={handleSubmit} // Pass submit handler directly
+                    onNext={handleNext}
+                    onSubmit={handleSubmit}
                     isSubmitting={isSubmitting}
                  />
             </motion.div>

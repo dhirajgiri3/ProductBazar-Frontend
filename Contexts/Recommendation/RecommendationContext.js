@@ -52,12 +52,16 @@ export const RecommendationProvider = ({ children }) => {
       // Add a timestamp to prevent browser caching
       const requestParams = {
         ...params,
-        _t: Date.now() // Add timestamp to bust cache
+        _t: Date.now(), // Add timestamp to bust cache
+        _priority: 'high' // Always use high priority for recommendation requests
       };
 
       // Use makePriorityRequest for important recommendation requests
       // This prevents them from being canceled by less important requests
-      const response = await makePriorityRequest('get', endpoint, { params: requestParams });
+      const response = await makePriorityRequest('get', endpoint, {
+        params: requestParams,
+        retryCount: 1 // Start with retry count 1 to enable automatic retries
+      });
 
       if (!response.data.success) {
         throw new Error(
@@ -426,7 +430,7 @@ export const RecommendationProvider = ({ children }) => {
         // If we're making too many requests and have a slightly stale cache, use it anyway
         // This prevents excessive API calls when rapidly switching between pages
         const staleCachedResponse = getCachedData(cacheKey);
-        if (requestCount > 2 && staleCachedResponse) { // Reduced threshold from 3 to 2
+        if (requestCount > 1 && staleCachedResponse) { // Reduced threshold from 2 to 1 to be more aggressive with caching
           logger.info(`Using slightly stale cache for ${cacheType} to prevent rate limiting`);
           return staleCachedResponse;
         }
@@ -585,7 +589,8 @@ export const RecommendationProvider = ({ children }) => {
       offset = 0,
       days = 7,
       categoryId = null,
-      refresh = false
+      refresh = false,
+      options = {}
     ) => {
       const params = {
         limit,
@@ -604,22 +609,60 @@ export const RecommendationProvider = ({ children }) => {
         categoryId: categoryId || "all",
       };
 
-      return fetchRecommendations(
-        "/recommendations/trending",
-        params,
-        "trending",
-        cacheParams,
-        false, // Optional auth
-        refresh,
-        60 * 30 // 30 minute cache TTL for trending - trending doesn't change that often
-      );
+      try {
+        return await fetchRecommendations(
+          "/recommendations/trending",
+          params,
+          "trending",
+          cacheParams,
+          false, // Optional auth
+          refresh,
+          60 * 30 // 30 minute cache TTL for trending - trending doesn't change that often
+        );
+      } catch (error) {
+        // If the main trending endpoint fails, try the products/trending endpoint as fallback
+        if ((error.response?.status === 404 || error.response?.status === 429) && !options.isRetry) {
+          logger.warn("Trending recommendations failed, falling back to products/trending", error);
+          try {
+            // Convert days to timeRange format expected by products/trending
+            const timeRange = days === 1 ? '1d' : days === 7 ? '7d' : '30d';
+
+            // Make direct request to products/trending
+            const response = await makePriorityRequest('GET', '/products/trending', {
+              params: {
+                limit,
+                timeRange,
+                _t: Date.now(),
+                _priority: 'high'
+              },
+              retryCount: 1
+            });
+
+            if (response.data.success && Array.isArray(response.data.data)) {
+              // Transform to match recommendation format
+              return response.data.data.map(product => ({
+                productData: product,
+                product: product._id,
+                score: 1.0,
+                reason: 'trending',
+                explanationText: 'Trending product'
+              }));
+            }
+            return [];
+          } catch (fallbackError) {
+            logger.error("Fallback to products/trending failed", fallbackError);
+            return [];
+          }
+        }
+        throw error;
+      }
     },
     [fetchRecommendations]
   );
 
   // Fetch New Products
   const getNewRecommendations = useCallback(
-    async (limit = 10, offset = 0, days = 14, refresh = false) => {
+    async (limit = 10, offset = 0, days = 14, refresh = false, options = {}) => {
       const params = {
         limit,
         offset,
@@ -632,14 +675,49 @@ export const RecommendationProvider = ({ children }) => {
         days,
       };
 
-      return fetchRecommendations(
-        "/recommendations/new",
-        params,
-        "new",
-        cacheParams,
-        false, // Optional auth
-        refresh
-      );
+      try {
+        return await fetchRecommendations(
+          "/recommendations/new",
+          params,
+          "new",
+          cacheParams,
+          false, // Optional auth
+          refresh
+        );
+      } catch (error) {
+        // If the main new endpoint fails, try the products/recent endpoint as fallback
+        if ((error.response?.status === 404 || error.response?.status === 429) && !options.isRetry) {
+          logger.warn("New recommendations failed, falling back to products/recent", error);
+          try {
+            // Make direct request to products/recent
+            const response = await makePriorityRequest('GET', '/products/recent', {
+              params: {
+                limit,
+                days,
+                _t: Date.now(),
+                _priority: 'high'
+              },
+              retryCount: 1
+            });
+
+            if (response.data.success && Array.isArray(response.data.data)) {
+              // Transform to match recommendation format
+              return response.data.data.map(product => ({
+                productData: product,
+                product: product._id,
+                score: 1.0,
+                reason: 'new',
+                explanationText: 'Recently added product'
+              }));
+            }
+            return [];
+          } catch (fallbackError) {
+            logger.error("Fallback to products/recent failed", fallbackError);
+            return [];
+          }
+        }
+        throw error;
+      }
     },
     [fetchRecommendations]
   );

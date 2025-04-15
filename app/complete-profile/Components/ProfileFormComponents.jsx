@@ -62,28 +62,28 @@ export const FormField = ({
   };
 
   const commonClasses =
-    "w-full pl-10 pr-3 py-2 rounded-md border-0 bg-gray-50 focus:outline-none transition-all duration-200 text-sm";
+    "w-full pl-10 pr-3 py-2.5 rounded-md border border-gray-200 bg-white focus:outline-none transition-all duration-200 text-sm shadow-sm";
   const focusClasses =
-    "focus:bg-white focus:ring-1 focus:ring-gray-900/30";
-  const hoverClasses = "hover:bg-gray-100";
+    "focus:border-violet-300 focus:ring-2 focus:ring-violet-100";
+  const hoverClasses = "hover:border-gray-300";
   const errorClasses =
-    "ring-1 ring-red-300 focus:ring-2 focus:ring-red-500/50";
-  const disabledClasses = "disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-100";
+    "border-red-300 bg-red-50 focus:border-red-400 focus:ring-2 focus:ring-red-100";
+  const disabledClasses = "disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:border-gray-200";
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <label
         htmlFor={name}
         className={clsx(
-          "block text-xs font-medium",
-          isError ? "text-red-600" : "text-gray-500"
+          "flex items-center text-xs font-medium",
+          isError ? "text-red-600" : "text-gray-700"
         )}
       >
-        {label} {required && <span className="text-red-400 ml-0.5">*</span>}
+        {label} {required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       <div className="relative">
-        <div className={clsx("absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none", type === 'textarea' && 'top-3 items-start')}>
-          {getIconForField()}
+        <div className={clsx("absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10", type === 'textarea' && 'top-3 items-start')}>
+          {icon || getIconForField()}
         </div>
         {type === "select" ? (
           <div className="relative">
@@ -162,12 +162,14 @@ export const FormField = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.2 }}
-            className="mt-0.5"
+            className="mt-1.5"
           >
-            <p className="text-red-500 text-xs flex items-start">
-              <svg className="h-3 w-3 mr-1 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-              <span>{error}</span>
-            </p>
+            <div className="bg-red-50 px-2.5 py-1.5 rounded-md border border-red-100">
+              <p className="text-red-600 text-xs flex items-start">
+                <svg className="h-3 w-3 mr-1.5 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                <span>{error}</span>
+              </p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -178,14 +180,14 @@ export const FormField = ({
 
 // --- Tag Component ---
 export const TagComponent = ({ text, onRemove }) => (
-  <div className="flex items-center bg-gray-100 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-md">
+  <div className="flex items-center bg-violet-50 text-violet-700 text-xs font-medium px-2.5 py-1.5 rounded-md border border-violet-100 shadow-sm">
     <span>{text}</span>
     <button
       type="button"
       onClick={onRemove}
-      className="ml-1.5 text-gray-400 hover:text-gray-600 focus:outline-none"
+      className="ml-2 text-violet-400 hover:text-violet-600 focus:outline-none transition-colors duration-200"
     >
-      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
     </button>
   </div>
 );
@@ -210,14 +212,18 @@ export const TagInput = ({
     );
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-3 bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-gray-700">{label}</label>
-                <span className="text-xs text-gray-900">{tags.length} selected</span>
+                <label className="flex items-center text-sm font-medium text-gray-700">
+                    {label}
+                    <span className="ml-2 bg-violet-100 text-violet-700 text-xs px-2 py-0.5 rounded-full">
+                        {tags.length} selected
+                    </span>
+                </label>
             </div>
             <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">{icon}</div>
-                <div className="flex flex-wrap gap-1.5 p-2 pl-10 bg-gray-50 rounded-md transition-all duration-200 focus-within:bg-white focus-within:ring-1 focus-within:ring-gray-900/30 hover:bg-gray-100 min-h-[50px]">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">{icon}</div>
+                <div className="flex flex-wrap gap-2 p-3 pl-10 bg-white border border-gray-200 rounded-md transition-all duration-200 focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-100 hover:border-gray-300 min-h-[60px] shadow-sm">
                     <AnimatePresence>
                         {tags.map((tag) => (
                             <motion.div key={tag} initial={{ opacity: 0, scale: 0.8, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: 10 }} transition={{ duration: 0.2, type: "spring", stiffness: 200 }} layout>
@@ -230,17 +236,20 @@ export const TagInput = ({
                         value={inputValue}
                         onChange={onInputChange}
                         onKeyDown={onInputKeyDown}
-                        className="flex-grow min-w-[150px] outline-none p-1 text-sm bg-transparent"
+                        className="flex-grow min-w-[150px] outline-none p-1.5 text-sm bg-transparent"
                         placeholder={placeholder}
                     />
                 </div>
             </div>
             {predefinedOptions && predefinedOptions.length > 0 && (
-                <div className="mt-1">
-                    <p className="text-xs text-gray-500 mb-2">
+                <div className="mt-3 bg-gray-50 p-3 rounded-md border border-gray-200">
+                    <p className="text-xs font-medium text-gray-700 mb-2 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1.5 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
                         {type === 'skills' ? 'Quickly add relevant skills:' : 'Quickly add interests:'}
                     </p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                         {predefinedOptions.map((option) => {
                             const isSelected = tags.includes(option);
                             return (
@@ -249,17 +258,29 @@ export const TagInput = ({
                                     type="button"
                                     onClick={() => onAddPredefined(option, type)}
                                     className={clsx(
-                                        "px-2 py-0.5 text-xs rounded-md transition-all duration-200 flex items-center",
-                                        isSelected ? "bg-gray-800 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                        "px-2.5 py-1 text-xs rounded-md transition-all duration-200 flex items-center border shadow-sm",
+                                        isSelected
+                                            ? "bg-violet-600 text-white border-violet-700"
+                                            : "bg-white text-gray-700 border-gray-200 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
                                     )}
                                     disabled={isSelected}
                                     whileHover={isSelected ? {} : { scale: 1.03, y: -1 }}
                                     whileTap={isSelected ? {} : { scale: 0.97 }}
                                 >
                                     {isSelected ? (
-                                        <><svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>{option}</>
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            {option}
+                                        </>
                                     ) : (
-                                        <><span className="text-xs mr-1">+</span>{option}</>
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                                            </svg>
+                                            {option}
+                                        </>
                                     )}
                                 </motion.button>
                             );
@@ -288,19 +309,27 @@ export const StepIndicator = ({ currentStep, totalSteps, getStepLabel }) => (
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: step * 0.05 }}
           >
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs transition-colors duration-200 ${isActive ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-500"}`}>
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-200 border-2 shadow-sm ${isActive
+                ? "bg-violet-600 text-white border-violet-700"
+                : "bg-white text-gray-500 border-gray-200"}`}
+            >
               {isCompleted ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
               ) : ( step )}
             </div>
-            <span className={`mt-1.5 text-xs ${isActive ? "text-gray-900 font-medium" : "text-gray-400"}`}>{getStepLabel(step)}</span>
+            <span className={`mt-2 text-xs ${isActive ? "text-violet-700 font-medium" : "text-gray-500"}`}>
+              {getStepLabel(step)}
+            </span>
           </motion.button>
         );
       })}
     </div>
-    <div className="relative h-0.5 bg-gray-100 w-full">
+    <div className="relative h-1 bg-gray-100 w-full rounded-full overflow-hidden">
       <motion.div
-        className="absolute top-0 left-0 h-full bg-gray-900"
+        className="absolute top-0 left-0 h-full bg-violet-600"
         initial={{ width: 0 }}
         animate={{ width: `${((currentStep - 1) / (totalSteps - 1)) * 100}%` }}
         transition={{ duration: 0.3 }}
@@ -318,15 +347,21 @@ export const NavigationButtons = ({
   onSubmit,
   isSubmitting,
 }) => (
-  <div className="flex items-center justify-end space-x-3">
+  <div className="flex items-center justify-end space-x-4">
     {currentStep > 1 && (
       <motion.button
         type="button"
         onClick={onBack}
-        className="px-4 py-2 text-gray-500 text-sm flex items-center space-x-1.5 transition-colors duration-200 hover:text-gray-700"
-        whileHover={{ x: -1 }} whileTap={{ scale: 0.98 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}
+        className="px-5 py-2.5 text-gray-600 text-sm flex items-center space-x-2 transition-all duration-200 hover:text-violet-700 border border-transparent hover:border-violet-100 rounded-md hover:bg-violet-50"
+        whileHover={{ x: -1 }}
+        whileTap={{ scale: 0.98 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
         <span>Back</span>
       </motion.button>
     )}
@@ -334,24 +369,49 @@ export const NavigationButtons = ({
       <motion.button
         type="button"
         onClick={onNext}
-        className="px-4 py-2 bg-gray-900 text-white text-sm rounded-md flex items-center space-x-1.5 transition-colors duration-200 hover:bg-gray-800"
-        whileHover={{ x: 1 }} whileTap={{ scale: 0.98 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}
+        className="px-5 py-2.5 bg-violet-600 text-white text-sm rounded-md flex items-center space-x-2 transition-all duration-200 hover:bg-violet-700 shadow-sm border border-violet-700"
+        whileHover={{ x: 1, y: -1 }}
+        whileTap={{ scale: 0.98, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
       >
         <span>Continue</span>
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
       </motion.button>
     ) : (
       <motion.button
         type="button"
         onClick={onSubmit}
         disabled={isSubmitting}
-        className={clsx("px-4 py-2 rounded-md text-white text-sm flex items-center space-x-1.5 transition-colors duration-200", isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-gray-900 hover:bg-gray-800")}
-        whileHover={isSubmitting ? {} : { x: 1 }} whileTap={isSubmitting ? {} : { scale: 0.98 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}
+        className={clsx(
+          "px-5 py-2.5 rounded-md text-white text-sm flex items-center space-x-2 transition-all duration-200 shadow-sm border",
+          isSubmitting
+            ? "bg-gray-400 cursor-not-allowed border-gray-500"
+            : "bg-violet-600 hover:bg-violet-700 border-violet-700"
+        )}
+        whileHover={isSubmitting ? {} : { x: 1, y: -1 }}
+        whileTap={isSubmitting ? {} : { scale: 0.98, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
       >
         {isSubmitting ? (
-          <div className="flex items-center justify-center"><div className="mr-2"><LoaderComponent text="" message="" size="small" color="white" /></div><span>Saving...</span></div>
+          <div className="flex items-center justify-center">
+            <div className="mr-2">
+              <LoaderComponent text="" message="" size="small" color="white" />
+            </div>
+            <span>Saving...</span>
+          </div>
         ) : (
-          <><span>Complete Profile</span><svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg></>
+          <>
+            <span>Complete Profile</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </>
         )}
       </motion.button>
     )}

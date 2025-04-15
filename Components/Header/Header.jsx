@@ -30,10 +30,10 @@ import {
 import { useAuth } from "../../Contexts/Auth/AuthContext";
 import { useProduct } from "../../Contexts/Product/ProductContext";
 import { useCategories } from "../../Contexts/Category/CategoryContext";
-import debounce from "lodash.debounce";
 import { useOnClickOutside } from "../../Hooks/useOnClickOutside";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import SearchModal from "../Modal/Search/SearchModal";
 
 const NavItem = ({ label, isActive, href, onClick }) => (
   <Link
@@ -57,10 +57,8 @@ const Header = () => {
   const { categories = [], error: categoryError, retryFetchCategories } = useCategories();
 
   // States
-  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showOnboardingBanner, setShowOnboardingBanner] = useState(false);
@@ -68,15 +66,8 @@ const Header = () => {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
 
   // Refs
-  const searchRef = useRef(null);
   const userMenuRef = useRef(null);
   const roleMenuRef = useRef(null);
-  const searchInputRef = useRef(null);
-
-  // Close dropdowns when clicking outside
-  useOnClickOutside(searchRef, () => {
-    setIsSearchActive(false);
-  });
 
   useOnClickOutside(userMenuRef, () => {
     setIsUserMenuOpen(false);
@@ -187,72 +178,13 @@ const Header = () => {
     }
   }, [isAuthenticated, user, nextStep]);
 
-  // redirect to login if user is not authenticated
-  // useEffect(() => {
-  //   if (!isAuthenticated() && pathname !== "/auth/login") {
-  //     router.push("/auth/login");
-  //   }
-  // }, [isAuthenticated, pathname, router]);
-
-  // Search implementation with debounce
-  const debouncedSearch = useCallback(
-    debounce(async (query) => {
-      if (!query || query.length < 2) {
-        setSearchResults([]);
-        setIsSearching(false);
-        return;
-      }
-
-      setIsSearching(true);
-
-      try {
-        const results = await searchProducts(query, {
-          limit: 5,
-          natural_language: true,
-        });
-
-        if (results && results.products) {
-          setSearchResults(results.products);
-        }
-      } catch (error) {
-        console.error("Search error:", error);
-        toast.error("Search failed. Please try again.");
-      } finally {
-        setIsSearching(false);
-      }
-    }, 300),
-    [searchProducts]
-  );
-
-  // Handle search input changes
-  const handleSearchChange = (e) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    debouncedSearch(query);
-  };
-
-  // Handle search submit
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setIsSearchActive(false);
-      setSearchResults([]);
-    }
-  };
-
-  // Handle keyboard shortcuts and navigation
+  // Handle keyboard shortcuts for search
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Command/Ctrl + K to focus search
+      // Command/Ctrl + K to open search modal
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setIsSearchActive(true);
-        searchInputRef.current?.focus();
-      }
-      // Escape to close search
-      if (e.key === "Escape") {
-        setIsSearchActive(false);
+        setIsSearchModalOpen(true);
       }
     };
 
@@ -324,122 +256,17 @@ const Header = () => {
             </Link>
 
             {/* Desktop Search */}
-            <div ref={searchRef} className="relative hidden sm:block">
-              <div
-                className={`flex items-center relative rounded-md border ${
-                  isSearchActive
-                    ? "border-violet-300 ring-2 ring-violet-100"
-                    : "border-gray-200"
-                } px-3 py-2 w-64 md:w-80 transition-all`}
-                onClick={() => setIsSearchActive(true)}
+            <div className="relative hidden sm:block">
+              <button
+                className="flex items-center relative rounded-md border border-gray-200 px-3 py-2 w-64 md:w-80 transition-all hover:border-violet-300 hover:ring-1 hover:ring-violet-100"
+                onClick={() => setIsSearchModalOpen(true)}
               >
                 <Search size={16} className="text-gray-400 mr-2" />
-                <input
-                  id="search-input"
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder="Search products, startups, etc..."
-                  className="bg-transparent border-none focus:outline-none text-sm w-full"
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  onFocus={() => setIsSearchActive(true)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit(e)}
-                  aria-expanded={isSearchActive}
-                  aria-controls="search-results"
-                />
+                <span className="text-gray-500 text-sm flex-1 text-left">Search products, startups, etc...</span>
                 <div className="hidden md:flex items-center border border-gray-200 rounded px-1.5 py-0.5 text-xs text-gray-500">
                   ⌘K
                 </div>
-              </div>
-
-              {/* Search Results Dropdown */}
-              {isSearchActive && (
-                <div
-                  id="search-results"
-                  className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-30"
-                >
-                  {isSearching ? (
-                    <div className="p-4 text-center text-gray-500">
-                      <div className="animate-pulse">Searching...</div>
-                    </div>
-                  ) : searchResults.length > 0 ? (
-                    <div>
-                      <div className="max-h-80 overflow-y-auto">
-                        {searchResults.map((product) => (
-                          <Link
-                            key={product._id}
-                            href={`/products/${product.slug}`}
-                            className="block px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0"
-                            onClick={() => setIsSearchActive(false)}
-                          >
-                            <div className="flex items-start">
-                              {product.thumbnail && (
-                                <img
-                                  src={product.thumbnail}
-                                  alt={product.name}
-                                  className="w-10 h-10 rounded object-cover mr-3"
-                                  onError={(e) => {
-                                    e.target.src =
-                                      "/images/default-product.png";
-                                  }}
-                                />
-                              )}
-                              <div>
-                                <h4 className="font-medium text-sm text-gray-900">
-                                  {product.name}
-                                </h4>
-                                <p className="text-xs text-gray-500 mt-1 line-clamp-1">
-                                  {product.tagline || product.description}
-                                </p>
-                                {product.categoryName && (
-                                  <span className="inline-block mt-1 px-2 py-0.5 bg-violet-50 text-violet-700 rounded-full text-xs">
-                                    {product.categoryName}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                      <div className="p-2 border-t border-gray-100">
-                        <Link
-                          href={`/search?q=${encodeURIComponent(searchQuery)}`}
-                          className="block w-full text-center py-2 text-violet-600 hover:bg-violet-50 rounded-md text-sm font-medium transition-colors"
-                          onClick={() => setIsSearchActive(false)}
-                        >
-                          View all results
-                        </Link>
-                      </div>
-                    </div>
-                  ) : searchQuery.length > 0 ? (
-                    <div className="p-4 text-center text-gray-500">
-                      No results found for "{searchQuery}"
-                    </div>
-                  ) : (
-                    <div className="p-4">
-                      <p className="text-sm font-medium text-gray-700 mb-2">
-                        Try searching for:
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {["AI tools", "SaaS", "Marketing", "Design"].map(
-                          (term) => (
-                            <button
-                              key={term}
-                              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-medium text-gray-800 transition-colors"
-                              onClick={() => {
-                                setSearchQuery(term);
-                                debouncedSearch(term);
-                              }}
-                            >
-                              {term}
-                            </button>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              </button>
             </div>
           </div>
 
@@ -713,30 +540,21 @@ const Header = () => {
 
         {/* Mobile Search (only visible on mobile) */}
         <div className="px-4 pb-3 sm:hidden">
-          <form onSubmit={handleSearchSubmit} className="mt-1">
-            <div className="relative rounded-md border border-gray-200 flex items-center">
-              <Search size={16} className="ml-3 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={handleSearchChange}
-                className="w-full py-2 pl-2 pr-4 focus:outline-none text-sm"
-                aria-label="Search"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="p-1 text-gray-400 hover:text-gray-600"
-                  aria-label="Clear search"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-          </form>
+          <button
+            onClick={() => setIsSearchModalOpen(true)}
+            className="w-full mt-1 relative rounded-md border border-gray-200 flex items-center py-2 px-3"
+          >
+            <Search size={16} className="text-gray-400 mr-2" />
+            <span className="text-gray-500 text-sm flex-1 text-left">Search products...</span>
+          </button>
         </div>
+
+        {/* Global Search Modal */}
+        <SearchModal
+          isOpen={isSearchModalOpen}
+          onClose={() => setIsSearchModalOpen(false)}
+          initialQuery={searchQuery}
+        />
       </header>
 
       {/* Mobile Menu Drawer */}

@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { useAuth } from "../../../Contexts/Auth/AuthContext";
 import { motion } from "framer-motion";
 import { Search, Sparkles, ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import SearchModal from "../../../Components/Modal/Search/SearchModal";
 
 const heroVariants = {
   hidden: { opacity: 0 },
@@ -63,16 +65,15 @@ const getHeroContent = (userType = "general") => {
 };
 
 const HeroSection = ({ onSearch }) => {
+  const router = useRouter();
   const { user } = useAuth();
   const userType = user?.role || "general";
   const heroContent = getHeroContent(userType);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim() && onSearch) {
-      onSearch(searchQuery);
-    }
+  const handleSearchClick = () => {
+    setIsSearchModalOpen(true);
   };
 
   return (
@@ -96,7 +97,7 @@ const HeroSection = ({ onSearch }) => {
 
         {/* Subtle grid pattern overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-black/0 opacity-30"></div>
-        <div className="absolute inset-0 bg-[url('https://sdmntprwestus.oaiusercontent.com/files/00000000-9ea8-6230-8198-1fa857bd40c1/raw?se=2025-04-14T15%3A38%3A42Z&sp=r&sv=2024-08-04&sr=b&scid=3328526e-d174-561d-9b28-5d0135323a84&skoid=72d71449-cf2f-4f10-a498-f160460104ee&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-04-14T08%3A57%3A00Z&ske=2025-04-15T08%3A57%3A00Z&sks=b&skv=2024-08-04&sig=%2BgwJuHN07Mi8j1/ajKYwHqPRvDISOyWFc1ETeO1Sj%2BE%3D')] bg-repeat bg-[length:100px_100px] opacity-10"></div>
+        <div className="absolute inset-0 bg-[url('https://sdmntprwestus.oaiusercontent.com/files/00000000-9ea8-6230-8198-1fa857bd40c1/raw?se=2025-04-14T15%3A38%3A42Z&sp=r&sv=2024-08-04&sr=b&scid=3328526e-d174-561d-9b28-5d0135323a84&skoid=72d71449-cf2f-4f10-a498-f160460104ee&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-04-14T08%3A57%3A00Z&ske=2025-04-15T08%3A57%3A00Z&sks=b&skv=2024-08-04&sig=%2BgwJuHN07Mi8j1/ajKYwHqPRvDISOyWFc1ETeO1Sj%2BE%3D')] bg-repeat bg-[length:80px_80px] opacity-10"></div>
       </div>
 
       <motion.div
@@ -133,29 +134,34 @@ const HeroSection = ({ onSearch }) => {
           variants={itemVariants}
         >
           {/* Enhanced search form with improved visual design */}
-          <form onSubmit={handleSubmit} className="relative group">
-            <div className="absolute inset-0 bg-white/20 rounded-full blur-md group-hover:blur-lg transition-all duration-300 opacity-70 group-hover:opacity-100 -z-10 group-focus-within:opacity-100 group-focus-within:blur-lg"></div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={userType === "jobSeeker" ? "Search for jobs, companies, skills..." :
-                          userType === "investor" ? "Search for startups, founders, industries..." :
-                          userType === "startupOwner" ? "Search for tools, talent, investors..." :
-                          "Search for products, startups, skills, jobs..."}
-              className="w-full pl-6 pr-16 py-4 sm:py-5 rounded-full text-gray-700 focus:outline-none focus:ring-4 focus:ring-white/30 shadow-xl bg-white text-base transition-all duration-300 border border-transparent focus:border-violet-200 group-hover:shadow-violet-500/20"
-              aria-label="Search query"
-            />
-            <motion.button
-              type="submit"
+          <div className="relative group">
+            <div className="absolute inset-0 bg-white/20 rounded-full blur-md group-hover:blur-lg transition-all duration-300 opacity-70 group-hover:opacity-100 -z-10"></div>
+            <button
+              onClick={handleSearchClick}
+              className="w-full flex items-center pl-6 pr-16 py-4 sm:py-5 rounded-full text-gray-500 shadow-xl bg-white text-base transition-all duration-300 border border-transparent hover:border-violet-200 group-hover:shadow-violet-500/20 text-left"
+            >
+              <span>
+                {userType === "jobSeeker" ? "Search for jobs, companies, skills..." :
+                userType === "investor" ? "Search for startups, founders, industries..." :
+                userType === "startupOwner" ? "Search for tools, talent, investors..." :
+                "Search for products, startups, skills, jobs..."}
+              </span>
+            </button>
+            <motion.div
               className="absolute right-2.5 top-2.5 bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 active:from-violet-800 active:to-violet-900 text-white p-2.5 rounded-full transition-all duration-300 shadow-lg hover:shadow-violet-500/50"
-              aria-label="Search"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               <Search className="w-5 h-5" />
-            </motion.button>
-          </form>
+            </motion.div>
+          </div>
+
+          {/* Search Modal */}
+          <SearchModal
+            isOpen={isSearchModalOpen}
+            onClose={() => setIsSearchModalOpen(false)}
+            initialQuery={searchQuery}
+          />
 
           {/* Enhanced quick search tags with personalized suggestions */}
           <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -176,7 +182,11 @@ const HeroSection = ({ onSearch }) => {
                   className="px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white/90 text-sm rounded-full transition-all duration-300 backdrop-blur-sm border border-white/10 hover:border-white/30 shadow-sm hover:shadow-white/10"
                   onClick={() => {
                     setSearchQuery(tag);
-                    onSearch(tag);
+                    if (onSearch) {
+                      onSearch(tag);
+                    } else {
+                      router.push(`/search?q=${encodeURIComponent(tag)}`);
+                    }
                   }}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}

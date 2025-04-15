@@ -96,8 +96,8 @@ const InterestBasedSection = () => {
 
   return (
     <SectionWrapper delay={0.4}>
-      <div className="bg-white rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white rounded-xl overflow-hidden p-6">
+        <div className="flex items-center justify-between">
           <div className="flex items-center">
             <span className="text-violet-600 mr-2">
               <Star className="w-6 h-6" />

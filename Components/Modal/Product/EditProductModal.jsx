@@ -28,7 +28,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
   const [validationErrors, setValidationErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [isImageUploading, setIsImageUploading] = useState(false);
-  
+
   // Main form state
   const [formData, setFormData] = useState({
     name: product?.name || "", // Will be read-only
@@ -91,9 +91,9 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
         },
         gallery: []
       });
-      
+
       setThumbnailPreview(product.thumbnail);
-      
+
       if (product.gallery && Array.isArray(product.gallery)) {
         setGalleryPreviews(product.gallery.map(item => ({
           id: item._id,
@@ -103,7 +103,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
       } else {
         setGalleryPreviews([]);
       }
-      
+
       setHasUnsavedChanges(false);
     }
   }, [product, isOpen]);
@@ -111,7 +111,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
   // Handle form input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
+
     if (type === "checkbox") {
       setFormData(prev => ({ ...prev, [name]: checked }));
     } else if (name.startsWith("links.")) {
@@ -127,9 +127,9 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
-    
+
     setHasUnsavedChanges(true);
-    
+
     // Clear validation error for this field if it exists
     if (validationErrors[name]) {
       setValidationErrors(prev => {
@@ -144,7 +144,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
   const handleDescriptionChange = (content) => {
     setFormData(prev => ({ ...prev, description: content }));
     setHasUnsavedChanges(true);
-    
+
     if (validationErrors.description) {
       setValidationErrors(prev => {
         const newErrors = { ...prev };
@@ -158,27 +158,27 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
   const handleThumbnailChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     // Validate file size and type
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Image size should be less than 5MB");
       return;
     }
-    
+
     if (!file.type.startsWith("image/")) {
       toast.error("Please upload a valid image file");
       return;
     }
-    
+
     setFormData(prev => ({ ...prev, thumbnail: file }));
-    
+
     // Create a preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setThumbnailPreview(reader.result);
     };
     reader.readAsDataURL(file);
-    
+
     setHasUnsavedChanges(true);
   };
 
@@ -186,31 +186,31 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
   const handleGalleryChange = (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
-    
+
     // Validate total count
     if (galleryPreviews.length + files.length > 10) {
       toast.error("Maximum 10 gallery images allowed");
       return;
     }
-    
+
     // Process each file
     const newPreviews = [];
     const newGalleryFiles = [];
-    
+
     files.forEach(file => {
       // Validate file size and type
       if (file.size > 5 * 1024 * 1024) {
         toast.error(`${file.name} is too large (max 5MB)`);
         return;
       }
-      
+
       if (!file.type.startsWith("image/")) {
         toast.error(`${file.name} is not a valid image file`);
         return;
       }
-      
+
       newGalleryFiles.push(file);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -220,26 +220,26 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
           file: file,
           isExisting: false
         });
-        
+
         if (newPreviews.length === files.length) {
           setGalleryPreviews(prev => [...prev, ...newPreviews]);
         }
       };
       reader.readAsDataURL(file);
     });
-    
+
     setFormData(prev => ({
       ...prev,
       gallery: [...prev.gallery, ...newGalleryFiles]
     }));
-    
+
     setHasUnsavedChanges(true);
   };
 
   // Remove a gallery image
   const removeGalleryImage = async (indexToRemove) => {
     const imageToRemove = galleryPreviews[indexToRemove];
-    
+
     // If it's an existing image from the server, delete it via API
     if (imageToRemove.isExisting && product?.slug) {
       try {
@@ -250,10 +250,10 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
         return;
       }
     }
-    
+
     // Update the previews
     setGalleryPreviews(prev => prev.filter((_, index) => index !== indexToRemove));
-    
+
     // Update the form data for new uploads
     if (!imageToRemove.isExisting) {
       setFormData(prev => ({
@@ -261,41 +261,41 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
         gallery: prev.gallery.filter((_, index) => index !== indexToRemove)
       }));
     }
-    
+
     setHasUnsavedChanges(true);
   };
 
   // Form validation
   const validateForm = () => {
     const errors = {};
-    
+
     // Remove name validation since it's read-only now
     if (!formData.description || formData.description.trim().length < 10) {
       errors.description = "Description must be at least 10 characters";
     }
-    
+
     if (!formData.category) {
       errors.category = "Please select a category";
     }
-    
+
     if (formData.pricingType === "paid") {
       if (!formData.pricingAmount || parseFloat(formData.pricingAmount) <= 0) {
         errors.pricingAmount = "Please enter a valid price amount";
       }
     }
-    
+
     // Validate URLs
     Object.entries(formData.links).forEach(([key, value]) => {
       if (value && !value.match(/^(https?:\/\/)?.+\..+/)) {
         errors[`links.${key}`] = "Please enter a valid URL";
       }
     });
-    
+
     // Check if we have a thumbnail (either new or existing)
     if (!formData.thumbnail && !thumbnailPreview) {
       errors.thumbnail = "Product thumbnail is required";
     }
-    
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -303,14 +303,14 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
   // Submit the form
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       toast.error("Please fix the form errors");
       return;
     }
-    
+
     setIsSaving(true);
-    
+
     try {
       // Create formatted data for API
       const productData = {
@@ -325,7 +325,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
       };
 
       const result = await updateProduct(product.slug, productData);
-      
+
       if (result.success) {
         if (formData.gallery.length > 0 && product.slug) {
           setIsImageUploading(true);
@@ -341,7 +341,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
         } else {
           toast.success("Product updated successfully");
         }
-        
+
         setHasUnsavedChanges(false);
         onClose(result.data || result.product);
       } else {
@@ -381,7 +381,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
       ['clean']
     ],
   };
-  
+
   const editorFormats = [
     'header',
     'bold', 'italic', 'underline', 'strike', 'blockquote',
@@ -391,7 +391,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
 
   // Categories (normally these would come from an API)
   const categories = [
-    "Web App", "Mobile App", "Desktop App", "API/Backend", 
+    "Web App", "Mobile App", "Desktop App", "API/Backend",
     "Design Tool", "Developer Tool", "AI/ML", "SaaS",
     "E-commerce", "Productivity", "Education", "Entertainment",
     "Social Media", "Healthcare", "Finance", "Other"
@@ -427,8 +427,9 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <Tooltip id="tooltip" className="z-[100]" />
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         <motion.div
+          key="edit-product-modal"
           className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden relative"
           variants={modalVariants}
           initial="hidden"
@@ -449,7 +450,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
               <HiX className="w-6 h-6" />
             </button>
           </div>
-          
+
           {/* Tabs */}
           <div className="border-b border-gray-200 px-6 flex overflow-x-auto hide-scrollbar">
             {tabs.map((tab) => (
@@ -469,11 +470,11 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
               </button>
             ))}
           </div>
-          
+
           {/* Form content */}
           <div className="flex-1 overflow-y-auto p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
-              
+
               {/* Basic Info Tab */}
               {activeTab === "basic" && (
                 <div className="space-y-4">
@@ -501,7 +502,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                       Product names cannot be modified after creation to maintain consistency
                     </p>
                   </div>
-                  
+
                   <div>
                     <label htmlFor="tagline" className="block text-sm font-medium text-gray-700 mb-1">
                       Tagline
@@ -520,7 +521,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                       {formData.tagline?.length || 0}/160 characters
                     </p>
                   </div>
-                  
+
                   <div>
                     <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                       Description*
@@ -539,7 +540,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                       <p className="mt-1 text-sm text-red-600">{validationErrors.description}</p>
                     )}
                   </div>
-                  
+
                   <div>
                     <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
                       Category*
@@ -562,7 +563,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                       <p className="mt-1 text-sm text-red-600">{validationErrors.category}</p>
                     )}
                   </div>
-                  
+
                   <div>
                     <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
                       Status
@@ -586,17 +587,17 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                   </div>
                 </div>
               )}
-              
+
               {/* Media Tab */}
               {activeTab === "media" && (
                 <div className="space-y-6">
                   {/* Thumbnail Section */}
                   <div className="border border-gray-200 rounded-lg p-4">
                     <h3 className="font-medium text-gray-900 mb-3">Product Thumbnail*</h3>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <div 
+                        <div
                           className={`border-2 border-dashed rounded-lg p-4 h-48 flex flex-col items-center justify-center cursor-pointer hover:border-violet-500 transition-colors ${
                             validationErrors.thumbnail ? "border-red-500" : "border-gray-300"
                           }`}
@@ -617,7 +618,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                           <p className="mt-1 text-sm text-red-600">{validationErrors.thumbnail}</p>
                         )}
                       </div>
-                      
+
                       {thumbnailPreview && (
                         <div className="relative h-48 bg-gray-100 rounded-lg overflow-hidden">
                           <Image
@@ -642,14 +643,14 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Gallery Section */}
                   <div className="border border-gray-200 rounded-lg p-4">
                     <h3 className="font-medium text-gray-900 mb-3">Product Gallery</h3>
                     <p className="text-sm text-gray-500 mb-4">Add up to 10 images to showcase your product</p>
-                    
+
                     <div className="mb-4">
-                      <div 
+                      <div
                         className="border-2 border-dashed border-gray-300 rounded-lg p-4 h-32 flex flex-col items-center justify-center cursor-pointer hover:border-violet-500 transition-colors"
                         onClick={() => galleryInputRef.current?.click()}
                       >
@@ -665,7 +666,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                         />
                       </div>
                     </div>
-                    
+
                     {galleryPreviews.length > 0 && (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                         {galleryPreviews.map((preview, index) => (
@@ -688,14 +689,14 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                         ))}
                       </div>
                     )}
-                    
+
                     {galleryPreviews.length === 0 && (
                       <p className="text-sm text-gray-400 text-center py-4">No gallery images yet</p>
                     )}
                   </div>
                 </div>
               )}
-              
+
               {/* Pricing Tab */}
               {activeTab === "pricing" && (
                 <div className="space-y-6">
@@ -703,10 +704,10 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Pricing Type
                     </label>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {["free", "paid", "contact"].map(type => (
-                        <div 
+                        <div
                           key={type}
                           className={`border rounded-lg p-4 cursor-pointer transition-all ${
                             formData.pricingType === type
@@ -741,7 +742,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                       ))}
                     </div>
                   </div>
-                  
+
                   {formData.pricingType === "paid" && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -772,7 +773,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                           <p className="mt-1 text-sm text-red-600">{validationErrors.pricingAmount}</p>
                         )}
                       </div>
-                      
+
                       <div>
                         <label htmlFor="pricingCurrency" className="block text-sm font-medium text-gray-700 mb-1">
                           Currency
@@ -793,14 +794,14 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                   )}
                 </div>
               )}
-              
+
               {/* Links Tab */}
               {activeTab === "links" && (
                 <div className="space-y-4">
                   <p className="text-sm text-gray-500 mb-4">
                     Add relevant links to your product. These will be displayed on your product page.
                   </p>
-                  
+
                   {Object.entries({
                     website: "Website URL",
                     github: "GitHub Repository",
@@ -830,7 +831,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                   ))}
                 </div>
               )}
-              
+
               {/* Tags Tab */}
               {activeTab === "tags" && (
                 <div className="space-y-4">
@@ -851,12 +852,12 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                       Up to 10 tags to categorize your product. Tags help users discover your product.
                     </p>
                   </div>
-                  
+
                   {formData.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-3">
                       {formData.tags.map((tag, index) => (
-                        <span 
-                          key={index} 
+                        <span
+                          key={index}
                           className="bg-violet-100 text-violet-800 px-3 py-1 rounded-full text-sm"
                         >
                           {tag}
@@ -868,7 +869,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
               )}
             </form>
           </div>
-          
+
           {/* Footer */}
           <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
             <div className="flex text-sm">

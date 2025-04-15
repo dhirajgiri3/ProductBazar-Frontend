@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiUsers, FiSearch, FiEdit, FiChevronLeft, FiChevronRight, FiLoader, FiAlertTriangle } from 'react-icons/fi';
 import { motion } from 'framer-motion';
@@ -8,7 +8,7 @@ import { useAuth } from '../../../Contexts/Auth/AuthContext';
 import AdminRoleManager from '../../../Components/Admin/AdminRoleManager';
 import SecondaryRoles from '../../../Components/User/SecondaryRoles';
 import RoleCapabilities from '../../../Components/User/RoleCapabilities';
-import api from '../../../Utils/api';
+import { makePriorityRequest } from '../../../Utils/api';
 import logger from '../../../Utils/logger';
 
 const AdminUsersPage = () => {
@@ -23,6 +23,9 @@ const AdminUsersPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [roleFilter, setRoleFilter] = useState('');
+
+  // Reference to the current abort controller for canceling requests
+  const abortControllerRef = useRef(null);
 
   const roles = [
     { id: '', label: 'All Roles' },
@@ -43,49 +46,88 @@ const AdminUsersPage = () => {
     }
   }, [user, authLoading, router]);
 
-  // Fetch users
-  useEffect(() => {
-    const fetchUsers = async () => {
-      if (!user || user.role !== 'admin') return;
+  // Fetch users with debounce and proper request cancellation
+  const fetchUsers = useCallback(async () => {
+    if (!user || user.role !== 'admin') return;
 
-      setIsLoading(true);
-      try {
-        const queryParams = new URLSearchParams({
-          page: currentPage,
-          limit: 10
-        });
+    // Cancel any previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort('Canceled due to new request');
+    }
 
-        if (search) {
-          queryParams.append('search', search);
-        }
+    // Create a new AbortController
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
-        if (roleFilter) {
-          queryParams.append('role', roleFilter);
-        }
+    setIsLoading(true);
+    // Clear any previous error
+    setError('');
 
-        const response = await api.get(`/admin/users?${queryParams.toString()}`);
+    try {
+      const queryParams = new URLSearchParams({
+        page: currentPage,
+        limit: 10
+      });
 
-        if (response.data.status === 'success') {
-          setUsers(response.data.data.users);
-          setTotalPages(response.data.data.totalPages);
-        } else {
-          setError('Failed to fetch users');
-        }
-      } catch (err) {
+      if (search) {
+        queryParams.append('search', search);
+      }
+
+      if (roleFilter) {
+        queryParams.append('role', roleFilter);
+      }
+
+      // Use makePriorityRequest to ensure this request gets priority
+      const response = await makePriorityRequest('get', `/admin/users?${queryParams.toString()}`, {
+        signal: controller.signal
+      });
+
+      if (response.data.status === 'success') {
+        setUsers(response.data.data.users);
+        setTotalPages(response.data.data.totalPages);
+      } else {
+        setError('Failed to fetch users');
+      }
+    } catch (err) {
+      // Only set error if it's not a canceled request
+      if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
         logger.error('Error fetching users:', err);
         setError(err.response?.data?.message || 'Failed to fetch users');
-      } finally {
-        setIsLoading(false);
+      } else {
+        // For canceled requests, just log at debug level
+        logger.debug('User fetch request was canceled, likely due to a newer request');
       }
-    };
-
-    fetchUsers();
+    } finally {
+      setIsLoading(false);
+    }
   }, [user, currentPage, search, roleFilter]);
 
-  // Handle search
+  // Trigger fetch when dependencies change
+  useEffect(() => {
+    fetchUsers();
+
+    // Cleanup function to abort any pending requests when component unmounts
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort('Component unmounted');
+      }
+    };
+  }, [fetchUsers]);
+
+  // Handle search with debounce
   const handleSearch = (e) => {
     e.preventDefault();
-    setCurrentPage(1); // Reset to first page on new search
+    // Reset to first page on new search
+    setCurrentPage(1);
+  };
+
+  // Handle search input change with debounce
+  const handleSearchInputChange = (e) => {
+    // Cancel any previous request as we're typing
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort('Canceled due to new search input');
+    }
+    setSearch(e.target.value);
   };
 
   // Handle user selection
@@ -154,7 +196,7 @@ const AdminUsersPage = () => {
                 <input
                   type="text"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={handleSearchInputChange}
                   placeholder="Search users..."
                   className="flex-grow p-2 border border-gray-300 rounded-md text-sm"
                 />
@@ -171,6 +213,10 @@ const AdminUsersPage = () => {
               <select
                 value={roleFilter}
                 onChange={(e) => {
+                  // Cancel any previous request when changing filter
+                  if (abortControllerRef.current) {
+                    abortControllerRef.current.abort('Canceled due to role filter change');
+                  }
                   setRoleFilter(e.target.value);
                   setCurrentPage(1); // Reset to first page on filter change
                 }}
@@ -244,7 +290,13 @@ const AdminUsersPage = () => {
             {totalPages > 1 && (
               <div className="flex justify-between items-center mt-4 pt-4 border-t">
                 <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  onClick={() => {
+                    // Cancel any previous request when changing page
+                    if (abortControllerRef.current) {
+                      abortControllerRef.current.abort('Canceled due to pagination change');
+                    }
+                    setCurrentPage(prev => Math.max(prev - 1, 1));
+                  }}
                   disabled={currentPage === 1}
                   className={`p-2 rounded-md ${
                     currentPage === 1
@@ -260,7 +312,13 @@ const AdminUsersPage = () => {
                 </span>
 
                 <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  onClick={() => {
+                    // Cancel any previous request when changing page
+                    if (abortControllerRef.current) {
+                      abortControllerRef.current.abort('Canceled due to pagination change');
+                    }
+                    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                  }}
                   disabled={currentPage === totalPages}
                   className={`p-2 rounded-md ${
                     currentPage === totalPages

@@ -89,8 +89,8 @@ const PersonalizedSection = () => {
 
   return (
     <SectionWrapper delay={0.2}>
-      <div className="bg-white rounded-xl overflow-hidden h-full">
-        <div className="flex items-center justify-between mt-6 px-6">
+      <div className="bg-white rounded-xl overflow-hidden h-full my-6">
+        <div className="flex items-center justify-between px-6">
           <div className="flex items-center">
             <span className="text-pink-600 mr-3">
               <Heart className="w-6 h-6" />

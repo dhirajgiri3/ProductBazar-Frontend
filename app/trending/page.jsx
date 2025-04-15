@@ -364,17 +364,20 @@ export default function TrendingPage() {
           </div>
 
           {/* Content Section */}
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="wait" initial={false}>
+            {/* We use a key to ensure only one child is rendered at a time */}
             {loading ? (
-              <LoadingState />
+              <LoadingState key="loading" />
             ) : error ? (
               <ErrorState
+                key="error"
                 error={error}
                 onRetry={handleRefresh}
                 onReset={handleResetFilters}
               />
             ) : (
               <ProductGrid
+                key={`grid-${filter}-${category}`}
                 products={products}
                 filter={filter}
                 category={category}

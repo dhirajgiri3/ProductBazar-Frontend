@@ -89,13 +89,16 @@ const NewProductsSection = () => {
             // Try to fetch new products directly from the products API as fallback
             try {
               // Use the API utility for better error handling and consistency
+              // First try the recommendations endpoint with higher priority
               const response = await makePriorityRequest('GET', '/recommendations/new', {
                 params: {
                   limit: 6,
                   days: 30,
-                  _t: Date.now() // Cache busting
+                  _t: Date.now(), // Cache busting
+                  _priority: 'high' // Ensure high priority
                 },
-                signal: abortController.signal
+                signal: abortController.signal,
+                retryCount: 1 // Start with retry count 1 to enable automatic retries
               });
 
               if (response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
@@ -126,13 +129,16 @@ const NewProductsSection = () => {
                 // Try one more fallback to the direct products API
                 try {
                   // Use the API utility for better error handling and consistency
-                  const response = await makePriorityRequest('GET', '/products/trending', {
+                  // Try the recent products endpoint first
+                  const response = await makePriorityRequest('GET', '/products/recent', {
                     params: {
                       limit: 6,
-                      timeRange: '30d',
-                      _t: Date.now() // Cache busting
+                      days: 30,
+                      _t: Date.now(), // Cache busting
+                      _priority: 'high' // Ensure high priority
                     },
-                    signal: abortController.signal
+                    signal: abortController.signal,
+                    retryCount: 1 // Start with retry count 1 to enable automatic retries
                   });
 
                   if (response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
@@ -144,6 +150,8 @@ const NewProductsSection = () => {
                       reason: 'new',
                       explanationText: 'Recently added product'
                     }));
+
+                    logger.info(`Successfully fetched ${transformedData.length} new products from recent products API`);
                     setNewProducts(transformedData);
 
                     // Store the fetch time for the second fallback as well
@@ -163,6 +171,47 @@ const NewProductsSection = () => {
                 } catch (secondFallbackError) {
                   if (!abortController.signal.aborted) {
                     logger.error("Second fallback new products fetch failed:", secondFallbackError);
+
+                    // Try one last fallback to trending products
+                    try {
+                      const response = await makePriorityRequest('GET', '/products/trending', {
+                        params: {
+                          limit: 6,
+                          timeRange: '30d',
+                          _t: Date.now(), // Cache busting
+                          _priority: 'high' // Ensure high priority
+                        },
+                        signal: abortController.signal,
+                        retryCount: 1 // Start with retry count 1 to enable automatic retries
+                      });
+
+                      if (response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
+                        // Transform the data to match the expected format
+                        const transformedData = response.data.data.map(product => ({
+                          productData: product,
+                          product: product._id,
+                          score: 1.0,
+                          reason: 'new',
+                          explanationText: 'Recently added product'
+                        }));
+
+                        logger.info(`Successfully fetched ${transformedData.length} new products from trending products API as last resort`);
+                        setNewProducts(transformedData);
+
+                        // Store the fetch time for the third fallback as well
+                        try {
+                          sessionStorage.setItem(lastFetchKey, now.toString());
+                        } catch (e) {
+                          // Ignore storage errors
+                        }
+
+                        if (error) setError(null);
+                      }
+                    } catch (thirdFallbackError) {
+                      if (!abortController.signal.aborted) {
+                        logger.error("All fallback attempts for new products failed", thirdFallbackError);
+                      }
+                    }
                   }
                 }
               }

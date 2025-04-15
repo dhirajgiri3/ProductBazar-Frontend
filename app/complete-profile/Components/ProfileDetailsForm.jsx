@@ -35,6 +35,7 @@ export const ProfileDetailsForm = ({
               label="Company Name (Optional)"
               type="text"
               value={formData.companyName}
+              placeholder="Company Name"
               onChange={handleChange}
               error={formErrors.companyName}
             />
@@ -43,6 +44,7 @@ export const ProfileDetailsForm = ({
               label="Your Role (Optional)"
               type="text"
               value={formData.companyRole}
+              placeholder="Your Role"
               onChange={handleChange}
               error={formErrors.companyRole}
             />

@@ -67,6 +67,7 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "styled-components": "^6.1.12",
+    "synonyms": "^1.0.1",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "tsparticles": "^3.8.1",

@@ -60,9 +60,10 @@ const LoginPrompt = ({
   };
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       {isOpen && (
         <motion.div
+          key="login-prompt-backdrop"
           className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           variants={backdropVariants}
           initial="hidden"

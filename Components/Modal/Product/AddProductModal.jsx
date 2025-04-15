@@ -250,19 +250,19 @@ const AddProductModal = ({ isOpen, onClose }) => {
       if (formData.thumbnail) {
         productData.thumbnail = formData.thumbnail;
       }
-      
+
       const result = await createProduct(productData);
       if (result.success) {
         if (formData.gallery.length > 0 && result.product.slug) {
           try {
             // Show upload progress for gallery
             toast.loading("Uploading gallery images...");
-              
+
             const galleryResponse = await uploadProductGalleryImages(
               result.product.slug,
               formData.gallery
             );
-              
+
             if (galleryResponse.success) {
               toast.dismiss(); // Dismiss the loading toast
               // Don't show separate gallery success toast
@@ -341,8 +341,9 @@ const AddProductModal = ({ isOpen, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <Tooltip id="tooltip" className="z-[100]" />
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         <motion.div
+          key="add-product-modal"
           className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden relative"
           variants={modalVariants}
           initial="hidden"

@@ -198,8 +198,8 @@ export default function Home() {
 
         {/* New Arrivals Section - Important for discovery */}
         <SectionWrapper delay={isAuthenticated ? 0.2 : 0.1}>
-          <div className="bg-white rounded-xl overflow-hidden border border-gray-100 px-6">
-            <div className="flex-col items-center pt-6 ">
+          <div className="bg-white rounded-xl overflow-hidden border border-gray-100 p-6">
+            <div className="flex-col items-center">
               <div className="flex items-center">
                 <span className="text-green-600 mr-2">
                   <Clock className="w-6 h-6" />
@@ -379,119 +379,6 @@ export default function Home() {
               <SectionSkeleton height="h-64" />
             </div>
           )}
-        </div>
-
-        {/* Minimalistic footer */}
-        <div className="mt-16 pt-6 border-t border-gray-100">
-          <div className="flex flex-wrap justify-between">
-            <div className="w-full md:w-auto mb-6 md:mb-0">
-              <h4 className="font-medium text-gray-800 mb-3">ProductBazar</h4>
-              <p className="text-sm text-gray-500 max-w-xs">
-                Discover innovative products and connect with creators from
-                around the world.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-x-12 gap-y-6">
-              <div>
-                <h5 className="font-medium text-gray-700 mb-3 text-sm">
-                  Products
-                </h5>
-                <ul className="space-y-2 text-sm">
-                  <li>
-                    <a
-                      href="/products/trending"
-                      className="text-gray-500 hover:text-violet-600 transition-colors"
-                    >
-                      Trending
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="/products/new"
-                      className="text-gray-500 hover:text-violet-600 transition-colors"
-                    >
-                      New Arrivals
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="/categories"
-                      className="text-gray-500 hover:text-violet-600 transition-colors"
-                    >
-                      Categories
-                    </a>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <h5 className="font-medium text-gray-700 mb-3 text-sm">
-                  Community
-                </h5>
-                <ul className="space-y-2 text-sm">
-                  <li>
-                    <a
-                      href="/forum"
-                      className="text-gray-500 hover:text-violet-600 transition-colors"
-                    >
-                      Forum
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="/events"
-                      className="text-gray-500 hover:text-violet-600 transition-colors"
-                    >
-                      Events
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="/blog"
-                      className="text-gray-500 hover:text-violet-600 transition-colors"
-                    >
-                      Blog
-                    </a>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <h5 className="font-medium text-gray-700 mb-3 text-sm">
-                  Company
-                </h5>
-                <ul className="space-y-2 text-sm">
-                  <li>
-                    <a
-                      href="/about"
-                      className="text-gray-500 hover:text-violet-600 transition-colors"
-                    >
-                      About
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="/contact"
-                      className="text-gray-500 hover:text-violet-600 transition-colors"
-                    >
-                      Contact
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="/help"
-                      className="text-gray-500 hover:text-violet-600 transition-colors"
-                    >
-                      Help
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          <div className="mt-8 pt-4 border-t border-gray-50 text-center text-sm text-gray-400">
-            <p>
-              © {new Date().getFullYear()} ProductBazar. All rights reserved.
-            </p>
-          </div>
         </div>
       </div>
 

@@ -11,9 +11,9 @@ const backdropVariants = {
 // Modal animation variants
 const modalVariants = {
   hidden: { scale: 0.8, opacity: 0, y: 20 },
-  visible: { 
-    scale: 1, 
-    opacity: 1, 
+  visible: {
+    scale: 1,
+    opacity: 1,
     y: 0,
     transition: {
       type: "spring",
@@ -21,8 +21,8 @@ const modalVariants = {
       damping: 25
     }
   },
-  exit: { 
-    scale: 0.8, 
+  exit: {
+    scale: 0.8,
     opacity: 0,
     y: 20,
     transition: { duration: 0.2 }
@@ -32,8 +32,8 @@ const modalVariants = {
 // Content animation variants
 const contentVariants = {
   hidden: { opacity: 0, y: 10 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: {
       delay: 0.1,
@@ -61,9 +61,10 @@ const DeleteCommentModal = ({
   };
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       {isOpen && (
         <motion.div
+          key="delete-comment-modal"
           className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           variants={backdropVariants}
           initial="hidden"
@@ -93,9 +94,9 @@ const DeleteCommentModal = ({
                 <FaTimes size={18} />
               </button>
             </div>
-            
+
             {/* Modal Content */}
-            <motion.div 
+            <motion.div
               className="p-6"
               variants={contentVariants}
               initial="hidden"
@@ -104,7 +105,7 @@ const DeleteCommentModal = ({
               <p className="text-gray-700 dark:text-gray-300 mb-4">
                 {message}
               </p>
-              
+
               {/* Content Preview */}
               {content && (
                 <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg mb-6 max-h-32 overflow-auto">
@@ -113,7 +114,7 @@ const DeleteCommentModal = ({
                   </p>
                 </div>
               )}
-              
+
               {/* Action Buttons */}
               <div className="flex justify-end gap-3 mt-6">
                 <motion.button
@@ -125,7 +126,7 @@ const DeleteCommentModal = ({
                 >
                   Cancel
                 </motion.button>
-                
+
                 <motion.button
                   onClick={onConfirm}
                   disabled={isLoading}

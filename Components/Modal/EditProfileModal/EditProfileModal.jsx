@@ -81,6 +81,7 @@ const EditProfileModal = ({ isOpen, onClose }) => {
     // Media
     profilePicture: null,
     profileImageFile: null, // Store the actual file for upload
+    removeProfilePicture: false, // Flag to indicate if profile picture should be removed
     bannerImage: null
   });
   const [validationErrors, setValidationErrors] = useState({});
@@ -152,6 +153,7 @@ const EditProfileModal = ({ isOpen, onClose }) => {
         // Media
         profilePicture: user.profilePicture || null,
         profileImageFile: null, // Initialize with null
+        removeProfilePicture: false, // Initialize with false
         bannerImage: user.bannerImage || null
       });
     }
@@ -421,7 +423,7 @@ const EditProfileModal = ({ isOpen, onClose }) => {
               {/* Content */}
               <div className="relative z-10 p-6 max-h-[calc(100vh-20rem)] overflow-y-auto bg-white">
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <AnimatePresence mode="wait">
+                  <AnimatePresence>
                     {activeTab === "basics" && (
                       <ProfileBasicsSection
                         formData={formData}

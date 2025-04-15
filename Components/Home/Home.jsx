@@ -13,6 +13,7 @@ import { useRecommendation } from "../../Contexts/Recommendation/RecommendationC
 import { useAuth } from "../../Contexts/Auth/AuthContext";
 import { toast } from "react-hot-toast";
 import logger from "../../Utils/logger";
+import SearchModal from "../Search/SearchModal";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -157,16 +158,7 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Search state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchOptions, setSearchOptions] = useState({
-    sort: "relevance",
-    category: "",
-    limit: 20,
-    page: 1,
-    natural_language: true,
-  });
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
   // Update any product in all relevant lists
   const updateProductInAllLists = useCallback((slug, updater) => {
@@ -177,8 +169,7 @@ const Home = () => {
     setFeaturedProducts(updateList(featuredProducts));
     setNewProducts(updateList(newProducts));
     setPersonalizedProducts(updateList(personalizedProducts));
-    setSearchResults(updateList(searchResults));
-  }, [trendingProducts, featuredProducts, newProducts, personalizedProducts, searchResults]);
+  }, [trendingProducts, featuredProducts, newProducts, personalizedProducts]);
 
   // Handle product interactions
   const handleUpvote = useCallback(
@@ -301,49 +292,12 @@ const Home = () => {
     [isAuthenticated, recordInteraction, router]
   );
 
-  // Fetch search results
-  const handleSearch = useCallback(
-    async (query, options = {}) => {
-      if (!query.trim()) {
-        setSearchResults([]);
-        setIsSearching(false);
-        return;
-      }
-
-      setIsSearching(true);
-
-      try {
-        const searchOpts = { ...searchOptions, ...options };
-        const results = await searchProducts(query, searchOpts);
-
-        if (results && results.products) {
-          setSearchResults(results.products);
-        } else {
-          setSearchResults([]);
-        }
-      } catch (error) {
-        logger.error("Search error:", error);
-        toast.error("Failed to search products");
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    },
-    [searchProducts, searchOptions]
-  );
-
-  // Debounce search to avoid too many requests
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery.trim()) {
-        handleSearch(searchQuery);
-      } else {
-        setSearchResults([]);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, handleSearch]);
+  // Handle search from hero section
+  const handleSearch = useCallback((query) => {
+    if (query && query.trim()) {
+      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+    }
+  }, [router]);
 
   // Load data on component mount
   useEffect(() => {
@@ -402,14 +356,7 @@ const Home = () => {
     <div className="min-h-screen">
       <div className="z-[2] relative">
         <Hero
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          searchResults={searchResults}
-          isSearching={isSearching}
-          handleSearch={handleSearch}
-          searchOptions={searchOptions}
-          setSearchOptions={setSearchOptions}
-          onProductClick={handleProductClick}
+          onSearch={handleSearch}
         />
       </div>
       <div className="z-[-1] relative">

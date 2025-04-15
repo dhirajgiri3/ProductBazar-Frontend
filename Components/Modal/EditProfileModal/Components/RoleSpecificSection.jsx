@@ -494,7 +494,7 @@ const RoleSpecificSection = ({ formData, setFormData, setHasUnsavedChanges }) =>
           </div>
         )}
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           <motion.div
             key={activeSection}
             initial={{ opacity: 0, y: 20 }}
