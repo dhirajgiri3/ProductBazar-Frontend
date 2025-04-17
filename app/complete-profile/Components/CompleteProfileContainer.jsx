@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../../../Contexts/Auth/AuthContext";
 // useRouter is not used for navigation based on original code, keeping import commented
-// import { useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import logger from "../../../Utils/logger";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { optimizeImage } from "../../../Utils/Image/imageUtils";
-import api from "../../../Utils/api";
+import api, { makePriorityRequest } from "../../../Utils/api";
 import LoaderComponent from "../../../Components/UI/LoaderComponent";
 import SuccessConfetti from "./SuccessConfetti"; // Adjust path
 
@@ -21,14 +21,14 @@ import { StepIndicator, NavigationButtons } from "./ProfileFormComponents";
 import { FormStep } from "./FormStep"; // Keep if Profile*Form components use it
 
 const CompleteProfileContainer = () => {
-  const { user, completeProfile, updateProfilePicture, authLoading, error: authError, clearError } = useAuth();
-  // const router = useRouter(); // Not used for navigation
+  const { user, completeProfile, updateProfilePicture, authLoading, error: authError, clearError, fetchUserData, skipProfileCompletion } = useAuth();
+  const router = useRouter();
   const fileInputRef = useRef(null);
 
   const [showConfetti, setShowConfetti] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "", lastName: "", email: "", phone: "", gender: "", birthDate: "",
-    bio: "", address: { country: "", city: "", street: "" }, openToWork: false,
+    bio: "", headline: "", address: { country: "", city: "", street: "" }, openToWork: false,
     about: "", preferredContact: "", skills: [], interests: [],
     socialLinks: { facebook: "", twitter: "", linkedin: "", instagram: "", github: "", website: "" },
     profilePicture: "", // URL from server or local preview
@@ -61,14 +61,29 @@ const CompleteProfileContainer = () => {
   const fetchRoleSpecificData = async (userId, role) => {
       if (!userId || !role || role === "user") return null;
       try {
-          const response = await api.get(`/users/${userId}/role-details`, { timeout: 10000 });
-          if (response.data.status === "success" && response.data.data) {
-              logger.info(`Fetched role details for ${role}:`, response.data.data);
-              return response.data.data;
+          // Use makePriorityRequest to prevent this request from being canceled during navigation
+          try {
+              // Use priority request to prevent cancellation during navigation
+              const response = await makePriorityRequest('get', `/users/${userId}/role-details`, { timeout: 10000 });
+              if (response.data.status === "success" && response.data.data) {
+                  logger.info(`Fetched role details for ${role}:`, response.data.data);
+                  return response.data.data;
+              }
+          } catch (priorityErr) {
+              // If priority request fails, fall back to regular request
+              logger.warn(`Priority request failed, falling back to regular request: ${priorityErr.message}`);
+              const response = await api.get(`/users/${userId}/role-details`, { timeout: 10000 });
+              if (response.data.status === "success" && response.data.data) {
+                  logger.info(`Fetched role details for ${role}:`, response.data.data);
+                  return response.data.data;
+              }
           }
           return null;
       } catch (err) {
-          logger.error(`Failed to fetch ${role} details:`, err);
+          // Don't log canceled errors as they're expected during navigation
+          if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
+              logger.error(`Failed to fetch ${role} details:`, err);
+          }
           return null;
       }
   };
@@ -80,6 +95,24 @@ const CompleteProfileContainer = () => {
       return;
     }
 
+    // If we have an access token but no user data yet, try to refresh user data
+    const hasAccessToken = typeof window !== 'undefined' && localStorage.getItem('accessToken');
+    if (!user && hasAccessToken && !authLoading) {
+      // Try to refresh user data from the API
+      const loadUserData = async () => {
+        try {
+          // Use the fetchUserData function from AuthContext
+          await fetchUserData(hasAccessToken);
+          // We don't need to set roleDataLoaded here as this effect will run again when user is updated
+        } catch (err) {
+          logger.error("Failed to refresh user data:", err);
+          setRoleDataLoaded(true); // Prevent infinite loading
+        }
+      };
+      loadUserData();
+      return;
+    }
+
     if (user) {
       const initialData = {
         firstName: user.firstName || "", lastName: user.lastName || "", email: user.email || "",
@@ -87,6 +120,7 @@ const CompleteProfileContainer = () => {
         gender: user.gender || "",
         birthDate: user.birthDate ? new Date(user.birthDate).toISOString().split("T")[0] : "",
         bio: user.bio || "",
+        headline: user.headline || "",
         address: typeof user.address === 'object' ? { ...user.address } : { country: '', city: '', street: user.address || '' },
         openToWork: user.openToWork || false, about: user.about || "", preferredContact: user.preferredContact || "",
         skills: user.skills || [],
@@ -136,7 +170,7 @@ const CompleteProfileContainer = () => {
         setRoleDataLoaded(true);
       }
     }
-  }, [user, authLoading]); // Depend on user and authLoading
+  }, [user, authLoading, fetchUserData]); // Depend on user, authLoading, and fetchUserData
 
   // Helper for initial role defaults
     const getInitialRoleDefaults = (role, baseData) => {
@@ -212,7 +246,10 @@ const CompleteProfileContainer = () => {
        setFormData((prev) => ({
         ...prev,
         profileImage: optimizedFile,
-        profilePicture: localPreview, // Use local preview URL initially
+        profilePicture: {
+          url: localPreview, // Use local preview URL initially
+          publicId: undefined // Will be set after upload
+        }
       }));
 
       // Optional: Attempt background upload if user exists, update URL on success
@@ -224,10 +261,24 @@ const CompleteProfileContainer = () => {
             // and return the URL, not modify auth context directly during this flow.
             // Assuming it returns { success: true, url: '...' } or similar
           const result = await updateProfilePicture(uploadData); // This might update context, be mindful
-          if (result?.url) {
-             setFormData((prev) => ({ ...prev, profilePicture: result.url })); // Update with server URL
-             setProfileImagePreview(result.url); // Update preview to server URL
-             toast.success("Profile picture updated.");
+          if (result?.success) {
+             // Use the URL from the result or from the profilePicture object
+             const imageUrl = result.url || result.profilePicture?.url;
+             const publicId = result.publicId || result.profilePicture?.publicId;
+             if (imageUrl) {
+               setFormData((prev) => ({
+                 ...prev,
+                 profilePicture: {
+                   url: imageUrl,
+                   publicId: publicId
+                 }
+               })); // Update with server URL
+               setProfileImagePreview(imageUrl); // Update preview to server URL
+               toast.success("Profile picture updated successfully.");
+             } else {
+               // Success but no URL returned (shouldn't happen)
+               toast.success("Profile picture updated.");
+             }
           } else {
             // Keep local preview if background upload fails but file is ready
              toast.success("Image ready for submission.");
@@ -482,8 +533,13 @@ const CompleteProfileContainer = () => {
             companyRole: formData.companyRole, industry: formData.industry,
             // Send roleDetails only if the user has a specific role and data exists
             ...(user?.role && user.role !== 'user' && Object.keys(roleDetailsPayload).length > 0 && { roleDetails: roleDetailsPayload }),
-             // Include profilePicture URL only if no new image is being uploaded
-            ...(!formData.profileImage && formData.profilePicture && { profilePicture: formData.profilePicture }),
+             // Include profilePicture as an object with url property if no new image is being uploaded
+            ...(!formData.profileImage && formData.profilePicture && {
+                profilePicture: {
+                    url: formData.profilePicture,
+                    publicId: formData.profilePicture.includes('cloudinary') ? formData.profilePicture.split('/').pop().split('.')[0] : undefined
+                }
+            }),
         };
 
         const submissionData = new FormData();
@@ -505,11 +561,10 @@ const CompleteProfileContainer = () => {
             toast.success("Profile completed successfully!");
             setShowConfetti(true);
 
-            // Redirect after confetti (using window.location as per original)
+            // Redirect after confetti
             setTimeout(() => {
                 setShowConfetti(false);
-                // Force refresh may not be needed if context updates user, but kept for reliability
-                 window.location.href = "/user"; // Direct navigation
+                 router.push("/user"); // Use router for navigation
             }, 2500); // Show confetti longer
 
         } else {
@@ -562,8 +617,11 @@ const CompleteProfileContainer = () => {
     }, [totalSteps, user?.role]);
 
   // --- Render Logic ---
-  // Show loading state while authentication is in progress
-  if (authLoading) {
+  // Check if we have an access token but user data isn't loaded yet
+  const hasAccessToken = typeof window !== 'undefined' && localStorage.getItem('accessToken');
+
+  // Show loading state while authentication is in progress or if we have a token but no user yet
+  if (authLoading || (hasAccessToken && !user)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <LoaderComponent text="Loading authentication data..." size="large" color="violet" />
@@ -571,8 +629,8 @@ const CompleteProfileContainer = () => {
     );
   }
 
-  // Only show error if auth is initialized but no user is found
-  if (!user) {
+  // Only show error if auth is initialized but no user is found and no token exists
+  if (!user && !hasAccessToken) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6 text-center">
         <h2 className="text-xl font-semibold text-red-600 mb-4">Authentication Error</h2>
@@ -598,7 +656,7 @@ const CompleteProfileContainer = () => {
 
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 py-12 pt-6 px-4 sm:px-6 lg:px-8">
       {showConfetti && <SuccessConfetti trigger={true} duration={5000} />}
       <div className="max-w-3xl mx-auto">
         {/* Header Logo/Brand */}
@@ -618,23 +676,55 @@ const CompleteProfileContainer = () => {
         >
           {/* Card Header */}
           <div className="border-b border-gray-200 flex-shrink-0 px-6 py-5 bg-gradient-to-r from-violet-50 to-white">
-             <motion.h2
-               className="text-xl font-semibold text-gray-800 mb-1 flex items-center"
-               initial={{ opacity: 0, y: -5 }}
-               animate={{ opacity: 1, y: 0 }}
-               transition={{ duration: 0.3 }}
-             >
-               <span className="w-1.5 h-6 bg-violet-600 rounded-full mr-3"></span>
-               Complete Your Profile
-             </motion.h2>
-             <motion.p
-               className="text-gray-600 text-sm ml-4"
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               transition={{ duration: 0.3, delay: 0.1 }}
-             >
-               Step {currentStep} of {totalSteps}: <span className="text-violet-700 font-medium">{getStepLabel(currentStep)}</span>
-             </motion.p>
+            <div className="flex justify-between items-start">
+              <div>
+                <motion.h2
+                  className="text-xl font-semibold text-gray-800 mb-1 flex items-center"
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <span className="w-1.5 h-6 bg-violet-600 rounded-full mr-3"></span>
+                  Complete Your Profile
+                </motion.h2>
+                <motion.p
+                  className="text-gray-600 text-sm ml-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                >
+                  Step {currentStep} of {totalSteps}: <span className="text-violet-700 font-medium">{getStepLabel(currentStep)}</span>
+                </motion.p>
+              </div>
+            </div>
+          </div>
+
+          {/* Skip Profile Banner */}
+          <div className="bg-violet-50 border-b border-violet-100 px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-violet-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="text-sm text-violet-800 font-medium">Profile completion is optional</p>
+                <p className="text-xs text-violet-600">You can complete your profile later from settings</p>
+              </div>
+            </div>
+            <motion.button
+              onClick={() => {
+                skipProfileCompletion();
+                toast.success("You can complete your profile later from settings");
+                router.push("/home");
+              }}
+              className="flex items-center px-3 py-1.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-md transition-colors"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Skip & Continue
+            </motion.button>
           </div>
 
           {/* Scrollable Content Area */}
@@ -736,15 +826,33 @@ const CompleteProfileContainer = () => {
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                transition={{ duration: 0.3, delay: 0.3 }}
+               className="flex items-center space-x-3"
              >
-                 <NavigationButtons
-                    currentStep={currentStep}
-                    totalSteps={totalSteps}
-                    onBack={handleBack}
-                    onNext={handleNext}
-                    onSubmit={handleSubmit}
-                    isSubmitting={isSubmitting}
-                 />
+               {/* Skip button - more prominent position */}
+               <motion.button
+                 onClick={() => {
+                   // Skip profile completion using the context function
+                   skipProfileCompletion();
+                   toast.success("You can complete your profile later from settings");
+                   router.push("/home");
+                 }}
+                 className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-violet-700 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+                 whileHover={{ scale: 1.02 }}
+                 whileTap={{ scale: 0.98 }}
+               >
+                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                 </svg>
+                 Skip for now
+               </motion.button>
+               <NavigationButtons
+                  currentStep={currentStep}
+                  totalSteps={totalSteps}
+                  onBack={handleBack}
+                  onNext={handleNext}
+                  onSubmit={handleSubmit}
+                  isSubmitting={isSubmitting}
+               />
             </motion.div>
           </div>
         </motion.div>

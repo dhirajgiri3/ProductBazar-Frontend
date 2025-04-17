@@ -18,11 +18,11 @@ import {
   FiX,
 } from "react-icons/fi";
 import { useAuth } from "../../../Contexts/Auth/AuthContext";
-import RoleManagement from "../../../Components/Settings/RoleManagement";
-import ProfileSettings from "../../../Components/Settings/ProfileSettings";
-import NotificationSettings from "../../../Components/Settings/NotificationSettings";
-import PrivacySettings from "../../../Components/Settings/PrivacySettings";
-import SecuritySettings from "../../../Components/Settings/SecuritySettings";
+import RoleManagement from "./Components/RoleManagement";
+import ProfileSettings from "./Components/ProfileSettings";
+import NotificationSettings from "./Components/NotificationSettings";
+import PrivacySettings from "./Components/PrivacySettings";
+import SecuritySettings from "./Components/SecuritySettings";
 import LoaderComponent from "../../../Components/UI/LoaderComponent";
 
 const SettingsPage = () => {

@@ -1,67 +1,86 @@
 "use client";
 
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { FiSave, FiCheck, FiBell, FiMail, FiSmartphone } from 'react-icons/fi';
-import api from '../../Utils/api';
-import { toast } from 'react-hot-toast';
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { FiSave, FiCheck, FiBell, FiMail, FiSmartphone } from "react-icons/fi";
+import { makePriorityRequest } from "../../../../Utils/api";
+import { toast } from "react-hot-toast";
 
 const NotificationSettings = ({ user }) => {
   const [settings, setSettings] = useState({
     emailNotifications: {
-      productUpdates: user?.notificationPreferences?.emailNotifications?.productUpdates ?? true,
-      newFollowers: user?.notificationPreferences?.emailNotifications?.newFollowers ?? true,
-      comments: user?.notificationPreferences?.emailNotifications?.comments ?? true,
-      mentions: user?.notificationPreferences?.emailNotifications?.mentions ?? true,
-      upvotes: user?.notificationPreferences?.emailNotifications?.upvotes ?? true,
-      newsletter: user?.notificationPreferences?.emailNotifications?.newsletter ?? true,
+      productUpdates:
+        user?.notificationPreferences?.emailNotifications?.productUpdates ??
+        true,
+      newFollowers:
+        user?.notificationPreferences?.emailNotifications?.newFollowers ?? true,
+      comments:
+        user?.notificationPreferences?.emailNotifications?.comments ?? true,
+      mentions:
+        user?.notificationPreferences?.emailNotifications?.mentions ?? true,
+      upvotes:
+        user?.notificationPreferences?.emailNotifications?.upvotes ?? true,
+      newsletter:
+        user?.notificationPreferences?.emailNotifications?.newsletter ?? true,
     },
     pushNotifications: {
-      productUpdates: user?.notificationPreferences?.pushNotifications?.productUpdates ?? true,
-      newFollowers: user?.notificationPreferences?.pushNotifications?.newFollowers ?? true,
-      comments: user?.notificationPreferences?.pushNotifications?.comments ?? true,
-      mentions: user?.notificationPreferences?.pushNotifications?.mentions ?? true,
-      upvotes: user?.notificationPreferences?.pushNotifications?.upvotes ?? true,
+      productUpdates:
+        user?.notificationPreferences?.pushNotifications?.productUpdates ??
+        true,
+      newFollowers:
+        user?.notificationPreferences?.pushNotifications?.newFollowers ?? true,
+      comments:
+        user?.notificationPreferences?.pushNotifications?.comments ?? true,
+      mentions:
+        user?.notificationPreferences?.pushNotifications?.mentions ?? true,
+      upvotes:
+        user?.notificationPreferences?.pushNotifications?.upvotes ?? true,
     },
     smsNotifications: {
-      securityAlerts: user?.notificationPreferences?.smsNotifications?.securityAlerts ?? true,
-      accountUpdates: user?.notificationPreferences?.smsNotifications?.accountUpdates ?? false,
-    }
+      securityAlerts:
+        user?.notificationPreferences?.smsNotifications?.securityAlerts ?? true,
+      accountUpdates:
+        user?.notificationPreferences?.smsNotifications?.accountUpdates ??
+        false,
+    },
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleToggle = (category, setting) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
       [category]: {
         ...prev[category],
-        [setting]: !prev[category][setting]
-      }
+        [setting]: !prev[category][setting],
+      },
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setSuccessMessage('');
+    setSuccessMessage("");
 
     try {
-      await api.put('/auth/notification-preferences', {
-        notificationPreferences: settings
+      await makePriorityRequest("put", "/auth/notification-preferences", {
+        notificationPreferences: settings,
       });
 
-      setSuccessMessage('Notification preferences updated successfully');
-      toast.success('Notification preferences updated');
+      setSuccessMessage("Notification preferences updated successfully");
+      toast.success("Notification preferences updated");
 
       // Clear success message after 3 seconds
       setTimeout(() => {
-        setSuccessMessage('');
+        setSuccessMessage("");
       }, 3000);
     } catch (error) {
-      console.error('Error updating notification preferences:', error);
-      toast.error(error.response?.data?.message || 'Failed to update notification preferences');
+      console.error("Error updating notification preferences:", error);
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to update notification preferences"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -88,8 +107,12 @@ const NotificationSettings = ({ user }) => {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-800">Notification Settings</h2>
-        <span className="px-2 py-1 bg-violet-100 text-violet-800 text-xs font-medium rounded-full">Coming Soon</span>
+        <h2 className="text-xl font-semibold text-gray-800">
+          Notification Settings
+        </h2>
+        <span className="px-2 py-1 bg-violet-100 text-violet-800 text-xs font-medium rounded-full">
+          Coming Soon
+        </span>
       </div>
 
       {successMessage && (
@@ -109,7 +132,9 @@ const NotificationSettings = ({ user }) => {
           <div>
             <div className="flex items-center mb-4">
               <FiMail className="text-violet-600 mr-2" />
-              <h3 className="text-md font-medium text-gray-700">Email Notifications</h3>
+              <h3 className="text-md font-medium text-gray-700">
+                Email Notifications
+              </h3>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4">
@@ -161,7 +186,9 @@ const NotificationSettings = ({ user }) => {
           <div>
             <div className="flex items-center mb-4">
               <FiBell className="text-violet-600 mr-2" />
-              <h3 className="text-md font-medium text-gray-700">Push Notifications</h3>
+              <h3 className="text-md font-medium text-gray-700">
+                Push Notifications
+              </h3>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4">
@@ -206,7 +233,9 @@ const NotificationSettings = ({ user }) => {
           <div>
             <div className="flex items-center mb-4">
               <FiSmartphone className="text-violet-600 mr-2" />
-              <h3 className="text-md font-medium text-gray-700">SMS Notifications</h3>
+              <h3 className="text-md font-medium text-gray-700">
+                SMS Notifications
+              </h3>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4">

@@ -17,7 +17,7 @@ import {
   FiCalendar,
   FiMonitor,
 } from "react-icons/fi";
-import api from "../../../../Utils/api";
+import { makePriorityRequest } from "../../../../Utils/api";
 import { toast } from "react-hot-toast";
 
 const SecuritySettings = ({ user }) => {
@@ -53,9 +53,9 @@ const SecuritySettings = ({ user }) => {
       setPasswordStrength(0);
       return;
     }
-    
+
     let strength = 0;
-    
+
     // Length check
     if (passwordData.newPassword.length >= 8) strength += 1;
     if (passwordData.newPassword.length >= 12) strength += 1;
@@ -140,7 +140,7 @@ const SecuritySettings = ({ user }) => {
     setPasswordSuccess("");
 
     try {
-      await api.put("/auth/change-password", passwordData);
+      await makePriorityRequest("put", "/auth/change-password", passwordData);
 
       setPasswordSuccess("Password changed successfully");
       toast.success("Password changed successfully");
@@ -176,7 +176,7 @@ const SecuritySettings = ({ user }) => {
     setSecuritySuccess("");
 
     try {
-      await api.put("/auth/security-settings", {
+      await makePriorityRequest("put", "/auth/security-settings", {
         securitySettings: {
           twoFactorEnabled,
           loginAlerts,
@@ -203,7 +203,7 @@ const SecuritySettings = ({ user }) => {
   const handleLogoutAllSessions = async () => {
     setLogoutAllLoading(true);
     try {
-      await api.post("/auth/logout-all");
+      await makePriorityRequest("post", "/auth/logout-all");
       toast.success("Successfully logged out of all other sessions");
       setTimeout(() => {
         window.location.reload();

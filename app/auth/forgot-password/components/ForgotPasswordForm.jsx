@@ -28,7 +28,7 @@ function ForgotPasswordForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -38,11 +38,11 @@ function ForgotPasswordForm() {
     setFormErrors({});
     setIsLoading(true);
     setError('');
-    
+
     try {
       const response = await api.post('/auth/forgot-password', { email });
-      
-      if (response.data.status === 'success') {
+
+      if (response.data.status === 'success' || response.data.success) {
         setSuccessMessage('If your email is registered, you will receive password reset instructions shortly.');
         setEmail('');
         setStep('success');
@@ -79,28 +79,28 @@ function ForgotPasswordForm() {
 
         <div className="w-full space-y-6 text-center">
           <div className="mx-auto w-16 h-16 flex items-center justify-center rounded-full bg-green-100">
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className="h-8 w-8 text-green-600" 
-              fill="none" 
-              viewBox="0 0 24 24" 
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-8 w-8 text-green-600"
+              fill="none"
+              viewBox="0 0 24 24"
               stroke="currentColor"
             >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M5 13l4 4L19 7" 
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
               />
             </svg>
           </div>
-          
+
           <h2 className="text-2xl font-bold text-primary">Check Your Email</h2>
-          
+
           <p className="mt-2 text-sm text-secondary">
             {successMessage}
           </p>
-          
+
           <div className="mt-6">
             <button
               onClick={handleBackToLogin}

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useAuth } from "../../Contexts/Auth/AuthContext.js";
 import { useProduct } from "../../Contexts/Product/ProductContext.js";
 import EditProfileModal from "../../Components/Modal/EditProfileModal/EditProfileModal.jsx";
+import ProfileCompletionPrompt from "../../Components/Modal/ProfileCompletionPrompt/ProfileCompletionPrompt.jsx";
 import OverviewTab from "./Components/ProfileTabs/OverviewTab";
 import ProductsTab from "./Components/ProfileTabs/ProductsTab";
 import CollectionsTab from "./Components/ProfileTabs/CollectionsTab";
@@ -14,9 +15,6 @@ import TopicsTab from "./Components/ProfileTabs/TopicsTab";
 import ActivityTab from "./Components/ProfileTabs/ActivityTab";
 import SkillsTab from "./Components/ProfileTabs/SkillsTab";
 import SocialTab from "./Components/ProfileTabs/SocialTab";
-import RoleCapabilities from "../../Components/User/RoleCapabilities";
-import SecondaryRoles from "../../Components/User/SecondaryRoles";
-import AdminRoleManager from "../../Components/Admin/AdminRoleManager";
 import logger from "../../Utils/logger";
 import LoaderComponent from "../../Components/UI/LoaderComponent.jsx";
 import { normalizeProducts } from "../../Utils/Product/productUtils.js";
@@ -62,10 +60,10 @@ export default function ProfilePage() {
   const { user, authLoading, error } = useAuth();
   const { products, loading: productsLoading, getUserProducts } = useProduct();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isProfileCompletionModalOpen, setIsProfileCompletionModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("Overview");
   const [mergedProducts, setMergedProducts] = useState([]);
   const [isOwnProfile, setIsOwnProfile] = useState(true);
-  const [profileUser, setProfileUser] = useState(null);
 
   // Product tab specific states
   const [currentPage, setCurrentPage] = useState(1);
@@ -174,10 +172,19 @@ export default function ProfilePage() {
       // For now, we're only showing the current user's profile
       // In the future, this could be updated to fetch another user's profile
       setIsOwnProfile(true);
-      setProfileUser(user);
       fetchUserProducts(currentPage, activeProductFilter);
+
+      // Show profile completion modal if profile is not completed
+      if (isOwnProfile && !user.isProfileCompleted) {
+        // Use a timeout to ensure the modal doesn't appear immediately
+        const timer = setTimeout(() => {
+          setIsProfileCompletionModalOpen(true);
+        }, 1000);
+
+        return () => clearTimeout(timer);
+      }
     }
-  }, [user, fetchUserProducts, currentPage, activeProductFilter]);
+  }, [user, fetchUserProducts, currentPage, activeProductFilter, isOwnProfile]);
 
   // Update the Overview tab with product data whenever products change
   useEffect(() => {
@@ -390,21 +397,30 @@ export default function ProfilePage() {
               </div>
 
               <p className="text-gray-600 text-sm font-medium">
-                {user.companyRole || user.role === "freelancer"
+                {user.headline || (user.companyRole || user.role === "freelancer"
                   ? "Freelancer"
                   : user.role === "jobseeker"
                   ? "Looking for Opportunities"
-                  : "Product Enthusiast"}
+                  : "Product Enthusiast")}
+                {isOwnProfile && !user.headline && (
+                  <span className="ml-2 text-violet-500 text-xs italic">
+                    (Add a headline in profile settings)
+                  </span>
+                )}
               </p>
 
-              {user.bio && (
+              {user.bio ? (
                 <p className="text-gray-500 mt-2 text-sm max-w-2xl line-clamp-2">
                   {user.bio}
+                </p>
+              ) : isOwnProfile && (
+                <p className="text-gray-400 mt-2 text-sm max-w-2xl italic">
+                  Add a short bio to tell people about yourself
                 </p>
               )}
 
               <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-500 justify-center md:justify-start">
-                {user.address && (
+                {user.address && (user.address.city || user.address.country || (typeof user.address === "string" && user.address)) ? (
                   <span className="flex items-center gap-1">
                     <svg
                       className="w-3.5 h-3.5 text-gray-400"
@@ -428,11 +444,34 @@ export default function ProfilePage() {
                     {typeof user.address === "object"
                       ? `${user.address.city || ""}, ${
                           user.address.country || ""
-                        }`
+                        }`.replace(/, $/, "").replace(/^, /, "")
                       : user.address}
                   </span>
+                ) : isOwnProfile && (
+                  <span className="flex items-center gap-1 text-gray-400 italic">
+                    <svg
+                      className="w-3.5 h-3.5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                    Add your location
+                  </span>
                 )}
-                {user.preferredContact && (
+                {user.preferredContact ? (
                   <span className="flex items-center gap-1">
                     <svg
                       className="w-3.5 h-3.5 text-gray-400"
@@ -448,6 +487,23 @@ export default function ProfilePage() {
                       />
                     </svg>
                     {user.preferredContact}
+                  </span>
+                ) : isOwnProfile && (
+                  <span className="flex items-center gap-1 text-gray-400 italic">
+                    <svg
+                      className="w-3.5 h-3.5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                    Add preferred contact method
                   </span>
                 )}
               </div>
@@ -716,6 +772,16 @@ export default function ProfilePage() {
           <EditProfileModal
             isOpen={isEditModalOpen}
             onClose={() => setIsEditModalOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Profile Completion Modal */}
+      <AnimatePresence>
+        {isProfileCompletionModalOpen && (
+          <ProfileCompletionPrompt
+            isOpen={isProfileCompletionModalOpen}
+            onClose={() => setIsProfileCompletionModalOpen(false)}
           />
         )}
       </AnimatePresence>

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiSave, FiCheck, FiShield, FiEye, FiEyeOff, FiGlobe, FiLock } from 'react-icons/fi';
-import api from '../../Utils/api';
+import { makePriorityRequest } from '../../../../Utils/api';
 import { toast } from 'react-hot-toast';
 
 const PrivacySettings = ({ user }) => {
@@ -34,7 +34,7 @@ const PrivacySettings = ({ user }) => {
     setSuccessMessage('');
 
     try {
-      await api.put('/auth/privacy-settings', {
+      await makePriorityRequest('put', '/auth/privacy-settings', {
         privacySettings: settings
       });
 

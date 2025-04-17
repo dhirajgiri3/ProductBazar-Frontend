@@ -31,7 +31,7 @@ const ProfileImageSection = ({ formData, setFormData, setHasUnsavedChanges }) =>
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    
+
     const file = e.dataTransfer.files[0];
     if (file) {
       await handleImageUpload(file);
@@ -57,14 +57,23 @@ const ProfileImageSection = ({ formData, setFormData, setHasUnsavedChanges }) =>
       formDataImage.append("profileImage", optimizedFile);
 
       const updatedProfile = await updateProfilePicture(formDataImage);
-      setFormData((prev) => ({
-        ...prev,
-        profilePicture: { url: updatedProfile.profilePicture?.url }
-      }));
-      setPreviewImage(updatedProfile.profilePicture?.url);
-      setHasUnsavedChanges(true);
-      toast.dismiss(loadingToast);
-      toast.success("Profile picture updated");
+      if (updatedProfile?.success) {
+        // Get the URL from either the url property or from the profilePicture object
+        const imageUrl = updatedProfile.url || updatedProfile.profilePicture?.url;
+        if (imageUrl) {
+          setFormData((prev) => ({
+            ...prev,
+            profilePicture: { url: imageUrl }
+          }));
+          setPreviewImage(imageUrl);
+          setHasUnsavedChanges(true);
+        }
+        toast.dismiss(loadingToast);
+        toast.success("Profile picture updated successfully");
+      } else {
+        toast.dismiss(loadingToast);
+        toast.error(updatedProfile?.message || "Failed to update profile picture");
+      }
     } catch (err) {
       toast.dismiss(loadingToast);
       toast.error("Failed to update image");
@@ -109,7 +118,7 @@ const ProfileImageSection = ({ formData, setFormData, setHasUnsavedChanges }) =>
               </div>
             )}
           </div>
-          
+
           {/* Overlay Controls */}
           <div className="absolute inset-0 rounded-full bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
             <button
@@ -149,9 +158,9 @@ const ProfileImageSection = ({ formData, setFormData, setHasUnsavedChanges }) =>
             accept="image/jpeg,image/png,image/gif,image/webp"
             className="hidden"
           />
-          
+
           <FiUpload className={`w-8 h-8 mx-auto mb-4 ${isDragging ? 'text-violet-500' : 'text-gray-400'}`} />
-          
+
           <div className="space-y-2">
             <p className="text-sm font-medium text-gray-700">
               {isDragging ? "Drop your image here" : "Drag & drop your profile picture here"}
@@ -166,7 +175,7 @@ const ProfileImageSection = ({ formData, setFormData, setHasUnsavedChanges }) =>
               Browse files
             </button>
           </div>
-          
+
           <p className="mt-2 text-xs text-gray-400">
             Maximum file size: 10MB (JPEG, PNG, GIF, WebP)
           </p>

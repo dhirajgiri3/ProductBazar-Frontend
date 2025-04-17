@@ -4,7 +4,6 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../../../Contexts/Auth/AuthContext";
 import Image from "next/image";
-import Link from "next/link";
 import {
   FiAlertCircle,
   FiCheck,
@@ -13,10 +12,8 @@ import {
   FiMail,
   FiCamera,
   FiEdit3,
-  FiUpload,
   FiTrash2,
   FiX,
-  FiSend,
   FiShield,
 } from "react-icons/fi";
 import LoaderComponent from "../../../UI/LoaderComponent";
@@ -110,7 +107,8 @@ const ProfileBasicsSection = ({
 
       if (result && result.success) {
         // Use the server URL for the profile picture
-        const serverUrl = result.profilePicture?.url || result.profilePicture;
+        // Check both the url property and the profilePicture object
+        const serverUrl = result.url || result.profilePicture?.url || result.profilePicture;
 
         // Update the form data with the server URL as an object with url property
         setFormData((prev) => ({

@@ -22,6 +22,108 @@ export const AuthProvider = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const router = useRouter();
 
+
+  // Function to determine the next step based on user data
+  const determineNextStep = useCallback((userData) => {
+    if (!userData) {
+      console.log('Cannot determine next step: No user data');
+      return null;
+    }
+
+    console.log('Determining next step from user data:', userData);
+
+    // Check if all required steps are already completed
+    if (userData.isEmailVerified && userData.isPhoneVerified && userData.isProfileCompleted) {
+      console.log('All steps are completed, no next step needed');
+      return null;
+    }
+
+    // Check if steps were previously skipped
+    const skippedSteps = JSON.parse(localStorage.getItem("skippedSteps") || "[]");
+
+    // Define all possible steps
+    const allSteps = [
+      {
+        type: "email_verification",
+        title: "Verify your email address",
+        description: "Verify your email for account security",
+        required: true,
+        completed: userData.isEmailVerified
+      },
+      {
+        type: "phone_verification",
+        title: "Verify your phone number",
+        description: "Add an extra layer of security",
+        required: true,
+        completed: userData.isPhoneVerified
+      },
+      {
+        type: "profile_completion",
+        title: "Complete your profile",
+        description: "Help others know more about you",
+        required: false,
+        skippable: true,
+        completed: userData.isProfileCompleted
+      }
+    ];
+
+    // Calculate progress
+    const totalSteps = allSteps.length;
+    const completedSteps = allSteps.filter(step => step.completed).length;
+    const progress = {
+      completed: completedSteps,
+      total: totalSteps,
+      percentage: Math.round((completedSteps / totalSteps) * 100)
+    };
+
+    // Find the next incomplete required step
+    let nextStep = null;
+
+    // First check for email verification
+    if (userData.email && !userData.isEmailVerified) {
+      nextStep = {
+        type: "email_verification",
+        title: "Verify your email address",
+        description: "Verify your email for account security",
+        message: "Required for account security",
+        actionLabel: "Verify Now",
+        required: true,
+        allSteps,
+        progress
+      };
+    }
+    // Then check for phone verification
+    else if (userData.phone && !userData.isPhoneVerified) {
+      nextStep = {
+        type: "phone_verification",
+        title: "Verify your phone number",
+        description: "Add an extra layer of security",
+        message: "Required for account security",
+        actionLabel: "Verify Now",
+        required: true,
+        allSteps,
+        progress
+      };
+    }
+    // Finally check for profile completion if not skipped
+    else if (!userData.isProfileCompleted && !skippedSteps.includes("profile_completion")) {
+      nextStep = {
+        type: "profile_completion",
+        title: "Complete your profile",
+        description: "Help others know more about you",
+        message: "(Optional) Enhance your experience",
+        actionLabel: "Complete Now",
+        required: false,
+        skippable: true,
+        allSteps,
+        progress
+      };
+    }
+
+    console.log('Determined next step:', nextStep);
+    return nextStep;
+  }, []);
+
   // Initialize auth state
   useEffect(() => {
     let mounted = true;
@@ -32,13 +134,24 @@ export const AuthProvider = ({ children }) => {
       try {
         const storedToken = localStorage.getItem("accessToken");
         const storedUser = localStorage.getItem("user");
-        const storedNextStep = localStorage.getItem("nextStep");
+
+        console.log('Auth initialization started');
 
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-        if (storedNextStep) {
-          setNextStep(JSON.parse(storedNextStep));
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
+
+          // Determine the next step based on user data
+          const nextStepData = determineNextStep(userData);
+          if (nextStepData) {
+            console.log('Setting next step from user data during initialization:', nextStepData);
+            setNextStep(nextStepData);
+            localStorage.setItem("nextStep", JSON.stringify(nextStepData));
+          } else {
+            console.log('No next step needed during initialization');
+            setNextStep(null);
+            localStorage.removeItem("nextStep");
+          }
         }
 
         if (storedToken) {
@@ -46,6 +159,7 @@ export const AuthProvider = ({ children }) => {
           await fetchUserData(storedToken);
         }
       } catch (err) {
+        console.error("Auth initialization failed:", err);
         logger.error("Auth initialization failed:", err);
         clearAuthState();
       } finally {
@@ -60,7 +174,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [determineNextStep]);
 
   const fetchUserData = useCallback(
     async (token) => {
@@ -89,8 +203,40 @@ export const AuthProvider = ({ children }) => {
             userData.secondaryRoles = [];
           }
 
+          // Check if the user data has changed significantly
+          const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+          const hasSignificantChanges = (
+            userData.isEmailVerified !== currentUser.isEmailVerified ||
+            userData.isPhoneVerified !== currentUser.isPhoneVerified ||
+            userData.isProfileCompleted !== currentUser.isProfileCompleted
+          );
+
+          // Update user state and localStorage
           setUser(userData);
           localStorage.setItem("user", JSON.stringify(userData));
+
+          // If there are significant changes or we need to update the next step
+          if (hasSignificantChanges || !nextStep) {
+            try {
+              // Determine the next step based on user data
+              const nextStepData = determineNextStep(userData);
+
+              if (nextStepData) {
+                // Update the next step
+                setNextStep(nextStepData);
+                localStorage.setItem("nextStep", JSON.stringify(nextStepData));
+                console.log('Updated next step from user data:', nextStepData);
+              } else {
+                // Clear the next step if none is determined
+                setNextStep(null);
+                localStorage.removeItem("nextStep");
+                console.log('No next step needed, cleared from localStorage');
+              }
+            } catch (nextStepErr) {
+              console.error("Determine next step failed:", nextStepErr);
+            }
+          }
+
           setAuthLoading(false);
           return true;
         }
@@ -148,35 +294,56 @@ export const AuthProvider = ({ children }) => {
       if (data.data.accessToken) {
         setAccessToken(data.data.accessToken);
         localStorage.setItem("accessToken", data.data.accessToken);
-
-        // Note: We don't need to store the refresh token in localStorage
-        // as it's stored in an HTTP-only cookie by the server
-        // This is more secure as it prevents XSS attacks from stealing the refresh token
       }
 
-      if (data.nextStep) {
-        setNextStep(data.nextStep);
-        localStorage.setItem("nextStep", JSON.stringify(data.nextStep));
-      } else {
-        setNextStep(null);
-        localStorage.removeItem("nextStep");
+      // Determine the next step based on user data
+      try {
+        const nextStepData = determineNextStep(userData);
+
+        if (nextStepData) {
+          // Update the next step
+          setNextStep(nextStepData);
+          localStorage.setItem("nextStep", JSON.stringify(nextStepData));
+          console.log('Set next step after auth success:', nextStepData);
+        } else {
+          // Clear the next step if none is determined
+          setNextStep(null);
+          localStorage.removeItem("nextStep");
+          console.log('No next step needed after auth success');
+        }
+      } catch (nextStepErr) {
+        console.error("Determine next step failed after auth success:", nextStepErr);
       }
 
       setAuthLoading(false);
 
       if (redirect) {
-        if (data.nextStep?.type === "email_verification") {
+        // Get the current next step (which may have been modified above)
+        const currentNextStep = nextStep || data.nextStep;
+
+        if (currentNextStep?.type === "email_verification") {
           router.push("/auth/verify-email");
-        } else if (data.nextStep?.type === "phone_verification") {
+        } else if (currentNextStep?.type === "phone_verification") {
           router.push("/auth/verify-phone");
-        } else if (data.nextStep?.type === "profile_completion") {
-          router.push("/complete-profile");
+        } else if (currentNextStep?.type === "profile_completion") {
+          // Check if profile completion was skipped
+          const skippedSteps = JSON.parse(localStorage.getItem("skippedSteps") || "[]");
+          if (skippedSteps.includes("profile_completion")) {
+            // Skip to home page if profile completion was skipped
+            router.push("/home");
+          } else {
+            // Ensure user data is fully loaded before redirecting to complete profile
+            // This helps prevent the "Authentication Error" when redirecting to complete-profile
+            setTimeout(() => {
+              router.push("/complete-profile");
+            }, 100); // Small delay to ensure state updates are processed
+          }
         } else {
-          router.push("/user");
+          router.push("/home");
         }
       }
     },
-    [router]
+    [router, nextStep]
   );
 
   // Auth event listeners
@@ -188,11 +355,17 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("nextStep", JSON.stringify(event.detail.nextStep));
     };
 
+    const handleProfileUpdated = () => {
+      // Refresh user data when profile is updated
+      fetchUserData(accessToken);
+    };
+
     window.addEventListener("auth:logout", handleLogout);
     window.addEventListener(
       "auth:verification-required",
       handleVerificationRequired
     );
+    window.addEventListener("profile:updated", handleProfileUpdated);
 
     return () => {
       window.removeEventListener("auth:logout", handleLogout);
@@ -200,8 +373,74 @@ export const AuthProvider = ({ children }) => {
         "auth:verification-required",
         handleVerificationRequired
       );
+      window.removeEventListener("profile:updated", handleProfileUpdated);
     };
-  }, [router]);
+  }, [router, fetchUserData, accessToken]);
+
+  // Periodic refresh of user data
+  useEffect(() => {
+    // Only set up refresh if user is authenticated
+    if (!user || !accessToken) return;
+
+    // Refresh user data every 5 minutes
+    const refreshInterval = setInterval(() => {
+      fetchUserData(accessToken);
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(refreshInterval);
+  }, [user, accessToken, fetchUserData]);
+
+  // Skip profile completion step with improved handling
+  const skipProfileCompletion = useCallback(() => {
+    if (nextStep?.type === "profile_completion") {
+      // Mark this step as skipped in localStorage to prevent it from reappearing immediately
+      const skippedSteps = JSON.parse(localStorage.getItem("skippedSteps") || "[]");
+      if (!skippedSteps.includes("profile_completion")) {
+        skippedSteps.push("profile_completion");
+        localStorage.setItem("skippedSteps", JSON.stringify(skippedSteps));
+      }
+
+      // Determine the next step based on user data, excluding profile completion
+      if (user) {
+        // Check if there are other verification steps needed
+        if (!user.isEmailVerified && user.email) {
+          // Set email verification as the next step
+          const emailStep = determineNextStep({
+            ...user,
+            isProfileCompleted: true // Pretend profile is completed to skip it
+          });
+
+          if (emailStep) {
+            setNextStep(emailStep);
+            localStorage.setItem("nextStep", JSON.stringify(emailStep));
+            console.log('Skipped profile completion, showing email verification instead');
+            return true;
+          }
+        } else if (!user.isPhoneVerified && user.phone) {
+          // Set phone verification as the next step
+          const phoneStep = determineNextStep({
+            ...user,
+            isProfileCompleted: true, // Pretend profile is completed to skip it
+            isEmailVerified: true // Pretend email is verified to show phone step
+          });
+
+          if (phoneStep) {
+            setNextStep(phoneStep);
+            localStorage.setItem("nextStep", JSON.stringify(phoneStep));
+            console.log('Skipped profile completion, showing phone verification instead');
+            return true;
+          }
+        }
+      }
+
+      // If no other steps, clear the next step
+      setNextStep(null);
+      localStorage.removeItem("nextStep");
+      console.log('Skipped profile completion, no other steps needed');
+      return true;
+    }
+    return false;
+  }, [nextStep, user, determineNextStep]);
 
   // Utility functions
   const clearAuthState = useCallback(() => {
@@ -213,14 +452,43 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("user");
     localStorage.removeItem("userId");
     localStorage.removeItem("nextStep");
-    // Note: We don't need to remove refreshToken from localStorage
-    // as it's stored in an HTTP-only cookie and managed by the server
+    localStorage.removeItem("skippedSteps"); // Also clear skipped steps
   }, []);
 
   const clearAuthStateAndRedirect = useCallback(() => {
     clearAuthState();
     router.push("/auth/login");
   }, [router, clearAuthState]);
+
+
+  // Function to manually refresh the next step
+  const refreshNextStep = useCallback(() => {
+    if (!user) {
+      console.log('Cannot refresh next step: No user data');
+      return null;
+    }
+
+    console.log('Refreshing next step using user data...');
+    try {
+      // Determine the next step based on user data
+      const nextStepData = determineNextStep(user);
+
+      if (nextStepData) {
+        // Update the next step
+        setNextStep(nextStepData);
+        localStorage.setItem("nextStep", JSON.stringify(nextStepData));
+        return nextStepData;
+      } else {
+        // Clear the next step if none is determined
+        setNextStep(null);
+        localStorage.removeItem("nextStep");
+        return null;
+      }
+    } catch (err) {
+      console.error("Refresh next step failed:", err);
+      return null;
+    }
+  }, [user, determineNextStep]);
 
   // Auth methods
   const registerWithEmail = useCallback(
@@ -236,7 +504,7 @@ export const AuthProvider = ({ children }) => {
           roleDetails,
         });
 
-        if (response.data.status === "success") {
+        if (response.data.status === "success" || response.data.success) {
           handleAuthSuccess(response.data);
           return { success: true };
         }
@@ -247,6 +515,34 @@ export const AuthProvider = ({ children }) => {
         const errorMessage =
           err.response?.data?.message || "Registration failed";
         setError(errorMessage);
+
+        // Enhanced error handling
+        if (err.response?.status === 400) {
+          return {
+            success: false,
+            message: errorMessage || "Invalid registration data. Please check your information and try again.",
+            validationError: true
+          };
+        } else if (err.response?.status === 409) {
+          return {
+            success: false,
+            message: errorMessage || "Email already registered. Please use a different email or try logging in.",
+            alreadyExists: true
+          };
+        } else if (err.response?.status === 429) {
+          return {
+            success: false,
+            message: "Too many registration attempts. Please try again later.",
+            rateLimited: true
+          };
+        } else if (err.response?.status === 500) {
+          return {
+            success: false,
+            message: "Server error. Please try again later or contact support if the problem persists.",
+            serverError: true
+          };
+        }
+
         return { success: false, message: errorMessage };
       } finally {
         setAuthLoading(false);
@@ -266,7 +562,7 @@ export const AuthProvider = ({ children }) => {
           password,
         });
 
-        if (response.data.status === "success") {
+        if (response.data.status === "success" || response.data.success) {
           handleAuthSuccess(response.data);
           return { success: true };
         }
@@ -279,9 +575,29 @@ export const AuthProvider = ({ children }) => {
 
         // Enhanced error handling
         if (err.response?.status === 429) {
-          return { success: false, message: errorMessage, rateLimited: true };
+          return {
+            success: false,
+            message: "Too many login attempts. Please try again later.",
+            rateLimited: true
+          };
         } else if (err.response?.status === 403) {
-          return { success: false, message: errorMessage, locked: true };
+          return {
+            success: false,
+            message: "Your account is temporarily locked. Please try again later or reset your password.",
+            locked: true
+          };
+        } else if (err.response?.status === 401) {
+          return {
+            success: false,
+            message: "Invalid email or password. Please check your credentials and try again.",
+            unauthorized: true
+          };
+        } else if (err.response?.status === 500) {
+          return {
+            success: false,
+            message: "Server error. Please try again later or contact support if the problem persists.",
+            serverError: true
+          };
         }
 
         return { success: false, message: errorMessage };
@@ -823,6 +1139,11 @@ export const AuthProvider = ({ children }) => {
             false // Don't redirect - let the component handle it after confetti
           );
 
+          // Dispatch a profile:updated event to notify other components
+          window.dispatchEvent(new CustomEvent('profile:updated', {
+            detail: { user: response.data.data.user }
+          }));
+
           return { success: true, user: response.data.data.user };
         }
 
@@ -902,12 +1223,23 @@ export const AuthProvider = ({ children }) => {
               "nextStep",
               JSON.stringify(response.data.nextStep)
             );
+
+            // Dispatch a profile:updated event to notify other components
+            window.dispatchEvent(new CustomEvent('profile:updated', {
+              detail: { user: response.data.data.user }
+            }));
+
             return {
               success: true,
               user: response.data.data.user,
               nextStep: response.data.nextStep,
             };
           }
+
+          // Dispatch a profile:updated event to notify other components
+          window.dispatchEvent(new CustomEvent('profile:updated', {
+            detail: { user: response.data.data.user }
+          }));
 
           return { success: true, user: response.data.data.user };
         }
@@ -945,7 +1277,8 @@ export const AuthProvider = ({ children }) => {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      if (response.data.success) {
+      // Check for both success formats (status === "success" or success === true)
+      if (response.data.status === "success" || response.data.success) {
         // Update the local user data with the new profile picture
         setUser((prev) => ({
           ...prev,
@@ -966,6 +1299,7 @@ export const AuthProvider = ({ children }) => {
           success: true,
           message: "Profile picture updated successfully",
           profilePicture: response.data.data.user.profilePicture,
+          url: response.data.data.user.profilePicture?.url, // Add url property for easier access
         };
       }
 
@@ -1000,7 +1334,8 @@ export const AuthProvider = ({ children }) => {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      if (response.data.success || response.data.status === "success") {
+      // Check for both success formats (status === "success" or success === true)
+      if (response.data.status === "success" || response.data.success) {
         // Update the local user data with the new banner image
         setUser((prev) => ({
           ...prev,
@@ -1021,6 +1356,7 @@ export const AuthProvider = ({ children }) => {
           success: true,
           message: "Banner image updated successfully",
           bannerImage: response.data.data.user.bannerImage,
+          url: response.data.data.user.bannerImage?.url, // Add url property for easier access
         };
       }
 
@@ -1051,6 +1387,28 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  // Check if the user's profile is completed
+  const isProfileCompleted = useCallback(() => {
+    if (!user) return false;
+
+    // Check if the isProfileCompleted flag is set
+    if (user.isProfileCompleted === true) return true;
+
+    // If not, check required fields manually
+    const requiredFields = ["firstName", "lastName", "email", "phone", "about"];
+    const missingFields = requiredFields.filter(field => !user[field]);
+
+    // Allow either email or phone to be missing, but not both
+    if (missingFields.includes("email") && missingFields.includes("phone")) {
+      return false;
+    }
+
+    // Remove email and phone from missing fields for the final check
+    const criticalMissingFields = missingFields.filter(field => field !== "email" && field !== "phone");
+
+    return criticalMissingFields.length === 0;
+  }, [user]);
+
   const isAuthenticated = useCallback(() => {
     return !!user;
   }, [user]);
@@ -1062,7 +1420,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.post("/auth/reset-password", { email });
 
-      if (response.data.status === "success") {
+      if (response.data.status === "success" || response.data.success) {
         return { success: true };
       }
 
@@ -1107,8 +1465,11 @@ export const AuthProvider = ({ children }) => {
     resendEmailVerification,
     verifyEmail,
     completeProfile,
+    skipProfileCompletion,
     refreshUserData: fetchUserData,
+    refreshNextStep,
     isAuthenticated,
+    isProfileCompleted,
     resetPassword,
   };
 

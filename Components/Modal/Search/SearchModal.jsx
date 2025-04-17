@@ -31,14 +31,28 @@ const SearchModal = ({ isOpen, onClose, initialQuery = "" }) => {
   // Close modal when clicking outside
   useOnClickOutside(modalRef, onClose);
 
-  // Focus input when modal opens
+  // Focus input when modal opens and handle ESC key press
   useEffect(() => {
     if (isOpen && inputRef.current) {
       setTimeout(() => {
         inputRef.current.focus();
       }, 100);
+
+      // Add event listener for ESC key
+      const handleEscKey = (e) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+
+      document.addEventListener('keydown', handleEscKey);
+
+      // Clean up event listener
+      return () => {
+        document.removeEventListener('keydown', handleEscKey);
+      };
     }
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   // Reset state when modal closes
   useEffect(() => {

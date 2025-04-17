@@ -29,6 +29,16 @@ export const ProfileDetailsForm = ({
           <p className="text-sm text-gray-500 italic">
             Add your professional details, skills and interests.
           </p>
+          <FormField
+            name="headline"
+            label="Professional Headline"
+            type="text"
+            value={formData.headline}
+            placeholder="e.g., CEO at X Company, Software Developer at Y"
+            onChange={handleChange}
+            error={formErrors.headline}
+            maxLength={100}
+          />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               name="companyName"

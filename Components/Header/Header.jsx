@@ -33,6 +33,7 @@ import { useCategories } from "../../Contexts/Category/CategoryContext";
 import { useOnClickOutside } from "../../Hooks/useOnClickOutside";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import OnboardingBanner from "./OnboardingBanner";
 import SearchModal from "../Modal/Search/SearchModal";
 
 const NavItem = ({ label, isActive, href, onClick }) => (
@@ -52,9 +53,22 @@ const NavItem = ({ label, isActive, href, onClick }) => (
 const Header = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, isAuthenticated, logout, nextStep, authLoading, isInitialized } = useAuth();
+  const {
+    user,
+    isAuthenticated,
+    logout,
+    nextStep,
+    authLoading,
+    isInitialized,
+    skipProfileCompletion,
+    refreshNextStep,
+  } = useAuth();
   const { searchProducts } = useProduct();
-  const { categories = [], error: categoryError, retryFetchCategories } = useCategories();
+  const {
+    categories = [],
+    error: categoryError,
+    retryFetchCategories,
+  } = useCategories();
 
   // States
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -62,7 +76,6 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showOnboardingBanner, setShowOnboardingBanner] = useState(false);
-  const [bannerLink, setBannerLink] = useState("");
   const [showRoleMenu, setShowRoleMenu] = useState(false);
 
   // Refs
@@ -84,13 +97,13 @@ const Header = () => {
     const items = [];
 
     // Add admin-specific navigation items
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       items.push({
         label: "Admin Dashboard",
         href: "/admin/users",
         isActive: pathname.startsWith("/admin"),
         icon: <Users size={16} />,
-        isNew: true
+        isNew: true,
       });
     }
 
@@ -100,14 +113,14 @@ const Header = () => {
         label: "Jobs",
         href: "/jobs",
         isActive: pathname.startsWith("/jobs") && !pathname.includes("/post"),
-        icon: <Briefcase size={16} />
+        icon: <Briefcase size={16} />,
       });
 
       items.push({
         label: "My Applications",
         href: "/profile/applications",
         isActive: pathname.startsWith("/profile/applications"),
-        icon: <FileText size={16} />
+        icon: <FileText size={16} />,
       });
     }
 
@@ -116,7 +129,7 @@ const Header = () => {
         label: "Post Job",
         href: "/jobs/post",
         isActive: pathname === "/jobs/post",
-        icon: <Plus size={16} />
+        icon: <Plus size={16} />,
       });
     }
 
@@ -125,7 +138,7 @@ const Header = () => {
         label: "Projects",
         href: "/projects",
         isActive: pathname.startsWith("/projects"),
-        icon: <Layers size={16} />
+        icon: <Layers size={16} />,
       });
     }
 
@@ -134,7 +147,7 @@ const Header = () => {
         label: "Services",
         href: "/services",
         isActive: pathname.startsWith("/services"),
-        icon: <Code size={16} />
+        icon: <Code size={16} />,
       });
     }
 
@@ -143,7 +156,7 @@ const Header = () => {
         label: "Invest",
         href: "/invest",
         isActive: pathname.startsWith("/invest"),
-        icon: <DollarSign size={16} />
+        icon: <DollarSign size={16} />,
       });
     }
 
@@ -152,31 +165,32 @@ const Header = () => {
 
   // Consolidated effect for onboarding and profile status
   useEffect(() => {
-    if (isAuthenticated()) {
-      // Check if user has pending onboarding steps
-      if (nextStep) {
-        setShowOnboardingBanner(true);
-
-        // Set the appropriate banner link based on the next step type
-        if (nextStep.type === "email_verification") {
-          setBannerLink("/auth/verify-email");
-        } else if (nextStep.type === "phone_verification") {
-          setBannerLink("/auth/verify-phone");
-        } else if (nextStep.type === "profile_completion") {
-          setBannerLink("/complete-profile");
-        } else {
-          // Default fallback
-          setBannerLink("/complete-profile");
-        }
-      } else {
-        setShowOnboardingBanner(false);
-        setBannerLink("");
-      }
-    } else {
+    // Only show banner for authenticated users
+    if (!isAuthenticated() || !user) {
       setShowOnboardingBanner(false);
-      setBannerLink("");
+      return;
     }
-  }, [isAuthenticated, user, nextStep]);
+
+    // Check if all steps are completed
+    const allStepsCompleted = user.isEmailVerified && user.isPhoneVerified && user.isProfileCompleted;
+
+    if (allStepsCompleted) {
+      // All steps are completed, hide banner
+      setShowOnboardingBanner(false);
+
+      // If nextStep still exists despite all steps being completed, refresh it
+      if (nextStep) {
+        refreshNextStep();
+      }
+    } else if (nextStep) {
+      // There are incomplete steps and we have a nextStep, show banner
+      setShowOnboardingBanner(true);
+    } else {
+      // There are incomplete steps but no nextStep (shouldn't happen), refresh nextStep
+      refreshNextStep();
+      setShowOnboardingBanner(false); // Hide until refreshed
+    }
+  }, [isAuthenticated, user, nextStep, refreshNextStep]);
 
   // Handle keyboard shortcuts for search
   useEffect(() => {
@@ -212,16 +226,20 @@ const Header = () => {
       return;
     }
 
-    // If user has pending onboarding, complete that first
-    if (nextStep) {
-      toast.error("Please complete your profile first");
+    // If user has pending email or phone verification, complete that first
+    if (
+      nextStep &&
+      (nextStep.type === "email_verification" ||
+        nextStep.type === "phone_verification")
+    ) {
+      toast.error("Please verify your contact information first");
       handleCompleteOnboarding();
       return;
     }
 
     // Check if user has permission to upload products
     if (user?.roleCapabilities?.canUploadProducts) {
-      router.push("/add-product");
+      router.push("/product/new");
     } else {
       toast.error("Your current role doesn't allow product submissions");
       router.push("/user/settings");
@@ -243,6 +261,39 @@ const Header = () => {
 
   return (
     <>
+      {/* Onboarding Banner - Placed at the top of the page, outside the sticky header */}
+      {showOnboardingBanner && nextStep ? (
+        <OnboardingBanner
+          nextStep={nextStep}
+          onComplete={() => {
+            setShowOnboardingBanner(false);
+            handleCompleteOnboarding();
+          }}
+          onSkip={() => {
+            setShowOnboardingBanner(false);
+            skipProfileCompletion();
+          }}
+          onRefresh={async () => {
+            // Show loading toast
+            toast.loading('Refreshing verification status...', { id: 'refresh-toast' });
+            // Refresh next step
+            try {
+              const result = await Promise.resolve(refreshNextStep());
+              // Show success toast
+              setTimeout(() => {
+                if (result) {
+                  toast.success('Verification status updated', { id: 'refresh-toast' });
+                } else {
+                  toast.success('All steps completed!', { id: 'refresh-toast' });
+                }
+              }, 500);
+            } catch (error) {
+              toast.error('Failed to refresh status', { id: 'refresh-toast' });
+            }
+          }}
+        />
+      ) : null}
+
       {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
@@ -262,7 +313,9 @@ const Header = () => {
                 onClick={() => setIsSearchModalOpen(true)}
               >
                 <Search size={16} className="text-gray-400 mr-2" />
-                <span className="text-gray-500 text-sm flex-1 text-left">Search products, startups, etc...</span>
+                <span className="text-gray-500 text-sm flex-1 text-left">
+                  Search products, startups, etc...
+                </span>
                 <div className="hidden md:flex items-center border border-gray-200 rounded px-1.5 py-0.5 text-xs text-gray-500">
                   ⌘K
                 </div>
@@ -308,10 +361,23 @@ const Header = () => {
                 <div ref={roleMenuRef} className="relative">
                   <button
                     onClick={() => setShowRoleMenu(!showRoleMenu)}
-                    className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${pathname.startsWith("/jobs") || pathname.startsWith("/projects") || pathname.startsWith("/services") || pathname.startsWith("/invest") || pathname.startsWith("/profile/applications") ? "text-violet-600" : "text-gray-700 hover:text-violet-600"}`}
+                    className={`px-3 py-2 text-sm font-medium transition-colors flex items-center ${
+                      pathname.startsWith("/jobs") ||
+                      pathname.startsWith("/projects") ||
+                      pathname.startsWith("/services") ||
+                      pathname.startsWith("/invest") ||
+                      pathname.startsWith("/profile/applications")
+                        ? "text-violet-600"
+                        : "text-gray-700 hover:text-violet-600"
+                    }`}
                   >
                     <span>Features</span>
-                    <ChevronDown size={16} className={`ml-1 transition-transform ${showRoleMenu ? "rotate-180" : ""}`} />
+                    <ChevronDown
+                      size={16}
+                      className={`ml-1 transition-transform ${
+                        showRoleMenu ? "rotate-180" : ""
+                      }`}
+                    />
                   </button>
 
                   {/* Role-based menu dropdown */}
@@ -328,13 +394,19 @@ const Header = () => {
                           <Link
                             key={index}
                             href={item.href}
-                            className={`flex items-center px-4 py-2 text-sm ${item.isActive ? "bg-violet-50 text-violet-700" : "text-gray-700 hover:bg-gray-50"}`}
+                            className={`flex items-center px-4 py-2 text-sm ${
+                              item.isActive
+                                ? "bg-violet-50 text-violet-700"
+                                : "text-gray-700 hover:bg-gray-50"
+                            }`}
                             onClick={() => setShowRoleMenu(false)}
                           >
                             <span className="mr-2">{item.icon}</span>
                             <span>{item.label}</span>
                             {item.isNew && (
-                              <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">New</span>
+                              <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                New
+                              </span>
                             )}
                           </Link>
                         ))}
@@ -355,16 +427,18 @@ const Header = () => {
           {/* Right Section: Actions, Notifications, Profile */}
           <div className="flex items-center space-x-4">
             {/* Submit Button - Only show for users who can upload products */}
-            {isInitialized && isAuthenticated() && user?.roleCapabilities?.canUploadProducts && (
-              <button
-                onClick={handleProductSubmit}
-                className="hidden md:flex items-center justify-center bg-violet-600 hover:bg-violet-700 text-white rounded-full px-4 py-2 text-sm font-medium transition-colors"
-                aria-label="Submit a product"
-              >
-                <Plus size={16} className="mr-1" />
-                Submit
-              </button>
-            )}
+            {isInitialized &&
+              isAuthenticated() &&
+              user?.roleCapabilities?.canUploadProducts && (
+                <button
+                  onClick={handleProductSubmit}
+                  className="hidden md:flex items-center justify-center bg-violet-600 hover:bg-violet-700 text-white rounded-full px-4 py-2 text-sm font-medium transition-colors"
+                  aria-label="Submit a product"
+                >
+                  <Plus size={16} className="mr-1" />
+                  Submit
+                </button>
+              )}
 
             {!isInitialized ? (
               // Show skeleton loader while auth is initializing
@@ -411,7 +485,8 @@ const Header = () => {
                         alt={`${user?.firstName || "User"}'s profile`}
                         className="w-8 h-8 object-cover rounded-full"
                         onError={(e) => {
-                          e.target.src = "https://images.unsplash.com/photo-1664575602554-2087b04935a5?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+                          e.target.src =
+                            "https://images.unsplash.com/photo-1664575602554-2087b04935a5?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
                         }}
                       />
                     </div>
@@ -464,7 +539,9 @@ const Header = () => {
                           >
                             <FileText size={16} className="mr-2" />
                             My Applications
-                            <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">New</span>
+                            <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                              New
+                            </span>
                           </Link>
                         )}
 
@@ -545,7 +622,9 @@ const Header = () => {
             className="w-full mt-1 relative rounded-md border border-gray-200 flex items-center py-2 px-3"
           >
             <Search size={16} className="text-gray-400 mr-2" />
-            <span className="text-gray-500 text-sm flex-1 text-left">Search products...</span>
+            <span className="text-gray-500 text-sm flex-1 text-left">
+              Search products...
+            </span>
           </button>
         </div>
 
@@ -588,7 +667,8 @@ const Header = () => {
                   <Link
                     href="/products"
                     className={`flex items-center px-4 py-3 rounded-lg text-gray-800 ${
-                      pathname === "/products" || pathname.startsWith("/products/")
+                      pathname === "/products" ||
+                      pathname.startsWith("/products/")
                         ? "bg-violet-50 text-violet-700 font-medium"
                         : "hover:bg-gray-50"
                     }`}
@@ -600,7 +680,8 @@ const Header = () => {
                   <Link
                     href="/categories"
                     className={`flex items-center px-4 py-3 rounded-lg text-gray-800 ${
-                      pathname === "/categories" || pathname.startsWith("/category/")
+                      pathname === "/categories" ||
+                      pathname.startsWith("/category/")
                         ? "bg-violet-50 text-violet-700 font-medium"
                         : "hover:bg-gray-50"
                     }`}
@@ -638,7 +719,9 @@ const Header = () => {
 
                       {/* Role-based mobile navigation */}
                       <div className="mt-4 mb-2 px-4">
-                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Features</h3>
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Features
+                        </h3>
                       </div>
 
                       {getRoleBasedNavItems().map((item, index) => (
@@ -655,7 +738,9 @@ const Header = () => {
                           <span className="mr-3">{item.icon}</span>
                           {item.label}
                           {item.isNew && (
-                            <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">New</span>
+                            <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                              New
+                            </span>
                           )}
                         </Link>
                       ))}
@@ -758,29 +843,6 @@ const Header = () => {
                 )}
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Onboarding Banner */}
-      {showOnboardingBanner && (
-        <div className="bg-gradient-to-r from-violet-500 to-indigo-600 text-white py-3">
-          <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
-            <p className="text-white text-sm">
-              {nextStep?.message ||
-                "Complete your profile to unlock all features"}
-            </p>
-            <Link href={bannerLink || "/complete-profile"}>
-              <button
-                onClick={() => {
-                  setShowOnboardingBanner(false);
-                  handleCompleteOnboarding();
-                }}
-                className="bg-white text-violet-600 hover:bg-gray-100 px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
-              >
-                {nextStep?.actionLabel || "Complete Now"}
-              </button>
-            </Link>
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 {
-  "/complete-profile/page": "app/complete-profile/page.js",
-  "/home/page": "app/home/page.js",
   "/product/[slug]/page": "app/product/[slug]/page.js",
-  "/[user]/page": "app/[user]/page.js"
+  "/user/settings/page": "app/user/settings/page.js",
+  "/home/page": "app/home/page.js",
+  "/complete-profile/page": "app/complete-profile/page.js"
 }
