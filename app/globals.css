@@ -210,6 +210,14 @@
   }
 }
 
+/* Slow ping animation for timeline dots */
+@keyframes ping-slow {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
 /* Apply to elements */
 .glow-pulse {
   animation: pulseGlow 2s infinite ease-in-out;
@@ -236,6 +244,10 @@
 
 .burst-effect {
   animation: burst 0.5s ease-out forwards;
+}
+
+.animate-ping-slow {
+  animation: ping-slow 3s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
 /* Add this class definition to your existing CSS */

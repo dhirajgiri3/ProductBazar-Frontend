@@ -424,13 +424,13 @@ const RoleManagement = () => {
     const handleResize = () => {
       setMobileView(window.innerWidth < 1024);
     };
-    
+
     // Initial check
     handleResize();
-    
+
     // Add event listener
     window.addEventListener('resize', handleResize);
-    
+
     // Cleanup
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -451,10 +451,14 @@ const RoleManagement = () => {
     );
   }
 
+  // Check if user has admin role either as primary or secondary role
+  const isPrimaryAdmin = user?.role === 'admin';
+  const isSecondaryAdmin = user?.secondaryRoles && user.secondaryRoles.includes('admin');
+
   // Check if user is admin
-  if (!user || user.role !== 'admin') {
+  if (!user || (!isPrimaryAdmin && !isSecondaryAdmin)) {
     return (
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-white border border-amber-200 rounded-xl shadow-sm overflow-hidden"
@@ -477,7 +481,7 @@ const RoleManagement = () => {
 
   return (
     <div className="space-y-6">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
@@ -542,7 +546,7 @@ const RoleManagement = () => {
         <div className="p-4 sm:p-6">
           {/* Mobile Back Button - Only show when viewing user details on mobile */}
           {mobileView && mobileUserDetail && (
-            <motion.button 
+            <motion.button
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="mb-4 inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500"
@@ -552,7 +556,7 @@ const RoleManagement = () => {
               Back to User List
             </motion.button>
           )}
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* User List - Hide on mobile when viewing user details */}
             <div className={`lg:col-span-1 ${mobileView && mobileUserDetail ? 'hidden' : 'block'}`}>
@@ -660,7 +664,7 @@ const RoleManagement = () => {
                                         )}
                                         {suggestion.role && (
                                           <div className="flex items-center">
-                                            {roles.find(r => r.id === suggestion.role)?.icon || 
+                                            {roles.find(r => r.id === suggestion.role)?.icon ||
                                               <span className={`inline-block w-2 h-2 rounded-full mr-1 ${suggestion.role === 'admin' ? 'bg-red-500' : 'bg-green-500'}`}></span>
                                             }
                                             <span>{roles.find(r => r.id === suggestion.role)?.label || suggestion.role}</span>
@@ -676,7 +680,7 @@ const RoleManagement = () => {
                         )}
                       </AnimatePresence>
                     </div>
-                    
+
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                       <div className="relative flex-grow">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -759,8 +763,8 @@ const RoleManagement = () => {
                       <FiUsers className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-1">No users found</h3>
                       <p className="text-gray-500 max-w-md mx-auto">
-                        {searchQuery ? 
-                          "We couldn't find any users matching your search criteria. Try different search terms or filters." : 
+                        {searchQuery ?
+                          "We couldn't find any users matching your search criteria. Try different search terms or filters." :
                           "There are no users in the system yet."}
                       </p>
                     </div>
@@ -806,7 +810,7 @@ const RoleManagement = () => {
                                     </h3>
                                     {user.email && (
                                       <p className="text-xs sm:text-sm text-gray-500 flex items-center">
-                                        <FiMail className="mr-1 w-3 h-3 flex-shrink-0" /> 
+                                        <FiMail className="mr-1 w-3 h-3 flex-shrink-0" />
                                         <span className="truncate">{user.email}</span>
                                       </p>
                                     )}
@@ -821,7 +825,7 @@ const RoleManagement = () => {
                                   </div>
                                 </div>
                               </div>
-                              
+
                               {/* Mobile indicator for navigation */}
                               {mobileView && (
                                 <FiChevronRight className="ml-1 flex-shrink-0 text-gray-400" />
@@ -860,7 +864,7 @@ const RoleManagement = () => {
               {selectedUser ? (
                 <div className="space-y-4 sm:space-y-6">
                   {/* User Info */}
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
@@ -919,7 +923,7 @@ const RoleManagement = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="mt-3 sm:mt-0 sm:ml-auto">
                           <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
                             selectedUser.isProfileCompleted ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
@@ -941,27 +945,27 @@ const RoleManagement = () => {
                             {selectedUser._id}
                           </dd>
                         </div>
-                        
+
                         <div>
                           <dt className="text-xs sm:text-sm font-medium text-gray-500">Joined Date</dt>
                           <dd className="mt-1 text-xs sm:text-sm text-gray-900">
                             {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : 'N/A'}
                           </dd>
                         </div>
-                        
+
                         {selectedUser.companyName && (
                           <div>
                             <dt className="text-xs sm:text-sm font-medium text-gray-500">Company</dt>
                             <dd className="mt-1 text-xs sm:text-sm text-gray-900">{selectedUser.companyName}</dd>
                           </div>
                         )}
-                        
+
                         {selectedUser.address?.country && (
                           <div>
                             <dt className="text-xs sm:text-sm font-medium text-gray-500">Location</dt>
                             <dd className="mt-1 text-xs sm:text-sm text-gray-900">
                               {[
-                                selectedUser.address.city, 
+                                selectedUser.address.city,
                                 selectedUser.address.country
                               ].filter(Boolean).join(', ')}
                             </dd>
@@ -972,7 +976,7 @@ const RoleManagement = () => {
                   </motion.div>
 
                   {/* Primary Role Management */}
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: 0.1 }}
@@ -1013,7 +1017,7 @@ const RoleManagement = () => {
                         {/* Primary Role */}
                         <div>
                           <h4 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">Primary Role</h4>
-                          
+
                           {editMode ? (
                             <div className="rounded-md shadow-sm">
                               <select
@@ -1228,7 +1232,7 @@ const RoleManagement = () => {
                   </motion.div>
                 </div>
               ) : (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}

@@ -39,16 +39,33 @@ const AdminUsersPage = () => {
     { id: 'admin', label: 'Admin' }
   ];
 
-  // Check if user is admin
+  // Check if user has admin role (primary or secondary)
   useEffect(() => {
-    if (!authLoading && user && user.role !== 'admin') {
+    if (authLoading) return;
+
+    if (!user) {
+      router.push('/auth/login');
+      return;
+    }
+
+    // Check if user has admin role either as primary or secondary role
+    const isPrimaryAdmin = user.role === 'admin';
+    const isSecondaryAdmin = user.secondaryRoles && user.secondaryRoles.includes('admin');
+
+    if (!isPrimaryAdmin && !isSecondaryAdmin) {
       router.push('/unauthorized');
     }
   }, [user, authLoading, router]);
 
   // Fetch users with debounce and proper request cancellation
   const fetchUsers = useCallback(async () => {
-    if (!user || user.role !== 'admin') return;
+    if (!user) return;
+
+    // Check if user has admin role either as primary or secondary role
+    const isPrimaryAdmin = user.role === 'admin';
+    const isSecondaryAdmin = user.secondaryRoles && user.secondaryRoles.includes('admin');
+
+    if (!isPrimaryAdmin && !isSecondaryAdmin) return;
 
     // Cancel any previous request
     if (abortControllerRef.current) {
@@ -161,7 +178,11 @@ const AdminUsersPage = () => {
     );
   }
 
-  if (!user || user.role !== 'admin') {
+  // Check if user has admin role either as primary or secondary role
+  const isPrimaryAdmin = user?.role === 'admin';
+  const isSecondaryAdmin = user?.secondaryRoles && user.secondaryRoles.includes('admin');
+
+  if (!user || (!isPrimaryAdmin && !isSecondaryAdmin)) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="bg-amber-50 text-amber-800 p-4 rounded-lg">

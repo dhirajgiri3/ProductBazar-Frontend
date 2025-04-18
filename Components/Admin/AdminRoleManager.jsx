@@ -93,7 +93,11 @@ const AdminRoleManager = ({ userId, onRoleUpdated }) => {
     }
   };
 
-  if (!user || user.role !== 'admin') {
+  // Check if user has admin role either as primary or secondary role
+  const isPrimaryAdmin = user?.role === 'admin';
+  const isSecondaryAdmin = user?.secondaryRoles && user.secondaryRoles.includes('admin');
+
+  if (!user || (!isPrimaryAdmin && !isSecondaryAdmin)) {
     return (
       <div className="bg-amber-50 text-amber-800 p-4 rounded-lg mb-4">
         <div className="flex items-center">

@@ -194,22 +194,26 @@ const SettingsPage = () => {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="w-64 flex-shrink-0"
+              className="w-64 flex-shrink-0 relative"
             >
-              <div className="bg-white rounded-xl overflow-hidden">
-                <div className="flex flex-col space-y-1 p-3">
+              <div className="sticky top-20 bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
+                <div className="flex flex-col space-y-2 p-4 max-h-[calc(100vh-120px)] overflow-y-auto hide-scrollbar">
                   {navItems.map((item) => (
                     <motion.button
                       key={item.id}
                       variants={itemVariants}
                       onClick={() => setActiveTab(item.id)}
-                      className={`flex items-center px-3 py-2.5 rounded-md text-left transition-colors ${
+                      className={`flex items-center px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                         activeTab === item.id
-                          ? "bg-violet-50 text-violet-600"
-                          : "text-gray-700 hover:bg-gray-50"
+                          ? "bg-violet-50 text-violet-600 shadow-sm border-l-2 border-violet-600"
+                          : "text-gray-700 hover:bg-gray-50 hover:translate-x-1"
                       }`}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                     >
-                      {item.icon}
+                      <span className={`${activeTab === item.id ? "text-violet-600" : "text-gray-500"}`}>
+                        {item.icon}
+                      </span>
                       <span className="ml-3 font-medium">{item.label}</span>
                     </motion.button>
                   ))}

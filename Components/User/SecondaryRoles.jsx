@@ -17,8 +17,12 @@ const SecondaryRoles = ({ profileUser, isOwnProfile = true }) => {
 
   // Determine if the current user can modify roles
   useEffect(() => {
+    // Check if user has admin role either as primary or secondary role
+    const isPrimaryAdmin = user?.role === 'admin';
+    const isSecondaryAdmin = user?.secondaryRoles && user.secondaryRoles.includes('admin');
+
     // ONLY admin can modify roles (both their own and others')
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = isPrimaryAdmin || isSecondaryAdmin;
 
     // Set canModifyRoles to true only if the user is an admin
     setCanModifyRoles(isAdmin);
@@ -60,7 +64,12 @@ const SecondaryRoles = ({ profileUser, isOwnProfile = true }) => {
 
       let response;
 
-      if (user.role === 'admin' && !isOwnProfile) {
+      // Check if user has admin role either as primary or secondary role
+      const isPrimaryAdmin = user.role === 'admin';
+      const isSecondaryAdmin = user.secondaryRoles && user.secondaryRoles.includes('admin');
+      const isAdmin = isPrimaryAdmin || isSecondaryAdmin;
+
+      if (isAdmin && !isOwnProfile) {
         // Admin updating another user's roles
         response = await api.put(`/admin/users/${targetUser._id}/secondary-roles`, {
           secondaryRoles: updatedSecondaryRoles
@@ -100,7 +109,12 @@ const SecondaryRoles = ({ profileUser, isOwnProfile = true }) => {
 
       let response;
 
-      if (user.role === 'admin' && !isOwnProfile) {
+      // Check if user has admin role either as primary or secondary role
+      const isPrimaryAdmin = user.role === 'admin';
+      const isSecondaryAdmin = user.secondaryRoles && user.secondaryRoles.includes('admin');
+      const isAdmin = isPrimaryAdmin || isSecondaryAdmin;
+
+      if (isAdmin && !isOwnProfile) {
         // Admin updating another user's roles
         response = await api.put(`/admin/users/${targetUser._id}/secondary-roles`, {
           secondaryRoles: updatedSecondaryRoles

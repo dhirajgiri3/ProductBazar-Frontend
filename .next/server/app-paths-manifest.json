@@ -1,6 +1,5 @@
 {
-  "/product/[slug]/page": "app/product/[slug]/page.js",
-  "/user/settings/page": "app/user/settings/page.js",
+  "/user/mybookmarks/page": "app/user/mybookmarks/page.js",
   "/home/page": "app/home/page.js",
-  "/complete-profile/page": "app/complete-profile/page.js"
+  "/favicon.ico/route": "app/favicon.ico/route.js"
 }

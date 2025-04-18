@@ -24,7 +24,7 @@ const RoleSelector = ({ user, refreshUserData }) => {
 
   // Handle role change
   const handleRoleChange = async (roleId) => {
-    if (roleId === user?.role) {
+    if (roleId === user?.role || (user?.secondaryRoles && user.secondaryRoles.includes(roleId))) {
       setIsOpen(false);
       return;
     }
@@ -33,19 +33,32 @@ const RoleSelector = ({ user, refreshUserData }) => {
     setIsLoading(true);
 
     try {
-      // Instead of trying to change the role directly, we'll show a message
-      // and provide guidance on how to request a role change
+      // Get the role name for the toast message
+      const roleName = getRoleName(roleId);
+
+      // Create a more detailed message about the role request process
       toast.success(
         <div>
-          <p className="font-medium mb-1">Role changes require admin approval</p>
-          <p className="text-sm">Please contact an administrator to change your role to {getRoleName(roleId)}.</p>
+          <p className="font-medium mb-1">Role request submitted</p>
+          <p className="text-sm mb-1">
+            Your request for the <span className="font-medium">{roleName}</span> role has been noted.
+          </p>
+          <p className="text-sm">
+            An administrator will review your request and update your profile accordingly.
+          </p>
         </div>,
-        { duration: 5000 }
+        { duration: 6000 }
       );
 
-      // You could also implement a feature to send a role change request to admins
-      // For now, we'll just close the dropdown
-      setSelectedRole(user?.role); // Reset to current role
+      // In a real implementation, you would send a request to the backend here
+      // For example:
+      // await api.post('/user/role-requests', {
+      //   roleId,
+      //   requestType: user?.role === 'user' ? 'primary' : 'secondary'
+      // });
+
+      // Reset to current role
+      setSelectedRole(user?.role);
     } catch (err) {
       console.error('Error handling role change:', err);
       toast.error('An error occurred while processing your request');
@@ -114,7 +127,8 @@ const RoleSelector = ({ user, refreshUserData }) => {
               >
                 <div className="p-3 border-b border-gray-100">
                   <h4 className="text-sm font-medium text-gray-700">Available Roles</h4>
-                  <p className="text-xs text-gray-500">Role changes require admin approval</p>
+                  <p className="text-xs text-gray-500">You can request roles you don't already have</p>
+                  <p className="text-xs text-gray-500 mt-1">All role changes require admin approval</p>
                 </div>
 
                 <div className="max-h-80 overflow-y-auto">
@@ -122,19 +136,21 @@ const RoleSelector = ({ user, refreshUserData }) => {
                     const RoleIcon = role.icon;
                     const isCurrentRole = user?.role === role.id;
                     const isSecondaryRole = user?.secondaryRoles?.includes(role.id);
+                    const isAlreadyAssigned = isCurrentRole || isSecondaryRole;
 
                     return (
                       <div
                         key={role.id}
                         className={clsx(
                           "w-full text-left p-3 flex items-start",
-                          isCurrentRole ? "bg-violet-50" : "hover:bg-gray-50 transition-colors"
+                          isCurrentRole ? "bg-violet-50" : isSecondaryRole ? "bg-gray-50" : "hover:bg-gray-50 transition-colors"
                         )}
                       >
                         {/* We're using a div instead of a button since role changes require admin approval */}
                         <div className={clsx(
                           "w-8 h-8 rounded-full flex items-center justify-center mr-3 flex-shrink-0",
-                          isCurrentRole ? "bg-violet-100 text-violet-600" : "bg-gray-100 text-gray-500"
+                          isCurrentRole ? "bg-violet-100 text-violet-600" :
+                          isSecondaryRole ? "bg-gray-100 text-gray-600" : "bg-gray-100 text-gray-500"
                         )}>
                           <RoleIcon size={16} />
                         </div>
@@ -143,20 +159,21 @@ const RoleSelector = ({ user, refreshUserData }) => {
                           <div className="flex items-center">
                             <span className={clsx(
                               "font-medium text-sm",
-                              isCurrentRole ? "text-violet-700" : "text-gray-700"
+                              isCurrentRole ? "text-violet-700" :
+                              isSecondaryRole ? "text-gray-700" : "text-gray-700"
                             )}>
                               {role.name}
                             </span>
 
                             {isCurrentRole && (
                               <span className="ml-2 text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">
-                                Current
+                                Current Primary
                               </span>
                             )}
 
                             {!isCurrentRole && isSecondaryRole && (
                               <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                                Secondary
+                                Current Secondary
                               </span>
                             )}
                           </div>
@@ -165,7 +182,7 @@ const RoleSelector = ({ user, refreshUserData }) => {
                             {role.description}
                           </p>
 
-                          {!isCurrentRole && (
+                          {!isAlreadyAssigned && (
                             <button
                               type="button"
                               onClick={() => handleRoleChange(role.id)}
@@ -176,7 +193,7 @@ const RoleSelector = ({ user, refreshUserData }) => {
                           )}
                         </div>
 
-                        {isCurrentRole && (
+                        {isAlreadyAssigned && (
                           <div className="ml-2 text-violet-600">
                             <FiCheck size={16} />
                           </div>
@@ -187,8 +204,9 @@ const RoleSelector = ({ user, refreshUserData }) => {
                 </div>
 
                 <div className="p-3 border-t border-gray-100 text-xs text-gray-500">
-                  <p className="mb-1">To request a role change, please contact an administrator.</p>
-                  <p>Your current role determines which features are available to you.</p>
+                  <p className="mb-1">Role requests are reviewed by administrators.</p>
+                  <p className="mb-1">Primary roles determine your main capabilities.</p>
+                  <p>Secondary roles grant additional features without changing your primary role.</p>
                 </div>
               </motion.div>
             )}

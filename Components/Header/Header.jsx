@@ -96,8 +96,11 @@ const Header = () => {
 
     const items = [];
 
-    // Add admin-specific navigation items
-    if (user.role === "admin") {
+    // Add admin-specific navigation items - check both primary and secondary roles
+    const isPrimaryAdmin = user.role === "admin";
+    const isSecondaryAdmin = user.secondaryRoles && user.secondaryRoles.includes("admin");
+
+    if (isPrimaryAdmin || isSecondaryAdmin) {
       items.push({
         label: "Admin Dashboard",
         href: "/admin/users",
@@ -353,8 +356,8 @@ const Header = () => {
               <>
                 <NavItem
                   label="Bookmarks"
-                  isActive={pathname === "/bookmarks"}
-                  href="/bookmarks"
+                  isActive={pathname === "/user/mybookmarks"}
+                  href="/user/mybookmarks"
                 />
 
                 {/* Role-based navigation dropdown */}
@@ -477,12 +480,14 @@ const Header = () => {
                     aria-label="User menu"
                   >
                     <div className="rounded-full overflow-hidden border-2 border-transparent hover:border-violet-200 transition-colors">
-                      <img
+                      <Image
                         src={
                           user?.profilePicture?.url ||
                           "https://images.unsplash.com/photo-1664575602554-2087b04935a5?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                         }
                         alt={`${user?.firstName || "User"}'s profile`}
+                        width={32}
+                        height={32}
                         className="w-8 h-8 object-cover rounded-full"
                         onError={(e) => {
                           e.target.src =
@@ -705,9 +710,9 @@ const Header = () => {
                   {isAuthenticated() && (
                     <>
                       <Link
-                        href="/bookmarks"
+                        href="/user/mybookmarks"
                         className={`flex items-center px-4 py-3 rounded-lg text-gray-800 ${
-                          pathname === "/bookmarks"
+                          pathname === "/user/mybookmarks"
                             ? "bg-violet-50 text-violet-700 font-medium"
                             : "hover:bg-gray-50"
                         }`}

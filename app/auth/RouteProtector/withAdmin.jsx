@@ -17,13 +17,24 @@ const withAdmin = (Component) => {
         return;
       }
 
-      if (user.role !== "admin") {
+      // Check if user has admin role either as primary or secondary role
+      const isPrimaryAdmin = user.role === "admin";
+      const isSecondaryAdmin = user.secondaryRoles && user.secondaryRoles.includes("admin");
+
+      if (!isPrimaryAdmin && !isSecondaryAdmin) {
         router.push("/unauthorized");
       }
     }, [authLoading, user, router]);
 
-    // Only render when we're sure it's an admin
-    if (authLoading || !user || user.role !== "admin") return null;
+    // Only render when we're sure it's an admin (primary or secondary role)
+    if (authLoading || !user) return null;
+
+    // Check admin status
+    const isPrimaryAdmin = user.role === "admin";
+    const isSecondaryAdmin = user.secondaryRoles && user.secondaryRoles.includes("admin");
+
+    // Don't render if not an admin
+    if (!isPrimaryAdmin && !isSecondaryAdmin) return null;
 
     return <Component {...props} />;
   });

@@ -1,71 +1,31 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { Bookmark, BookmarkCheck } from "lucide-react";
-import { useProduct } from "../../../Contexts/Product/ProductContext";
-import { useAuth } from "../../../Contexts/Auth/AuthContext";
-import { useToast } from "../../../Contexts/Toast/ToastContext";
-import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext";
-import { addProductToMapping } from "../../../Utils/productMappingUtils";
-import eventBus, { EVENT_TYPES } from "../../../Utils/eventBus";
-import logger from "../../../Utils/logger";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useProduct } from "../../../Contexts/Product/ProductContext"; // Adjust path as needed
+import { useAuth } from "../../../Contexts/Auth/AuthContext";         // Adjust path as needed
+import { useToast } from "../../../Contexts/Toast/ToastContext";     // Adjust path as needed
+import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext"; // Adjust path as needed
+import { addProductToMapping } from "../../../Utils/productMappingUtils"; // Adjust path as needed
+import eventBus, { EVENT_TYPES } from "../../../Utils/eventBus";       // Adjust path as needed
+import logger from "../../../Utils/logger";                           // Adjust path as needed
+import AnimatedBookmarkIcon from "./AnimatedBookmarkIcon";           // Import our custom animated icon
 
-/**
- * Centralized Bookmark Button component
- *
- * @param {Object} props
- * @param {Object} props.product - The product object
- * @param {string} props.slug - The product slug (alternative to product object)
- * @param {boolean} props.hasBookmarked - Initial bookmark state (alternative to product object)
- * @param {number} props.bookmarkCount - Initial bookmark count (alternative to product object)
- * @param {string} props.size - Button size (sm, md, lg)
- * @param {string} props.source - Source of the interaction (for analytics)
- * @param {Function} props.onSuccess - Callback after successful bookmark
- * @param {string} props.className - Additional CSS classes
- * @param {boolean} props.showCount - Whether to show the bookmark count
- * @param {boolean} props.showText - Whether to show text label
- * @param {boolean} props.disabled - Whether the button is disabled
- */
 const BookmarkButton = ({
-  product,
-  slug,
-  hasBookmarked: initialHasBookmarked,
-  bookmarkCount: initialBookmarkCount,
-  size = "md",
-  source = "unknown",
-  onSuccess,
-  className = "",
-  showCount = true,
-  showText = false,
-  disabled = false,
+  product, // The full product object is preferred
+  slug, // Can be provided as an alternative if product object is minimal
+  hasBookmarked: initialHasBookmarked, // Explicit prop to override initial state
+  bookmarkCount: initialBookmarkCount, // Explicit prop to override initial count
+  size = "md", // 'sm', 'md', 'lg'
+  source = "unknown", // Context where the button is used
+  onSuccess, // Callback function on successful toggle: (result: { success: boolean, bookmarked: boolean, count: number }) => void
+  className = "", // Additional CSS classes for the container div
+  showCount = true, // Whether to display the bookmark count
+  showText = false, // Whether to show "Save" / "Saved" text
+  disabled = false, // Explicitly disable the button
 }) => {
-  // Get the product slug from either the slug prop or the product object
+  // Determine product slug
   const productSlug = slug || product?.slug;
-
-  // Determine initial state from props
-  const getInitialBookmarked = () => {
-    if (initialHasBookmarked !== undefined) return initialHasBookmarked;
-    if (product?.userInteractions?.hasBookmarked !== undefined) return product.userInteractions.hasBookmarked;
-    if (product?.bookmarks?.userHasBookmarked !== undefined) return product.bookmarks.userHasBookmarked;
-    // Also check top-level bookmarked property if available
-    if (product?.bookmarked !== undefined) return product.bookmarked;
-    return false;
-  };
-
-  const getInitialCount = () => {
-    if (initialBookmarkCount !== undefined) return initialBookmarkCount;
-    // Prioritize top-level bookmarkCount (virtual field) if available
-    if (product?.bookmarkCount !== undefined) return product.bookmarkCount;
-    // Fallback to nested structure count
-    if (product?.bookmarks?.count !== undefined) return product.bookmarks.count;
-    return 0;
-  };
-
-  // State
-  const [isBookmarked, setIsBookmarked] = useState(getInitialBookmarked());
-  const [count, setCount] = useState(getInitialCount());
-  const [isLoading, setIsLoading] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const productId = product?._id;
 
   // Hooks
   const { toggleBookmark, productCache } = useProduct();
@@ -73,378 +33,312 @@ const BookmarkButton = ({
   const { showToast } = useToast();
   const { recordInteraction } = useRecommendation();
 
-  // Track component mounted state to prevent updates after unmount
+  // State
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [count, setCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false); // For API call in progress
+  const [isProcessing, setIsProcessing] = useState(false); // Debounce rapid clicks
+
+  // Ref to track mounted state
   const isMounted = useRef(true);
 
   // Check if the current user is the maker/owner of the product
-  const isOwner = user && product && (user._id === product.maker || product?.maker?._id === user?._id);
+  const isOwner = user && product && (user._id === product.maker || user._id === product?.maker?._id);
 
-  // Listen for global bookmark events
+
+  // --- Initial State Calculation ---
+   const getInitialBookmarked = useCallback(() => {
+    if (!product && initialHasBookmarked === undefined) return false; // No data
+    if (initialHasBookmarked !== undefined) return initialHasBookmarked;
+    if (product?.userInteractions?.hasBookmarked !== undefined) return product.userInteractions.hasBookmarked;
+    if (product?.bookmarks?.userHasBookmarked !== undefined) return product.bookmarks.userHasBookmarked;
+    if (product?.bookmarked !== undefined) return product.bookmarked;
+    return false;
+  }, [product, initialHasBookmarked]);
+
+  const getInitialCount = useCallback(() => {
+    if (!product && initialBookmarkCount === undefined) return 0; // No data
+    if (initialBookmarkCount !== undefined) return initialBookmarkCount;
+    // Prioritize direct count field (expected from API)
+    if (product?.bookmarkCount !== undefined && typeof product.bookmarkCount === 'number') return product.bookmarkCount;
+    // Fallback to nested structure (older cache/data)
+    if (product?.bookmarks?.count !== undefined && typeof product.bookmarks.count === 'number') return product.bookmarks.count;
+    return 0;
+  }, [product, initialBookmarkCount]);
+
+  // Effect to initialize state when component mounts or product changes
   useEffect(() => {
-    // Subscribe to bookmark events
-    const unsubscribe = eventBus.subscribe(EVENT_TYPES.BOOKMARK_UPDATED, (data) => {
-      // Only update if this component is for the updated product
-      if ((productSlug && data.slug === productSlug) ||
-          (product?._id && data.productId === product._id)) {
+    setIsBookmarked(getInitialBookmarked());
+    setCount(getInitialCount());
+  }, [getInitialBookmarked, getInitialCount]);
 
-        logger.debug(`BookmarkButton received global update for ${productSlug || product?._id}:`, data);
-
-        // Update count and bookmarked state from the event data
-        if (isMounted.current) {
-          // Always update the count
-          setCount(data.count);
-
-          // Get the current user ID from localStorage
-          let currentUserId = localStorage.getItem('userId');
-
-          // If userId is not directly available, try to get it from auth data
-          if (!currentUserId) {
-            try {
-              const authData = localStorage.getItem('auth');
-              if (authData) {
-                const parsedAuth = JSON.parse(authData);
-                currentUserId = parsedAuth?.user?._id;
-              }
-
-              // Also check user object from context
-              if (!currentUserId && user && user._id) {
-                currentUserId = user._id;
-              }
-            } catch (e) {
-              logger.error('Error getting current user ID:', e);
-            }
-          }
-
-          // Check if this event is for the current user
-          const isCurrentUserAction = data.userId === currentUserId;
-
-          // Update bookmarked state if it's included in the event data
-          if (data.bookmarked !== undefined) {
-            setIsBookmarked(data.bookmarked);
-          }
-          // Or if it's an action event (add/remove) for the current user
-          else if (isCurrentUserAction && data.action) {
-            setIsBookmarked(data.action === 'add');
-          }
-
-          logger.debug(`BookmarkButton updated state for ${productSlug}:`, {
-            count: data.count,
-            bookmarked: isCurrentUserAction ? (data.action === 'add') : data.bookmarked,
-            isCurrentUserAction,
-            userId: data.userId,
-            currentUserId
-          });
-        }
-      }
-    });
-
-    // Cleanup subscription on unmount
-    return () => {
-      isMounted.current = false;
-      unsubscribe();
-    };
-  }, [productSlug, product?._id]);
-
-  // Check for updates in the global product cache
-  useEffect(() => {
-    if (!productSlug || !isMounted.current) return;
-
-    // Get the product from the global cache
-    const cachedProduct = productCache[productSlug];
-
-    if (cachedProduct) {
-      logger.debug(`BookmarkButton found product in global cache for ${productSlug}:`, {
-        bookmarkCount: cachedProduct.bookmarkCount,
-        bookmarked: cachedProduct.bookmarked,
-        userHasBookmarked: cachedProduct.bookmarks?.userHasBookmarked,
-        userInteractions: cachedProduct.userInteractions
-      });
-
-      // Update count if it's different
-      if (cachedProduct.bookmarkCount !== undefined && cachedProduct.bookmarkCount !== count) {
-        setCount(cachedProduct.bookmarkCount);
-      }
-
-      // Determine the bookmarked state from all possible sources
-      const cachedBookmarkedState =
-        cachedProduct.bookmarked ??
-        cachedProduct.bookmarks?.userHasBookmarked ??
-        cachedProduct.userInteractions?.hasBookmarked ??
-        false;
-
-      // Only update if the state is different to avoid unnecessary re-renders
-      if (cachedBookmarkedState !== isBookmarked) {
-        logger.debug(`BookmarkButton updating bookmarked state for ${productSlug} from ${isBookmarked} to ${cachedBookmarkedState}`);
-        setIsBookmarked(cachedBookmarkedState);
-      }
-    }
-  }, [productSlug, productCache]);
-
-  // Update state when props change
+  // Effect to update state if props/product data change *after* initial mount
   useEffect(() => {
     const newBookmarked = getInitialBookmarked();
     const newCount = getInitialCount();
 
-    // Add product to mapping for socket updates if available
-    if (product && product._id && product.slug) {
-      addProductToMapping(product);
-    }
-
-    // Only update state if there's an actual change to avoid unnecessary re-renders
     if (isBookmarked !== newBookmarked) {
-      // Log when there's an actual change in bookmarked state
-      logger.debug(`BookmarkButton bookmarked state changed for ${product?.slug || productSlug}:`, {
-        oldBookmarked: isBookmarked,
-        newBookmarked,
-        source: 'props-change'
-      });
-
-      // Update the state
-      setIsBookmarked(newBookmarked);
+       logger.debug(`BookmarkButton: Prop/Product update changed bookmarked state for ${productSlug}`, { old: isBookmarked, new: newBookmarked });
+       setIsBookmarked(newBookmarked);
     }
-
     if (count !== newCount) {
-      // Log when there's an actual change in count
-      logger.debug(`BookmarkButton count changed for ${product?.slug || productSlug}:`, {
-        oldCount: count,
-        newCount,
-        source: 'props-change'
-      });
-
-      // Update the state
-      setCount(newCount);
+       logger.debug(`BookmarkButton: Prop/Product update changed count for ${productSlug}`, { old: count, new: newCount });
+       setCount(newCount);
     }
 
-    // Set mounted flag
-    isMounted.current = true;
+     // Add product to mapping for socket updates if available
+     if (productId && productSlug) {
+        addProductToMapping({ _id: productId, slug: productSlug });
+     }
 
-    return () => {
-      isMounted.current = false;
-    };
   }, [
-    // Update dependencies to include the checked properties
     product?.userInteractions?.hasBookmarked,
     product?.bookmarks?.userHasBookmarked,
+    product?.bookmarked,
     product?.bookmarkCount,
     product?.bookmarks?.count,
     initialHasBookmarked,
-    initialBookmarkCount
+    initialBookmarkCount,
+    productSlug,
+    productId,
+    getInitialCount,
+    getInitialBookmarked
   ]);
+
+  // Effect for Mounted Ref
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  // Effect to listen for global bookmark events from EventBus
+  useEffect(() => {
+    if (!productSlug && !productId) return;
+
+    const handleGlobalUpdate = (data) => {
+      if ((productSlug && data.slug === productSlug) || (productId && data.productId === productId)) {
+        if (isMounted.current) {
+          logger.debug(`BookmarkButton: Global event received for ${productSlug || productId}`, data);
+          // Update count
+          if (data.count !== undefined && data.count !== count) {
+             setCount(data.count);
+          }
+
+          // Update bookmarked status
+          let currentUserId = user?._id || localStorage.getItem('userId');
+          const isCurrentUserAction = data.userId === currentUserId;
+
+          if (data.bookmarked !== undefined && data.bookmarked !== isBookmarked) {
+             setIsBookmarked(data.bookmarked);
+          } else if (isCurrentUserAction && data.action) {
+             const newBookmarkedState = data.action === 'add';
+             if (newBookmarkedState !== isBookmarked) {
+                setIsBookmarked(newBookmarkedState);
+             }
+          }
+        }
+      }
+    };
+
+    const unsubscribe = eventBus.subscribe(EVENT_TYPES.BOOKMARK_UPDATED, handleGlobalUpdate);
+    return () => unsubscribe();
+
+  }, [productSlug, productId, user?._id, count, isBookmarked]);
+
+  // Effect to check for updates in the global product cache
+  useEffect(() => {
+    if (!productSlug || !isMounted.current) return;
+    const cachedProduct = productCache[productSlug];
+
+    if (cachedProduct) {
+      // Determine count from cache
+      const cachedCount = cachedProduct.bookmarkCount ?? cachedProduct.bookmarks?.count ?? count;
+      if (cachedCount !== count) {
+         logger.debug(`BookmarkButton: Cache update changed count for ${productSlug}`, { old: count, new: cachedCount });
+         setCount(cachedCount);
+      }
+
+      // Determine bookmarked state from cache
+      const cachedBookmarkedState =
+        cachedProduct.bookmarked ??
+        cachedProduct.bookmarks?.userHasBookmarked ??
+        cachedProduct.userInteractions?.hasBookmarked ??
+        isBookmarked;
+
+      if (cachedBookmarkedState !== isBookmarked) {
+         logger.debug(`BookmarkButton: Cache update changed bookmarked state for ${productSlug}`, { old: isBookmarked, new: cachedBookmarkedState });
+         setIsBookmarked(cachedBookmarkedState);
+      }
+    }
+  }, [productSlug, productCache, count, isBookmarked]);
+
 
   // Handle bookmark action
   const handleBookmark = async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // Prevent action if not authenticated
-    if (!isAuthenticated) {
-      showToast("error", "Please log in to bookmark products");
-      return;
-    }
+     if (!productSlug) {
+       logger.error("BookmarkButton: Cannot toggle bookmark without product slug.");
+       showToast("error", "Cannot perform action: Product identifier missing.");
+       return;
+     }
 
-    // Prevent action if user is the owner
-    if (isOwner) {
-      showToast("error", "You cannot bookmark your own product");
-      return;
-    }
-
-    // Prevent rapid clicks
+    if (!isAuthenticated) { showToast("error", "Please log in to save products"); return; }
+    if (isOwner) { showToast("info", "You cannot bookmark your own product"); return; }
     if (isLoading || isProcessing) return;
 
     setIsLoading(true);
     setIsProcessing(true);
 
-    // Optimistic UI update - update state before calling API
+    // Optimistic UI update
     const previousState = isBookmarked;
     const previousCount = count;
     setIsBookmarked(!isBookmarked);
-
-    // Update count based on bookmark action
-    if (isBookmarked) {
-      // Removing bookmark - ensure count doesn't go below 0
-      setCount(prev => Math.max(0, prev - 1));
-    } else {
-      // Adding bookmark
-      setCount(prev => prev + 1);
-    }
+    setCount(prev => isBookmarked ? Math.max(0, prev - 1) : prev + 1);
 
     try {
-      // Call API
+      // Call API via context
       const result = await toggleBookmark(productSlug);
 
       if (!result.success) {
-        // Revert optimistic update on failure - revert to previous state
-        setIsBookmarked(previousState);
-        setCount(previousCount);
+        // Revert optimistic update on failure
+         if (isMounted.current) {
+             setIsBookmarked(previousState);
+             setCount(previousCount);
+         }
         showToast("error", result.message || "Failed to update bookmark");
-        return;
+        logger.warn(`Bookmark failed for ${productSlug}: ${result.message}`);
+        return; // Exit early
       }
 
-      // Record interaction for recommendations
+      // --- Sync with server state ---
+      const serverCount = result.bookmarkCount ?? result.count ?? count; // Prioritize specific field
+      const serverBookmarkedState = result.bookmarked ?? !previousState;
+
+      if (isMounted.current) {
+          if(serverCount !== count) setCount(serverCount);
+          if(serverBookmarkedState !== isBookmarked) setIsBookmarked(serverBookmarkedState);
+      }
+       // ---
+
+      // Record interaction for recommendations (fire and forget)
       if (recordInteraction) {
-        try {
-          await recordInteraction(
-            productSlug,
-            result.bookmarked ? "bookmark" : "remove_bookmark",
-            {
-              source,
-              previousInteraction: !result.bookmarked ? "bookmarked" : "none",
-            }
-          );
-        } catch (error) {
-          // Only log detailed errors in development mode
-          if (process.env.NODE_ENV === 'development') {
-            console.error("Failed to record interaction:", error);
-          }
-        }
+         recordInteraction(productSlug, serverBookmarkedState ? "bookmark" : "remove_bookmark", {
+            source,
+            previousInteraction: previousState ? "bookmarked" : "none",
+         }).catch(err => logger.error(`Failed to record bookmark interaction for ${productSlug}:`, err));
       }
 
       // Call success callback if provided
       if (onSuccess) {
-        // Ensure we pass the correct count from the API response
-        // The API returns the updated count after the operation
-        const resultWithCount = {
-          ...result,
-          // Standardize where count is accessed from the API response
-          count: result.bookmarkCount ?? result.count ?? count, // Prioritize bookmarkCount
-        };
-
-        // Update local state with the actual count from the server
-        setCount(resultWithCount.count); // Ensure local state matches API result
-
-        // Log only in development and only once per successful interaction
-        if (process.env.NODE_ENV === 'development') {
-          console.log('BookmarkButton API success:', {
-            product: productSlug,
-            bookmarked: result.bookmarked,
-            count: resultWithCount.count
-          });
-        }
-
-        // Pass the result to the parent component
-        onSuccess(resultWithCount);
+        onSuccess({ ...result, count: serverCount, bookmarked: serverBookmarkedState });
       }
 
-      // Show success message
-      showToast(
-        "success",
-        result.bookmarked ? "Product bookmarked successfully" : "Bookmark removed"
-      );
+      // Show success toast (optional)
+      // showToast("success", serverBookmarkedState ? "Product saved!" : "Bookmark removed");
+
     } catch (error) {
-      // Only log detailed errors in development mode
-      if (process.env.NODE_ENV === 'development') {
-        console.error("Error toggling bookmark:", error);
+      logger.error(`Error toggling bookmark for ${productSlug}:`, error);
+      // Revert optimistic update on error
+      if (isMounted.current) {
+          setIsBookmarked(previousState);
+          setCount(previousCount);
       }
-      // Revert optimistic update on error - revert to previous state
-      setIsBookmarked(previousState);
-      setCount(previousCount);
-      showToast("error", "Something went wrong");
+
+      // Extract error message from the error object
+      let errorMessage = "An unexpected error occurred while saving.";
+
+      // Check for specific error messages
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      // Show the error message in a toast
+      showToast("error", errorMessage);
     } finally {
-      setIsLoading(false);
-      // Allow new interactions after a short delay
-      setTimeout(() => {
-        setIsProcessing(false);
-      }, 500);
+      if (isMounted.current) {
+        setIsLoading(false);
+        setTimeout(() => {
+          if (isMounted.current) setIsProcessing(false);
+        }, 300);
+      }
     }
   };
 
-  // Size classes
+  // Dynamic class generation
   const sizeClasses = {
-    sm: "p-1.5 rounded-full",
-    md: "p-2 rounded-full",
-    lg: "p-2.5 rounded-xl",
+    sm: "p-1.5 rounded-md text-xs",
+    md: "p-2 rounded-lg text-sm",
+    lg: "p-2.5 rounded-lg text-base",
   };
-
-  // Count size classes
-  const countSizeClasses = {
-    sm: "text-xs",
-    md: "text-sm",
-    lg: "text-base",
-  };
-
-  // Icon size classes
   const iconSizeClasses = {
-    sm: "w-3 h-3",
+    sm: "w-3.5 h-3.5",
     md: "w-4 h-4",
     lg: "w-5 h-5",
   };
+   const countSizeClasses = {
+    sm: "text-xs",
+    md: "text-sm",
+    lg: "text-sm",
+  };
+   const textClasses = {
+    sm: "text-xs ml-1",
+    md: "text-sm ml-1.5",
+    lg: "text-sm ml-1.5",
+  };
 
-  // Log when the bookmarked state changes (for debugging) - but only in development and with rate limiting
-  useEffect(() => {
-    // Only log in development mode and limit frequency
-    if (process.env.NODE_ENV !== 'development') return;
-
-    // Use a debounce mechanism to avoid excessive logging
-    const logKey = `bookmark_log_${productSlug || product?._id}`;
-    const lastLog = parseInt(sessionStorage.getItem(logKey) || '0');
-    const now = Date.now();
-
-    // Only log once every 2 seconds per product
-    if (now - lastLog > 2000) {
-      logger.debug(`BookmarkButton UI state for ${productSlug}:`, {
-        isBookmarked,
-        count,
-        productId: product?._id,
-        timestamp: now
-      });
-
-      try {
-        sessionStorage.setItem(logKey, now.toString());
-      } catch (e) {
-        // Ignore storage errors
-      }
-    }
-  }, [isBookmarked, count, productSlug, product?._id]);
+  const buttonBaseClasses = "transition-all duration-200 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-1";
+  const bookmarkedClasses = "bg-violet-100 text-violet-700 hover:bg-violet-200";
+  const notBookmarkedClasses = "bg-gray-100 text-gray-500 hover:bg-violet-50 hover:text-violet-600";
+  const disabledClasses = "opacity-60 cursor-not-allowed";
+  const processingClasses = "cursor-wait";
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className={`flex items-center ${showCount ? 'gap-1.5' : ''} ${className}`}>
       <button
+        type="button"
         onClick={handleBookmark}
-        disabled={disabled || isLoading || isOwner}
-        className={`transition-all duration-200 ${
-          isBookmarked
-            ? "bg-violet-100 text-violet-700"
-            : "text-gray-500 hover:bg-violet-50 hover:text-violet-600"
-        } ${sizeClasses[size] || sizeClasses.md} ${className} ${
-          isOwner ? "opacity-50 cursor-not-allowed" : ""
-        }`}
-        title={
-          isOwner
-            ? "Cannot bookmark your own product"
-            : isBookmarked
-            ? "Remove bookmark"
-            : "Save for later"
+        disabled={disabled || isLoading || isOwner || isProcessing}
+        className={`${buttonBaseClasses} ${sizeClasses[size] || sizeClasses.md} ${
+          isBookmarked ? bookmarkedClasses : notBookmarkedClasses
+        } ${isOwner || disabled ? disabledClasses : ""} ${
+          isProcessing ? processingClasses : ""
+        } ${showText ? 'px-3' : ''}`} // Add padding if text is shown
+         title={
+          isOwner ? "Cannot bookmark your own product"
+          : isBookmarked ? "Remove from saved"
+          : "Save for later"
         }
+        aria-pressed={isBookmarked}
         aria-label={
-          isOwner
-            ? "Cannot bookmark your own product"
-            : isBookmarked
-            ? "Remove bookmark"
-            : "Save for later"
+            isOwner ? "Cannot bookmark own product"
+            : isBookmarked ? "Remove bookmark"
+            : `Bookmark ${product?.name || 'product'}`
         }
       >
-        {isBookmarked ? (
-          <BookmarkCheck
-            className={`${iconSizeClasses[size] || iconSizeClasses.md} ${
-              isLoading ? "animate-pulse" : ""
-            }`}
-          />
-        ) : (
-          <Bookmark
-            className={`${iconSizeClasses[size] || iconSizeClasses.md} ${
-              isLoading ? "animate-pulse" : ""
-            }`}
-          />
-        )}
+        <AnimatedBookmarkIcon
+          isBookmarked={isBookmarked}
+          isLoading={isLoading}
+          size={size}
+          className={iconSizeClasses[size] || iconSizeClasses.md}
+        />
         {showText && (
-          <span className="ml-1.5">
-            {isOwner ? "Own Product" : isBookmarked ? "Saved" : "Save"}
-          </span>
+            <span className={textClasses[size] || textClasses.md}>
+                {isBookmarked ? 'Saved' : 'Save'}
+            </span>
         )}
       </button>
 
-      {showCount && (
-        <span className={`font-medium text-gray-700 ${countSizeClasses[size] || countSizeClasses.md}`}>
+      {showCount && !showText && ( // Only show count if text is not shown
+        <span
+          className={`font-medium text-gray-700 tabular-nums ${countSizeClasses[size] || countSizeClasses.md}`}
+          aria-live="polite"
+        >
           {count}
         </span>
       )}

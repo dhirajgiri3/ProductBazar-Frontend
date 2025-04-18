@@ -1,306 +1,216 @@
-import React, { useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
+import React from "react";
 import { motion } from "framer-motion";
-import {
-  HiThumbUp,
-  HiOutlineThumbUp,
-  HiBookmark,
-  HiOutlineBookmark,
-  HiOutlineEye,
-  HiPencil,
-} from "react-icons/hi";
-import { useAuth } from "../../Contexts/Auth/AuthContext";
-import { useProduct } from "../../Contexts/Product/ProductContext";
-import EditProductModal from "../Modal/Product/EditProductModal";
+import Image from "next/image";
+import Link from "next/link";
+import { FiArrowUp, FiEye, FiTag, FiCalendar, FiHeart } from "react-icons/fi";
+import { format, parseISO, isValid } from "date-fns";
 
-// Memoize the component to prevent unnecessary re-renders
-const ProductCard = React.memo(function ProductCard({
-  product,
-  showMaker = true,
-  minimal = false,
-  isOwner = false,
-  onEdit,
-  onDelete,
-}) {
-  const { isAuthenticated, user } = useAuth();
-  const { toggleUpvote, toggleBookmark } = useProduct();
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+// Helper function to safely format dates
+const formatDate = (dateString) => {
+  try {
+    if (!dateString) return "";
 
+    // Sometimes dates can come as timestamps or other formats
+    const date = typeof dateString === 'number'
+      ? new Date(dateString)
+      : parseISO(dateString);
+
+    if (!isValid(date)) {
+      return "";
+    }
+
+    return format(date, "MMM d, yyyy");
+  } catch (error) {
+    console.error("Error formatting date:", error, dateString);
+    return "";
+  }
+};
+
+// Helper to safely get slug or ID for product URL
+const getProductUrl = (product) => {
+  if (!product) return "#";
+
+  if (product.slug) {
+    return `/product/${product.slug}`;
+  }
+
+  return `/product/${product._id || product.id}`;
+};
+
+const ProfileProductCard = ({ product, minimal = false }) => {
   if (!product) return null;
 
   const {
     name,
-    slug,
+    title,
+    description,
     tagline,
-    thumbnail,
-    maker,
-    pricing,
-    upvotes = { count: 0, userHasUpvoted: false },
-    bookmarks = { userHasBookmarked: false },
-    views = { count: 0 },
+    thumbnailImage,
+    images,
+    tags,
     category,
-    categoryName,
-    deleteProduct,
+    upvotesCount,
+    upvotes,
+    views,
+    createdAt,
+    launchedAt,
+    status
   } = product;
 
-  // Determine if current user is the product owner if not explicitly passed
-  const currentUserIsOwner =
-    isOwner || (user && maker && user._id === maker._id);
+  // Determine product name from various possible fields
+  const productName = name || title || "Unnamed Product";
 
-  const handleUpvote = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  // Get short description
+  const shortDescription = tagline || description || "";
 
-    if (!isAuthenticated) {
-      // Trigger auth modal or redirect to login
-      window.location.href =
-        "/auth/login?redirect=" + encodeURIComponent(window.location.pathname);
-      return;
-    }
+  // Calculate upvotes count
+  const upvoteCount = upvotesCount || (Array.isArray(upvotes) ? upvotes.length : upvotes) || 0;
 
-    // Prevent upvoting your own product
-    if (currentUserIsOwner) {
-      return;
-    }
+  // Get thumbnail URL, with fallbacks
+  const thumbnailUrl =
+    (thumbnailImage && thumbnailImage.url) ||
+    (thumbnailImage && typeof thumbnailImage === 'string' ? thumbnailImage : null) ||
+    (images && images.length > 0 && images[0].url) ||
+    (images && images.length > 0 && typeof images[0] === 'string' ? images[0] : null) ||
+    "https://images.unsplash.com/photo-1744167602287-77dc1cabd4e6?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
 
-    await toggleUpvote(slug);
-  };
+  // Get formatted date
+  const formattedDate = formatDate(launchedAt || createdAt);
 
-  const handleBookmark = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  // Get product URL
+  const productUrl = getProductUrl(product);
 
-    if (!isAuthenticated) {
-      // Trigger auth modal or redirect to login
-      window.location.href =
-        "/auth/login?redirect=" + encodeURIComponent(window.location.pathname);
-      return;
-    }
+  // Get category name
+  const categoryName =
+    (typeof category === 'object' ? category.name : category) ||
+    "Uncategorized";
 
-    await toggleBookmark(slug);
-  };
+  // Get status with default
+  const productStatus = status || "Published";
 
-  const openEditModal = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsEditModalOpen(true);
-  };
-
-  // Format price display
-  const getPriceDisplay = () => {
-    if (pricing?.type === "paid") {
-      const currency =
-        {
-          USD: "$",
-          EUR: "€",
-          GBP: "£",
-        }[pricing.currency] || "$";
-
-      return `${currency}${pricing.amount}`;
-    } else if (pricing?.type === "contact") {
-      return "Contact";
-    } else {
-      return "Free";
-    }
-  };
+  // Format tags for display
+  const productTags = Array.isArray(tags) ? tags :
+    (typeof tags === 'string' ? tags.split(',').map(t => t.trim()) : []);
 
   return (
-    <>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
-        transition={{ duration: 0.3 }}
-        className="group relative overflow-hidden rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-      >
-        <div className="flex flex-col h-full">
-          {/* Thumbnail with overlay */}
-          <div className="relative aspect-[16/9] overflow-hidden">
-            {thumbnail ? (
-              <Image
-                src={thumbnail}
-                alt={name}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                priority={false}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-50 to-indigo-50">
-                <span className="text-gray-400 text-2xl font-light">
-                  {name.substring(0, 1)}
-                </span>
-              </div>
-            )}
-
-            {/* Overlay gradient for better text visibility */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-
-            {/* Edit button for product owner */}
-            {currentUserIsOwner && (
-              <button
-                onClick={openEditModal}
-                className="absolute top-3 right-3 p-2 rounded-lg bg-white/90 backdrop-blur-sm shadow-sm hover:bg-violet-500 hover:text-white transition-all duration-200 z-10 opacity-0 group-hover:opacity-100"
-                aria-label="Edit product"
-              >
-                <HiPencil className="w-4 h-4" />
-              </button>
-            )}
-
-            {/* Badges container - positioned for better layout */}
-            <div className="absolute top-3 left-3 right-16 flex justify-between items-start">
-              {/* Price badge with improved styling */}
-              <div
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium backdrop-blur-sm ${
-                  pricing?.type === "paid"
-                    ? "bg-amber-500/90 text-white"
-                    : pricing?.type === "contact"
-                    ? "bg-blue-500/90 text-white"
-                    : "bg-emerald-500/90 text-white"
-                }`}
-              >
-                {getPriceDisplay()}
-              </div>
-
-              {/* Category badge with improved styling */}
-              {!minimal && categoryName && (
-                <div className="px-3 py-1.5 rounded-lg bg-violet-500/90 text-white text-xs font-medium backdrop-blur-sm">
-                  {categoryName}
-                </div>
-              )}
-            </div>
-
-            {/* View count overlay */}
-            {!minimal && views && (
-              <div className="absolute bottom-3 left-3 flex items-center px-2.5 py-1 rounded-lg bg-black/30 text-white text-xs backdrop-blur-sm">
-                <HiOutlineEye className="w-3.5 h-3.5 mr-1" />
-                <span>
-                  {views.count > 1000
-                    ? `${(views.count / 1000).toFixed(1)}k`
-                    : views.count}
-                </span>
-              </div>
-            )}
-
-            {/* Interaction buttons with improved styling */}
-            <div className="absolute bottom-3 right-3 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <button
-                onClick={handleUpvote}
-                disabled={currentUserIsOwner}
-                className={`p-2 rounded-lg bg-white/90 backdrop-blur-sm shadow-sm transition-all duration-200 ${
-                  currentUserIsOwner
-                    ? "opacity-50 cursor-not-allowed"
-                    : "hover:bg-white hover:text-violet-600"
-                }`}
-                aria-label={
-                  upvotes.userHasUpvoted ? "Remove upvote" : "Upvote product"
-                }
-                title={
-                  currentUserIsOwner
-                    ? "Cannot upvote your own product"
-                    : upvotes.userHasUpvoted
-                    ? "Remove upvote"
-                    : "Upvote product"
-                }
-              >
-                {upvotes.userHasUpvoted ? (
-                  <HiThumbUp className="w-4 h-4 text-violet-600" />
-                ) : (
-                  <HiOutlineThumbUp className="w-4 h-4" />
-                )}
-              </button>
-
-              <button
-                onClick={handleBookmark}
-                className="p-2 rounded-lg bg-white/90 backdrop-blur-sm shadow-sm hover:bg-white hover:text-violet-600 transition-all duration-200"
-                aria-label={
-                  bookmarks.userHasBookmarked
-                    ? "Remove bookmark"
-                    : "Bookmark product"
-                }
-              >
-                {bookmarks.userHasBookmarked ? (
-                  <HiBookmark className="w-4 h-4 text-violet-600" />
-                ) : (
-                  <HiOutlineBookmark className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Product info with improved typography and spacing */}
-          <div className="flex flex-col flex-grow p-5">
-            <div className="flex-grow">
-              <Link href={`/product/${slug}`} className="block">
-                <h3 className="font-semibold text-gray-900 text-lg mb-1.5 line-clamp-1 group-hover:text-violet-600 transition-colors">
-                  {name}
-                </h3>
-              </Link>
-
-              {tagline && (
-                <p className="text-gray-500 text-sm leading-relaxed line-clamp-2 mb-3">
-                  {tagline}
-                </p>
-              )}
-            </div>
-
-            {/* Footer with maker info and upvotes - improved styling */}
-            {showMaker && maker && (
-              <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
-                <Link
-                  href={`/${maker.username || maker._id}`}
-                  className="flex items-center group/maker"
-                >
-                  {maker.profilePicture ? (
-                    <div className="w-7 h-7 rounded-full overflow-hidden bg-gray-100 mr-2 ring-2 ring-white shadow-sm group-hover/maker:ring-violet-100 transition-all">
-                      <Image
-                        src={maker.profilePicture?.url || maker.profilePicture}
-                        alt={`${maker.firstName} ${maker.lastName}`}
-                        width={28}
-                        height={28}
-                        className="object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-600 flex items-center justify-center text-xs font-medium mr-2 ring-2 ring-white shadow-sm group-hover/maker:ring-violet-100 transition-all">
-                      {maker.firstName ? maker.firstName.charAt(0) : "U"}
-                    </div>
-                  )}
-                  <div className="flex flex-col">
-                    <span className="text-xs font-medium text-gray-700 group-hover/maker:text-violet-600 transition-colors">
-                      {maker.firstName} {maker.lastName}
-                    </span>
-                    {maker.title && (
-                      <span className="text-[10px] text-gray-400">
-                        {maker.title}
-                      </span>
-                    )}
-                  </div>
-                </Link>
-
-                <div className="flex items-center bg-gray-50 px-3 py-1.5 rounded-full">
-                  <HiThumbUp className="w-3.5 h-3.5 text-violet-500 mr-1.5" />
-                  <span className="text-xs font-medium text-gray-700">
-                    {upvotes.count || 0}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
+    <motion.div
+      whileHover={{ y: -6, transition: { duration: 0.3 } }}
+      className={`relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-md hover:border-violet-100 ${minimal ? 'h-full' : ''}`}
+    >
+      {status && status !== "Published" && (
+        <div className="absolute top-3 right-3 z-10">
+          <motion.span
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className={`text-xs font-medium px-3 py-1 rounded-full border ${
+              status === "Draft"
+                ? "bg-amber-50 text-amber-700 border-amber-200"
+                : status === "Archived"
+                  ? "bg-gray-50 text-gray-700 border-gray-200"
+                  : "bg-violet-50 text-violet-700 border-violet-200"
+            }`}
+          >
+            {status}
+          </motion.span>
         </div>
-      </motion.div>
-
-      {/* Edit Modal */}
-      {isEditModalOpen && (
-        <EditProductModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          product={product}
-        />
       )}
-    </>
-  );
-});
 
-export default ProductCard;
+      <Link href={productUrl}>
+        <div className="w-full aspect-video relative overflow-hidden group">
+          <Image
+            src={thumbnailUrl}
+            alt={productName}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-110"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        </div>
+
+        <div className="p-5">
+          <h3 className="font-medium text-gray-900 line-clamp-1 text-base md:text-lg">{productName}</h3>
+
+          {!minimal && shortDescription && (
+            <p className="mt-2 text-sm text-gray-500 line-clamp-2">{shortDescription}</p>
+          )}
+
+          {minimal && shortDescription && (
+            <p className="mt-1 text-xs text-gray-500 line-clamp-1">{shortDescription}</p>
+          )}
+
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {!minimal && (
+                <motion.div
+                  className="flex items-center text-gray-500 text-xs gap-1.5"
+                  whileHover={{ scale: 1.05, color: "#8b5cf6" }}
+                >
+                  <FiEye className="w-3.5 h-3.5" />
+                  <span>{views || 0}</span>
+                </motion.div>
+              )}
+
+              <motion.div
+                className="flex items-center text-gray-500 text-xs gap-1.5"
+                whileHover={{ scale: 1.05, color: "#8b5cf6" }}
+              >
+                <FiArrowUp className="w-3.5 h-3.5" />
+                <span>{upvoteCount}</span>
+              </motion.div>
+
+              {!minimal && formattedDate && (
+                <motion.div
+                  className="flex items-center text-gray-500 text-xs gap-1.5"
+                  whileHover={{ scale: 1.05, color: "#8b5cf6" }}
+                >
+                  <FiCalendar className="w-3.5 h-3.5" />
+                  <span>{formattedDate}</span>
+                </motion.div>
+              )}
+            </div>
+
+            {!minimal && categoryName && (
+              <motion.span
+                className="text-xs px-3 py-1 bg-violet-50 text-violet-600 rounded-full border border-violet-100"
+                whileHover={{ scale: 1.05, y: -2, backgroundColor: "#ede9fe" }}
+              >
+                {categoryName}
+              </motion.span>
+            )}
+          </div>
+
+          {!minimal && productTags.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {productTags.slice(0, 3).map((tag, index) => (
+                <motion.span
+                  key={index}
+                  className="text-xs px-3 py-1 bg-gray-50 text-gray-600 rounded-full border border-gray-100"
+                  whileHover={{ scale: 1.05, y: -2, backgroundColor: "#f5f3ff" }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 * index }}
+                >
+                  {tag}
+                </motion.span>
+              ))}
+              {productTags.length > 3 && (
+                <motion.span
+                  className="text-xs px-3 py-1 bg-gray-50 text-gray-600 rounded-full border border-gray-100"
+                  whileHover={{ scale: 1.05, y: -2, backgroundColor: "#f5f3ff" }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  +{productTags.length - 3}
+                </motion.span>
+              )}
+            </div>
+          )}
+        </div>
+      </Link>
+    </motion.div>
+  );
+};
+
+export default ProfileProductCard;
