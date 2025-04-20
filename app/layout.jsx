@@ -8,6 +8,7 @@ import { Toaster } from "react-hot-toast";
 import { ToastProvider } from "../Contexts/Toast/ToastContext";
 import { CategoryProvider } from "../Contexts/Category/CategoryContext";
 import { ProductProvider } from "../Contexts/Product/ProductContext";
+import { ProjectProvider } from "../Contexts/Project/ProjectContext";
 import { RecommendationProvider } from "../Contexts/Recommendation/RecommendationContext";
 import { SocketProvider } from "../Contexts/Socket/SocketContext";
 import Header from "../Components/Header/Header";
@@ -36,17 +37,19 @@ export default function RootLayout({ children }) {
           <StyledComponentsRegistry>
             <AuthProvider>
               <ProductProvider>
-                <CategoryProvider>
-                  <RecommendationProvider>
-                    <SocketProvider>
-                      <GlobalStyle />
-                      <Header />
-                      {children}
-                      <Toaster />
-                      <Footer />
-                    </SocketProvider>
-                  </RecommendationProvider>
-                </CategoryProvider>
+                <ProjectProvider>
+                  <CategoryProvider>
+                    <RecommendationProvider>
+                      <SocketProvider>
+                        <GlobalStyle />
+                        <Header />
+                        {children}
+                        <Toaster />
+                        <Footer />
+                      </SocketProvider>
+                    </RecommendationProvider>
+                  </CategoryProvider>
+                </ProjectProvider>
               </ProductProvider>
             </AuthProvider>
           </StyledComponentsRegistry>

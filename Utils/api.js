@@ -10,6 +10,22 @@ const api = axios.create({
   withCredentials: true, // Always send cookies with requests
 });
 
+// Log all requests in development
+if (process.env.NODE_ENV !== 'production') {
+  api.interceptors.request.use(request => {
+    console.log('API Request:', request.method.toUpperCase(), request.url);
+    return request;
+  });
+
+  api.interceptors.response.use(response => {
+    console.log('API Response:', response.status, response.config.method.toUpperCase(), response.config.url);
+    return response;
+  }, error => {
+    console.error('API Error:', error.response?.status || error.message, error.config?.method?.toUpperCase(), error.config?.url);
+    return Promise.reject(error);
+  });
+}
+
 // Request deduplication to prevent multiple identical calls
 const pendingRequests = new Map();
 

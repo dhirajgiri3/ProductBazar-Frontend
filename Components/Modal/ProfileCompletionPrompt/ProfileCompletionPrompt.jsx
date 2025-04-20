@@ -10,14 +10,14 @@ import { useRouter } from "next/navigation";
 const ProfileCompletionPrompt = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const router = useRouter();
-  
+
   // Calculate profile completion percentage
   const calculateCompletionPercentage = () => {
     if (!user) return 0;
-    
+
     const requiredFields = ["firstName", "lastName", "email", "phone", "about"];
     const recommendedFields = ["bio", "headline", "address.country", "address.city", "skills", "interests"];
-    
+
     // Count filled required fields
     const filledRequired = requiredFields.filter(field => {
       if (field.includes('.')) {
@@ -29,14 +29,14 @@ const ProfileCompletionPrompt = ({ isOpen, onClose }) => {
         }
         return true;
       }
-      
+
       if (field === 'skills' || field === 'interests') {
         return user[field] && user[field].length > 0;
       }
-      
+
       return !!user[field];
     }).length;
-    
+
     // Count filled recommended fields
     const filledRecommended = recommendedFields.filter(field => {
       if (field.includes('.')) {
@@ -48,35 +48,35 @@ const ProfileCompletionPrompt = ({ isOpen, onClose }) => {
         }
         return true;
       }
-      
+
       if (field === 'skills' || field === 'interests') {
         return user[field] && user[field].length > 0;
       }
-      
+
       return !!user[field];
     }).length;
-    
+
     const requiredWeight = 0.7;
     const recommendedWeight = 0.3;
-    
+
     const requiredCompletion = filledRequired / requiredFields.length;
-    const recommendedCompletion = recommendedFields.length > 0 
-      ? filledRecommended / recommendedFields.length 
+    const recommendedCompletion = recommendedFields.length > 0
+      ? filledRecommended / recommendedFields.length
       : 1;
-    
+
     return Math.round(
       (requiredCompletion * requiredWeight + recommendedCompletion * recommendedWeight) * 100
     );
   };
-  
+
   const completionPercentage = calculateCompletionPercentage();
-  
+
   // Get missing fields
   const getMissingFields = () => {
     if (!user) return [];
-    
+
     const missingFields = [];
-    
+
     if (!user.firstName || !user.lastName) missingFields.push("Name");
     if (!user.email) missingFields.push("Email");
     if (!user.phone) missingFields.push("Phone");
@@ -86,16 +86,16 @@ const ProfileCompletionPrompt = ({ isOpen, onClose }) => {
     if (!user.address || (!user.address.country && !user.address.city)) missingFields.push("Location");
     if (!user.skills || user.skills.length === 0) missingFields.push("Skills");
     if (!user.interests || user.interests.length === 0) missingFields.push("Interests");
-    
+
     return missingFields;
   };
-  
+
   const missingFields = getMissingFields();
-  
+
   const modalVariants = {
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: { opacity: 1, scale: 1, transition: { duration: 0.3, ease: "easeOut" } },
-    exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2, ease: "easeIn" } }
+    hidden: { opacity: 0, scale: 0.95, y: 20 },
+    visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.3, type: "spring", damping: 25, stiffness: 300 } },
+    exit: { opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.2, ease: "easeInOut" } }
   };
 
   const overlayVariants = {
@@ -103,7 +103,7 @@ const ProfileCompletionPrompt = ({ isOpen, onClose }) => {
     visible: { opacity: 1, transition: { duration: 0.2 } },
     exit: { opacity: 0, transition: { duration: 0.2 } }
   };
-  
+
   const handleCompleteProfile = () => {
     router.push("/complete-profile");
     onClose();
@@ -113,15 +113,15 @@ const ProfileCompletionPrompt = ({ isOpen, onClose }) => {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center"
+          className="h-full fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-[10px] flex items-center justify-center"
           variants={overlayVariants}
           initial="hidden"
           animate="visible"
           exit="exit"
         >
-          <div className="flex items-center justify-center min-h-screen w-full px-4 py-8">
+          <div className="flex items-center justify-center w-full px-4 py-6">
             <motion.div
-              className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+              className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden fixed top-[5rem]"
               variants={modalVariants}
               initial="hidden"
               animate="visible"
@@ -159,19 +159,19 @@ const ProfileCompletionPrompt = ({ isOpen, onClose }) => {
                     <span className="text-sm font-medium text-violet-600">{completionPercentage}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div 
-                      className="bg-violet-600 h-2.5 rounded-full" 
+                    <div
+                      className="bg-violet-600 h-2.5 rounded-full"
                       style={{ width: `${completionPercentage}%` }}
                     ></div>
                   </div>
                 </div>
-                
+
                 <div className="mb-6">
                   <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
                     <FiAlertCircle className="mr-2 text-amber-500" />
                     Missing Information
                   </h3>
-                  
+
                   {missingFields.length > 0 ? (
                     <ul className="space-y-2 text-sm">
                       {missingFields.map((field, index) => (
@@ -188,7 +188,7 @@ const ProfileCompletionPrompt = ({ isOpen, onClose }) => {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="bg-violet-50 rounded-lg p-4 mb-6">
                   <p className="text-sm text-violet-700">
                     A complete profile helps you connect with other users and increases your visibility on ProductBazar.

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Grid, 
-  CircularProgress, 
-  Card, 
+import {
+  Box,
+  Typography,
+  Grid,
+  CircularProgress,
+  Card,
   CardContent,
   Chip,
   Stack
@@ -30,9 +30,9 @@ const PopularProducts = ({ limit = 6, timeframe = 7, title = 'Popular Products' 
     const fetchPopularProducts = async () => {
       try {
         setLoading(true);
-        const result = await viewService.getPopularProducts({ 
-          limit, 
-          days: timeframe 
+        const result = await viewService.getPopularProducts({
+          limit,
+          days: timeframe
         });
         setProducts(result.data);
         setError(null);
@@ -61,7 +61,7 @@ const PopularProducts = ({ limit = 6, timeframe = 7, title = 'Popular Products' 
 
   if (!products || products.length === 0) {
     return (
-      <NoData 
+      <NoData
         title="No popular products yet"
         message="We don't have enough data to show popular products at this time."
         suggestion="Check back soon as more users discover products!"
@@ -113,7 +113,7 @@ const PopularProducts = ({ limit = 6, timeframe = 7, title = 'Popular Products' 
                         </Box>
                       )}
                     </Box>
-                    
+
                     <Box sx={{ flex: 1 }}>
                       <Link href={`/product/${product.slug}`} passHref>
                         <Typography
@@ -133,25 +133,25 @@ const PopularProducts = ({ limit = 6, timeframe = 7, title = 'Popular Products' 
                           {product.name}
                         </Typography>
                       </Link>
-                      
+
                       <Stack direction="row" spacing={1}>
                         <Chip
                           size="small"
                           icon={<VisibilityIcon fontSize="small" />}
-                          label={`${product.views} views`}
+                          label={`${typeof product.views === 'object' ? product.views.count || 0 : product.views || 0} views`}
                           variant="outlined"
                         />
-                        
+
                         <Chip
                           size="small"
                           icon={<PersonIcon fontSize="small" />}
-                          label={`${product.uniqueViews} unique`}
+                          label={`${typeof product.views === 'object' ? product.views.unique || 0 : product.uniqueViews || 0} unique`}
                           variant="outlined"
                         />
                       </Stack>
                     </Box>
                   </Box>
-                  
+
                   {product.avgDuration && (
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 'auto' }}>
                       Average view time: {Math.round(product.avgDuration)} seconds

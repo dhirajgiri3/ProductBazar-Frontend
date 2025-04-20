@@ -42,7 +42,7 @@ export const setUserData = (user) => {
  */
 export const getUserData = () => {
     if (typeof window === 'undefined') return null;
-    
+
     try {
         const userData = localStorage.getItem('user');
         return userData ? JSON.parse(userData) : null;
@@ -67,7 +67,7 @@ export const removeUserData = () => {
 export const isTokenExpired = () => {
     const token = getAuthToken();
     if (!token) return true;
-    
+
     try {
         const decoded = jwtDecode(token);
         return decoded.exp < Date.now() / 1000;
@@ -128,7 +128,7 @@ export const isProfileCompleted = () => {
  */
 export const clearAuthData = () => {
     if (typeof window === 'undefined') return;
-    
+
     removeAuthToken();
     removeUserData();
     localStorage.removeItem('nextStep');
@@ -140,7 +140,7 @@ export const clearAuthData = () => {
  */
 export const getNextStep = () => {
     if (typeof window === 'undefined') return null;
-    
+
     try {
         const nextStep = localStorage.getItem('nextStep');
         return nextStep ? JSON.parse(nextStep) : null;
@@ -193,17 +193,23 @@ export const getVerificationNeeds = () => {
  * @param {string} defaultPath - Default path to redirect to if fully authenticated
  * @returns {string} The path to redirect to
  */
-export const getAuthRedirectPath = (defaultPath = '/user') => {
+export const getAuthRedirectPath = (defaultPath = null) => {
     const user = getUserData();
     const { needsEmailVerification, needsPhoneVerification } = getVerificationNeeds();
-    
+
     if (!user) return '/auth/login';
     if (!user.isProfileCompleted) return '/complete-profile';
     if (needsEmailVerification && needsPhoneVerification) return '/auth/verify-both';
     if (needsEmailVerification) return '/auth/verify-email';
     if (needsPhoneVerification) return '/auth/verify-phone';
-    
-    return defaultPath;
+
+    // If user has a username, redirect to their profile page
+    if (user.username && !defaultPath) {
+        return `/user/${user.username}`;
+    }
+
+    // If defaultPath is provided, use it, otherwise redirect to home
+    return defaultPath || '/home';
 };
 
 /**
@@ -213,7 +219,7 @@ export const getAuthRedirectPath = (defaultPath = '/user') => {
  */
 export const parseToken = (token) => {
     if (!token) return null;
-    
+
     try {
         return jwtDecode(token);
     } catch (error) {

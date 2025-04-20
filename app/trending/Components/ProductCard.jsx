@@ -7,10 +7,10 @@ import { formatDistanceToNow } from "date-fns";
 export default function ProductCard({ product, index, onUpvote, onSave }) {
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
-      transition: { duration: 0.4, delay: index * 0.1 } 
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.4, delay: index * 0.1 }
     }
   };
 
@@ -18,7 +18,7 @@ export default function ProductCard({ product, index, onUpvote, onSave }) {
     <motion.div
       variants={cardVariants}
       whileHover={{ y: -3, scale: 1.02 }}
-      className="group backdrop-blur-sm bg-white/60 rounded-xl border border-gray-200/50 
+      className="group backdrop-blur-sm bg-white/60 rounded-xl border border-gray-200/50
         overflow-hidden hover:shadow-lg transition-all duration-300"
     >
       <Link href={`/product/${product.slug}`}>
@@ -37,7 +37,7 @@ export default function ProductCard({ product, index, onUpvote, onSave }) {
               <motion.span
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="px-2.5 py-1 text-xs font-medium text-white bg-gradient-to-r 
+                className="px-2.5 py-1 text-xs font-medium text-white bg-gradient-to-r
                   from-blue-600 to-indigo-600 rounded-full shadow-lg"
               >
                 Featured
@@ -50,7 +50,7 @@ export default function ProductCard({ product, index, onUpvote, onSave }) {
       <div className="p-5">
         <div className="flex items-start justify-between mb-3">
           <Link href={`/product/${product.slug}`}>
-            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 
+            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600
               transition-colors line-clamp-1"
             >
               {product.name}
@@ -61,7 +61,7 @@ export default function ProductCard({ product, index, onUpvote, onSave }) {
               onClick={() => onUpvote(product.id)}
               active={product.hasUpvoted}
               icon={<HiArrowUp className="w-5 h-5" />}
-              count={product.upvotes}
+              count={typeof product.upvotes === 'object' ? product.upvotes.count || 0 : product.upvotes || 0}
             />
             <ActionButton
               onClick={() => onSave(product.id)}
@@ -86,7 +86,7 @@ export default function ProductCard({ product, index, onUpvote, onSave }) {
                 className="rounded-full ring-2 ring-white"
               />
               <div>
-                <span className="text-sm font-medium text-gray-900 
+                <span className="text-sm font-medium text-gray-900
                   group-hover/maker:text-blue-600 transition-colors">
                   {product.maker.name}
                 </span>
@@ -108,8 +108,8 @@ const ActionButton = ({ onClick, active, icon, count }) => (
     whileTap={{ scale: 0.9 }}
     onClick={onClick}
     className={`flex items-center space-x-1 px-2 py-1 rounded-md transition-colors
-      ${active 
-        ? 'text-blue-600 bg-blue-50' 
+      ${active
+        ? 'text-blue-600 bg-blue-50'
         : 'text-gray-500 hover:text-blue-600 hover:bg-gray-50'}`}
   >
     {icon}

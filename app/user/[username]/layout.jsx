@@ -2,7 +2,8 @@
 
 import { useEffect } from 'react';
 import gsap from 'gsap';
-import { ProductProvider } from '../../Contexts/Product/ProductContext';
+import { ProductProvider } from '../../../Contexts/Product/ProductContext';
+import "../../../app/globals.css";
 
 export default function UserProfileLayout({ children }) {
   useEffect(() => {

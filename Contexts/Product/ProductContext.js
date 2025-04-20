@@ -417,12 +417,72 @@ export const ProductProvider = ({ children }) => {
           formData.append("thumbnail", productData.thumbnail);
         }
 
-        const response = await api.put(`/products/${slug}`, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        // Use makePriorityRequest instead of direct api call to prevent cancellations
+        const response = await makePriorityRequest(
+          'put',
+          `/products/${slug}`,
+          {
+            data: formData,
+            isFormData: true,
+            headers: {
+              "Content-Type": "multipart/form-data",
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'X-Cache-Invalidate': 'true' // Custom header for cache invalidation
+            },
+            params: { timestamp: Date.now() } // Add timestamp to ensure fresh request
+          }
+        );
 
         if (!response.data.success)
           throw new Error(response.data.message || "Failed to update product");
+
+        // Get the updated product data
+        const updatedProduct = response.data.data;
+        const productId = updatedProduct._id || getIdFromSlug(slug);
+        const newSlug = response.data.newSlug || updatedProduct.slug || slug;
+        const slugChanged = response.data.slugChanged || false;
+
+        // Clear local cache for the old slug if it changed
+        if (slugChanged && newSlug !== slug) {
+          clearProductFromLocalCache(slug);
+        }
+
+        // Always clear cache for the new slug
+        clearProductFromLocalCache(newSlug);
+
+        // Update the global product cache with the updated product
+        if (updatedProduct) {
+          // If slug changed, remove the old entry
+          if (slugChanged && newSlug !== slug) {
+            setProductCache(prevCache => {
+              const newCache = { ...prevCache };
+              if (newCache[slug]) {
+                delete newCache[slug];
+                logger.info(`Removed old slug ${slug} from global cache due to slug change`);
+              }
+              return newCache;
+            });
+          }
+
+          // Add the updated product to the cache with the new slug
+          updateProductInCache(newSlug, updatedProduct);
+
+          // If this is the current product, update it
+          if (currentProduct && (currentProduct.slug === slug || currentProduct._id === productId)) {
+            setCurrentProduct(updatedProduct);
+          }
+
+          // Broadcast a product updated event
+          eventBus.publish(EVENT_TYPES.PRODUCT_UPDATED, {
+            oldSlug: slug,
+            newSlug: newSlug,
+            slugChanged: slugChanged,
+            productId: productId,
+            product: updatedProduct,
+            timestamp: Date.now()
+          });
+        }
 
         return response.data;
       } catch (err) {
@@ -433,7 +493,7 @@ export const ProductProvider = ({ children }) => {
         setLoading(false);
       }
     },
-    []
+    [currentProduct]
   );
 
   // Delete a product
@@ -441,26 +501,41 @@ export const ProductProvider = ({ children }) => {
     async (slug) => {
       setLoading(true);
       try {
-        const response = await api.post(`/products/${slug}`, {
-          _method: 'DELETE', // Some APIs use this pattern for DELETE with payload
-          timestamp: Date.now() // Add timestamp to prevent caching
-        }, {
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'X-Cache-Invalidate': 'true' // Custom header for cache invalidation
+        // Use makePriorityRequest instead of direct api call to prevent cancellations
+        const response = await makePriorityRequest(
+          'delete',
+          `/products/${slug}`,
+          {
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'X-Cache-Invalidate': 'true' // Custom header for cache invalidation
+            },
+            params: { timestamp: Date.now() } // Add timestamp to ensure fresh request
           }
-        });
+        );
 
         if (!response.data.success)
           throw new Error(response.data.message || "Failed to delete product");
 
-        // Clear local product data from any in-memory caches
-        clearProductFromLocalCache(slug);
+        // Get the product ID from the response or from the global mapping
+        const productId = response.data.productId || getIdFromSlug(slug);
 
-        router.push("/products");
-        return true;
+        // Process successful deletion
+        return processProductDeletion(slug, productId);
       } catch (err) {
+        // Special handling for 404 errors - the product is already deleted
+        if (err.response && err.response.status === 404) {
+          logger.warn(`Product ${slug} not found (404). It may have been already deleted.`);
+
+          // Get the product ID from the global mapping
+          const productId = getIdFromSlug(slug);
+
+          // Process the deletion anyway to clean up the UI
+          return processProductDeletion(slug, productId, true);
+        }
+
+        // Handle other errors
         setError(err.message);
         logger.error("Error deleting product:", err);
         return false;
@@ -468,8 +543,41 @@ export const ProductProvider = ({ children }) => {
         setLoading(false);
       }
     },
-    [router]
+    [router, currentProduct]
   );
+
+  // Helper function to process product deletion (used by deleteProduct)
+  const processProductDeletion = useCallback((slug, productId, wasAlreadyDeleted = false) => {
+    // Clear local product data from any in-memory caches
+    clearProductFromLocalCache(slug);
+
+    // Remove the product from the global product cache
+    setProductCache(prevCache => {
+      const newCache = { ...prevCache };
+      if (newCache[slug]) {
+        delete newCache[slug];
+        logger.info(`Removed product ${slug} from global cache`);
+      }
+      return newCache;
+    });
+
+    // If this is the current product, clear it
+    if (currentProduct && (currentProduct.slug === slug || currentProduct._id === productId)) {
+      setCurrentProduct(null);
+    }
+
+    // Broadcast a product deleted event
+    eventBus.publish(EVENT_TYPES.PRODUCT_DELETED, {
+      slug,
+      productId,
+      wasAlreadyDeleted,
+      timestamp: Date.now()
+    });
+
+    // Navigate to products page
+    router.push("/products");
+    return true;
+  }, [currentProduct, router]);
 
   // Add a function to clear product from local cache sources
   const clearProductFromLocalCache = (slug) => {
@@ -1002,23 +1110,77 @@ export const ProductProvider = ({ children }) => {
   );
 
   // Fetch user's products
-  const getUserProducts = useCallback(async (userId) => {
+  const getUserProducts = useCallback(async (userId, options = {}) => {
     setLoading(true);
     try {
-      const response = await api.get(`/products/user/${userId}`);
-      if (!response.data.success)
-        throw new Error(
-          response.data.message || "Failed to fetch user products"
-        );
+      // Create query parameters for pagination and filtering
+      const { page = 1, limit = 10, filter = 'all', bypassCache = false } = options;
+
+      // Create abort controller to handle request cancellation
+      const controller = new AbortController();
+      const signal = controller.signal;
+
+      // Build query string
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', page);
+      queryParams.append('limit', limit);
+      if (filter !== 'all') {
+        queryParams.append('status', filter);
+      }
+
+      // Add cache busting parameter if needed
+      if (bypassCache) {
+        queryParams.append('_t', Date.now());
+      }
+
+      // Make the request with the abort signal and cache control headers if needed
+      const config = { signal };
+      if (bypassCache) {
+        config.headers = {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'X-Cache-Invalidate': 'true'
+        };
+      }
+
+      // Make the request with the abort signal
+      const response = await api.get(
+        `/products/user/${userId}?${queryParams.toString()}`,
+        config
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to fetch user products");
+      }
+
+      // Return normalized data with pagination and status counts
       return {
-        products: normalizeProducts(response.data.data),
+        data: normalizeProducts(response.data.data || []),
         user: response.data.user,
-        meta: response.data.meta,
+        totalCount: response.data.totalCount || response.data.data?.length || 0,
+        statusCounts: response.data.statusCounts || {
+          published: response.data.data?.filter(p => p.status === 'Published').length || 0,
+          draft: response.data.data?.filter(p => p.status === 'Draft').length || 0,
+          archived: response.data.data?.filter(p => p.status === 'Archived').length || 0
+        },
+        currentPage: page,
+        totalPages: response.data.totalPages || Math.ceil((response.data.totalCount || response.data.data?.length || 0) / limit),
+        controller // Return controller so it can be aborted if needed
       };
     } catch (err) {
-      setError(err.message);
-      logger.error(`Error fetching products for user ${userId}:`, err);
-      return { products: [], user: null, meta: null };
+      // Don't log canceled errors as they're expected during navigation
+      if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
+        setError(err.message);
+        logger.error(`Error fetching products for user ${userId}:`, err);
+      }
+      return {
+        data: [],
+        user: null,
+        totalCount: 0,
+        statusCounts: { published: 0, draft: 0, archived: 0 },
+        currentPage: options.page || 1,
+        totalPages: 0
+      };
     } finally {
       setLoading(false);
     }

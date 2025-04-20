@@ -18,9 +18,9 @@ class EventBus {
     if (!this.events[event]) {
       this.events[event] = [];
     }
-    
+
     this.events[event].push(callback);
-    
+
     // Return unsubscribe function
     return () => {
       this.events[event] = this.events[event].filter(cb => cb !== callback);
@@ -34,7 +34,7 @@ class EventBus {
    */
   publish(event, data) {
     if (!this.events[event]) return;
-    
+
     this.events[event].forEach(callback => {
       try {
         callback(data);
@@ -58,6 +58,7 @@ const eventBus = new EventBus();
 // Define standard event types
 export const EVENT_TYPES = {
   PRODUCT_UPDATED: 'product:updated',
+  PRODUCT_DELETED: 'product:deleted',
   UPVOTE_UPDATED: 'upvote:updated',
   BOOKMARK_UPDATED: 'bookmark:updated',
   SOCKET_CONNECTED: 'socket:connected',

@@ -320,9 +320,9 @@ const EditProfileModal = ({ isOpen, onClose }) => {
   };
 
   const modalVariants = {
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: { opacity: 1, scale: 1, transition: { duration: 0.3, ease: "easeOut" } },
-    exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2, ease: "easeIn" } }
+    hidden: { opacity: 0, scale: 0.95, y: 20 },
+    visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.3, type: "spring", damping: 25, stiffness: 300 } },
+    exit: { opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.2, ease: "easeInOut" } }
   };
 
   const overlayVariants = {
@@ -365,15 +365,15 @@ const EditProfileModal = ({ isOpen, onClose }) => {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center"
+          className="h-full fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-[10px]"
           variants={overlayVariants}
           initial="hidden"
           animate="visible"
           exit="exit"
         >
-          <div className="flex items-center justify-center min-h-screen w-full px-4 py-8">
+          <div className="flex items-center justify-center w-full px-4 py-6">
             <motion.div
-              className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden"
+              className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden fixed top-[5rem]"
               variants={modalVariants}
               initial="hidden"
               animate="visible"

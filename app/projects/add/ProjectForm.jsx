@@ -1,36 +1,65 @@
 "use client";
 
-import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
-import { 
-  FolderKanban, 
-  Upload, 
-  X, 
+import {
+  FolderKanban,
+  Upload,
+  X,
   Image as ImageIcon,
-  Calendar,
   Link,
   Building,
   CheckCircle,
-  Tag,
-  Briefcase
+  Briefcase,
+  Eye
 } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import api from "../../../Utils/api";
 import logger from "../../../Utils/logger";
-import RichTextEditor from "../../../Components/UI/RichTextEditor";
 
-const ProjectForm = ({ user }) => {
+const ProjectForm = ({ user, project = null, isEditing = false }) => {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [thumbnail, setThumbnail] = useState(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState(null);
   const [galleryImages, setGalleryImages] = useState([]);
+  const [galleryPreviews, setGalleryPreviews] = useState([]);
   const [clientLogo, setClientLogo] = useState(null);
+  const [clientLogoPreview, setClientLogoPreview] = useState(null);
   const [formComplete, setFormComplete] = useState(false);
   const [createdProjectSlug, setCreatedProjectSlug] = useState(null);
-  const [currentProject, setCurrentProject] = useState(false);
+  const [currentProject, setCurrentProject] = useState(isEditing ? true : false);
+
+  // Set initial values for thumbnail and gallery images when editing
+  useEffect(() => {
+    if (isEditing && project) {
+      // Set current project status
+      setCurrentProject(project.current || false);
+
+      // Load existing images as File objects if needed for preview
+      // Note: We don't actually load the files here, just set the URLs for preview
+      // The actual files will be uploaded only if the user changes them
+      if (project.thumbnail) {
+        // For thumbnail, we just need to show the preview
+        setThumbnailPreview(project.thumbnail);
+      }
+
+      if (project.gallery && project.gallery.length > 0) {
+        // For gallery, we need to show previews of all images
+        setGalleryPreviews(project.gallery.map(item => ({
+          url: item.url,
+          caption: item.caption || ''
+        })));
+      }
+
+      if (project.client?.logo) {
+        setClientLogoPreview(project.client.logo);
+      }
+    }
+  }, [isEditing, project]);
 
   // Determine owner type based on user role
   const determineOwnerType = () => {
@@ -38,50 +67,83 @@ const ProjectForm = ({ user }) => {
     if (user.role === "freelancer") return "freelancer";
     if (user.role === "agency") return "agency";
     if (user.role === "startupOwner" || user.role === "maker") return "startupOwner";
-    
+
     // Check secondary roles if primary role doesn't match
     if (user.secondaryRoles?.includes("jobseeker")) return "jobseeker";
     if (user.secondaryRoles?.includes("freelancer")) return "freelancer";
     if (user.secondaryRoles?.includes("agency")) return "agency";
     if (user.secondaryRoles?.includes("startupOwner") || user.secondaryRoles?.includes("maker")) return "startupOwner";
-    
+
     return "freelancer"; // Default fallback
+  };
+
+  // Set up default values based on whether we're editing or creating
+  const getDefaultValues = () => {
+    if (isEditing && project) {
+      return {
+        title: project.title || "",
+        description: project.description || "",
+        category: project.category || "",
+        role: project.role || "",
+        client: {
+          name: project.client?.name || "",
+          industry: project.client?.industry || "",
+          website: project.client?.website || "",
+          testimonial: {
+            content: project.client?.testimonial?.content || "",
+            author: project.client?.testimonial?.author || "",
+            position: project.client?.testimonial?.position || "",
+          },
+        },
+        technologies: project.technologies?.join(", ") || "",
+        skills: project.skills?.join(", ") || "",
+        startDate: project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : "",
+        endDate: project.endDate ? new Date(project.endDate).toISOString().split('T')[0] : "",
+        challenge: project.challenge || "",
+        solution: project.solution || "",
+        results: project.results || "",
+        achievements: project.achievements?.join("\n") || "",
+        projectUrl: project.projectUrl || "",
+        repositoryUrl: project.repositoryUrl || "",
+        visibility: project.visibility || "public",
+      };
+    } else {
+      return {
+        title: "",
+        description: "",
+        category: "",
+        role: "",
+        client: {
+          name: "",
+          industry: "",
+          website: "",
+          testimonial: {
+            content: "",
+            author: "",
+            position: "",
+          },
+        },
+        technologies: "",
+        skills: "",
+        startDate: "",
+        endDate: "",
+        challenge: "",
+        solution: "",
+        results: "",
+        achievements: "",
+        projectUrl: "",
+        repositoryUrl: "",
+        visibility: "public",
+      };
+    }
   };
 
   const {
     register,
     handleSubmit,
-    control,
-    watch,
     formState: { errors },
   } = useForm({
-    defaultValues: {
-      title: "",
-      description: "",
-      category: "",
-      role: "",
-      client: {
-        name: "",
-        industry: "",
-        website: "",
-        testimonial: {
-          content: "",
-          author: "",
-          position: "",
-        },
-      },
-      technologies: "",
-      skills: "",
-      startDate: "",
-      endDate: "",
-      challenge: "",
-      solution: "",
-      results: "",
-      achievements: "",
-      projectUrl: "",
-      repositoryUrl: "",
-      visibility: "public",
-    },
+    defaultValues: getDefaultValues(),
   });
 
   const { getRootProps: getThumbnailRootProps, getInputProps: getThumbnailInputProps } = useDropzone({
@@ -133,41 +195,61 @@ const ProjectForm = ({ user }) => {
 
       // Create FormData for file upload
       const formData = new FormData();
-      
+
       // Add JSON data
       formData.append("data", JSON.stringify(formattedData));
-      
+
       // Add thumbnail if exists
       if (thumbnail) {
         formData.append("thumbnail", thumbnail);
       }
-      
+
       // Add gallery images if exist
-      galleryImages.forEach((image, index) => {
-        formData.append(`gallery[${index}]`, image);
+      galleryImages.forEach((image) => {
+        formData.append('gallery', image);
       });
-      
+
       // Add client logo if exists
       if (clientLogo) {
         formData.append("clientLogo", clientLogo);
       }
 
-      const response = await api.post("/projects", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      let response;
 
-      if (response.data.status === "success") {
-        setCreatedProjectSlug(response.data.data.project.slug);
-        setFormComplete(true);
-        toast.success("Project added successfully!");
+      if (isEditing && project) {
+        // Update existing project
+        response = await api.patch(`/projects/${project._id}`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        if (response.data.status === "success") {
+          setFormComplete(true);
+          setCreatedProjectSlug(response.data.data.project.slug);
+          toast.success("Project updated successfully!");
+        } else {
+          toast.error(response.data.message || "Failed to update project");
+        }
       } else {
-        toast.error(response.data.message || "Failed to add project");
+        // Create new project
+        response = await api.post("/projects", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        if (response.data.status === "success") {
+          setFormComplete(true);
+          setCreatedProjectSlug(response.data.data.project.slug);
+          toast.success("Project added successfully!");
+        } else {
+          toast.error(response.data.message || "Failed to add project");
+        }
       }
     } catch (error) {
-      logger.error("Error adding project:", error);
-      toast.error(error.response?.data?.message || "Failed to add project");
+      logger.error(`Error ${isEditing ? 'updating' : 'adding'} project:`, error);
+      toast.error(error.response?.data?.message || `Failed to ${isEditing ? 'update' : 'add'} project`);
     } finally {
       setIsSubmitting(false);
     }
@@ -189,9 +271,11 @@ const ProjectForm = ({ user }) => {
         >
           <CheckCircle size={40} className="text-green-600" />
         </motion.div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Project Added!</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          {isEditing ? "Project Updated!" : "Project Added!"}
+        </h1>
         <p className="text-gray-600 mb-8">
-          Your project has been added successfully and is now visible to the community.
+          Your project has been {isEditing ? "updated" : "added"} successfully and is now visible to the community.
         </p>
         <div className="flex flex-col space-y-4">
           <button
@@ -225,7 +309,7 @@ const ProjectForm = ({ user }) => {
             <FolderKanban className="mr-2 text-violet-600" size={20} />
             Project Basics
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -334,7 +418,7 @@ const ProjectForm = ({ user }) => {
             <ImageIcon className="mr-2 text-violet-600" size={20} />
             Project Media
           </h2>
-          
+
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -357,6 +441,24 @@ const ProjectForm = ({ user }) => {
                       onClick={(e) => {
                         e.stopPropagation();
                         setThumbnail(null);
+                      }}
+                      className="ml-2 p-1 bg-red-100 rounded-full text-red-500 hover:bg-red-200"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : thumbnailPreview ? (
+                  <div className="flex items-center justify-center">
+                    <img
+                      src={thumbnailPreview}
+                      alt="Existing thumbnail"
+                      className="h-32 object-contain"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setThumbnailPreview(null);
                       }}
                       className="ml-2 p-1 bg-red-100 rounded-full text-red-500 hover:bg-red-200"
                     >
@@ -388,10 +490,11 @@ const ProjectForm = ({ user }) => {
                   Drop gallery images here or click to upload (up to 10 images)
                 </p>
               </div>
-              {galleryImages.length > 0 && (
+              {(galleryImages.length > 0 || galleryPreviews.length > 0) && (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 mt-4">
+                  {/* New gallery images */}
                   {galleryImages.map((image, index) => (
-                    <div key={index} className="relative">
+                    <div key={`new-${index}`} className="relative">
                       <img
                         src={URL.createObjectURL(image)}
                         alt={`Gallery image ${index + 1}`}
@@ -401,6 +504,26 @@ const ProjectForm = ({ user }) => {
                         type="button"
                         onClick={() => {
                           setGalleryImages(galleryImages.filter((_, i) => i !== index));
+                        }}
+                        className="absolute top-1 right-1 p-1 bg-red-500 rounded-full text-white"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Existing gallery images */}
+                  {galleryPreviews.map((image, index) => (
+                    <div key={`existing-${index}`} className="relative">
+                      <img
+                        src={image.url}
+                        alt={image.caption || `Gallery image ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGalleryPreviews(galleryPreviews.filter((_, i) => i !== index));
                         }}
                         className="absolute top-1 right-1 p-1 bg-red-500 rounded-full text-white"
                       >
@@ -420,7 +543,7 @@ const ProjectForm = ({ user }) => {
             <Briefcase className="mr-2 text-violet-600" size={20} />
             Project Details
           </h2>
-          
+
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -500,7 +623,7 @@ const ProjectForm = ({ user }) => {
             <Building className="mr-2 text-violet-600" size={20} />
             Client Information (Optional)
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -562,6 +685,24 @@ const ProjectForm = ({ user }) => {
                       <X size={16} />
                     </button>
                   </div>
+                ) : clientLogoPreview ? (
+                  <div className="flex items-center justify-center">
+                    <img
+                      src={clientLogoPreview}
+                      alt="Existing client logo"
+                      className="h-16 object-contain"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setClientLogoPreview(null);
+                      }}
+                      className="ml-2 p-1 bg-red-100 rounded-full text-red-500 hover:bg-red-200"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
                 ) : (
                   <div>
                     <ImageIcon size={20} className="mx-auto mb-1 text-gray-400" />
@@ -615,7 +756,7 @@ const ProjectForm = ({ user }) => {
             <Link className="mr-2 text-violet-600" size={20} />
             Project Links
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -647,7 +788,7 @@ const ProjectForm = ({ user }) => {
             <Eye className="mr-2 text-violet-600" size={20} />
             Visibility Settings
           </h2>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Who can see this project?
@@ -700,7 +841,9 @@ const ProjectForm = ({ user }) => {
             whileTap={{ scale: 0.98 }}
           >
             <Upload size={20} />
-            {isSubmitting ? "Adding Project..." : "Add Project"}
+            {isSubmitting
+              ? isEditing ? "Updating Project..." : "Adding Project..."
+              : isEditing ? "Update Project" : "Add Project"}
           </motion.button>
         </div>
       </form>

@@ -1,5 +1,3 @@
 {
-  "/user/mybookmarks/page": "app/user/mybookmarks/page.js",
-  "/home/page": "app/home/page.js",
-  "/favicon.ico/route": "app/favicon.ico/route.js"
+  "/user/[username]/page": "app/user/[username]/page.js"
 }

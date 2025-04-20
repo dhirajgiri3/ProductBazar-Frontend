@@ -147,7 +147,7 @@ export default function AddProductPage() {
               Launch Your Product
             </h1>
 
-            <p className="mt-6 text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            <p className="mt-6 text-md sm:text-md text-gray-600 max-w-2xl mx-auto leading-relaxed">
               Share your creation with our community of makers and early
               adopters. The journey from idea to launch is just a few steps
               away.
@@ -155,10 +155,9 @@ export default function AddProductPage() {
 
             <div className="mt-8 flex flex-wrap gap-4 justify-center">
               <motion.div
-                className="flex items-center justify-center bg-white/80 backdrop-blur-sm px-5 py-3 rounded-lg border border-violet-100 shadow-sm"
+                className="flex items-center justify-center bg-white/80 backdrop-blur-sm px-5 py-3 rounded-lg border border-violet-100"
                 whileHover={{
                   y: -3,
-                  boxShadow: "0 10px 25px -5px rgba(124, 58, 237, 0.1)",
                 }}
               >
                 <Rocket size={18} className="mr-2 text-violet-600" />
@@ -166,14 +165,13 @@ export default function AddProductPage() {
               </motion.div>
 
               <motion.div
-                className="flex items-center justify-center bg-white/80 backdrop-blur-sm px-5 py-3 rounded-lg border border-violet-100 shadow-sm"
+                className="flex items-center justify-center bg-white/80 backdrop-blur-sm px-5 py-3 rounded-lg border border-violet-100"
                 whileHover={{
                   y: -3,
-                  boxShadow: "0 10px 25px -5px rgba(124, 58, 237, 0.1)",
                 }}
               >
                 <ArrowRight size={18} className="mr-2 text-violet-600" />
-                <span className="text-gray-700">Launch in minutes</span>
+                <span className="text-gray-700">Let's launch in minutes</span>
               </motion.div>
             </div>
           </motion.div>

@@ -1,213 +1,455 @@
-import React from "react";
-import { motion } from "framer-motion";
+// src/Components/Product/ProfileProductCard.jsx
+import React, { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { FiArrowUp, FiEye, FiTag, FiCalendar, FiHeart } from "react-icons/fi";
+import { FiEye, FiCalendar, FiEdit2, FiTrash2, FiChevronLeft, FiChevronRight, FiImage } from "react-icons/fi";
 import { format, parseISO, isValid } from "date-fns";
 
-// Helper function to safely format dates
+// --- Helper Functions ---
+
+// Safely format dates
 const formatDate = (dateString) => {
+  if (!dateString) return null;
   try {
-    if (!dateString) return "";
-
-    // Sometimes dates can come as timestamps or other formats
-    const date = typeof dateString === 'number'
-      ? new Date(dateString)
-      : parseISO(dateString);
-
-    if (!isValid(date)) {
-      return "";
-    }
-
-    return format(date, "MMM d, yyyy");
+    const date = typeof dateString === 'number' ? new Date(dateString) : parseISO(dateString);
+    return isValid(date) ? format(date, "MMM d, yyyy") : null;
   } catch (error) {
     console.error("Error formatting date:", error, dateString);
-    return "";
+    return null;
   }
 };
 
-// Helper to safely get slug or ID for product URL
+// Generate product URL safely
 const getProductUrl = (product) => {
   if (!product) return "#";
-
-  if (product.slug) {
-    return `/product/${product.slug}`;
-  }
-
-  return `/product/${product._id || product.id}`;
+  return product.slug ? `/product/${product.slug}` : `/product/${product._id || product.id || '#'}`;
 };
 
-const ProfileProductCard = ({ product, minimal = false }) => {
-  if (!product) return null;
+// Robustly extract and order gallery images
+const getGalleryImages = (product) => {
+  const images = new Set(); // Use Set to avoid duplicates
+  const fallbackImage = "https://via.placeholder.com/600x400/f3e8ff/a855f7?text=No+Image"; // Cleaner placeholder
 
+  // Priority 1: Explicit thumbnail field (string)
+  if (product.thumbnail && typeof product.thumbnail === 'string') {
+    images.add(product.thumbnail);
+  }
+  // Priority 2: Thumbnail object (Cloudinary format or similar)
+  else if (product.thumbnailImage?.url) {
+    images.add(product.thumbnailImage.url);
+  }
+  else if (product.thumbnailImage && typeof product.thumbnailImage === 'string') {
+    images.add(product.thumbnailImage); // Handle if thumbnailImage is just a URL string
+  }
+
+  // Priority 3: Gallery array
+  if (Array.isArray(product.gallery)) {
+    product.gallery.forEach(img => {
+      if (img?.url) images.add(img.url);
+      else if (typeof img === 'string') images.add(img);
+    });
+  }
+
+  // Priority 4: Images array (often used in older structures)
+  if (Array.isArray(product.images)) {
+      product.images.forEach(img => {
+          if (img?.url) images.add(img.url);
+          else if (typeof img === 'string') images.add(img);
+      });
+  }
+
+  const imageArray = Array.from(images);
+
+  // If still empty, use the fallback
+  return imageArray.length > 0 ? imageArray : [fallbackImage];
+};
+
+
+// --- Component ---
+
+const ProfileProductCard = ({
+  product,
+  minimal = false,
+  onEdit,
+  onDelete,
+  isOwner = false,
+  className = ""
+}) => {
+  if (!product || !product._id) return null; // Basic validation
+
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isHovering, setIsHovering] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  // Memoize derived data for performance
   const {
-    name,
-    title,
-    description,
-    tagline,
-    thumbnailImage,
-    images,
-    tags,
-    category,
-    upvotesCount,
-    upvotes,
-    views,
-    createdAt,
-    launchedAt,
-    status
-  } = product;
+    productName,
+    shortDescription,
+    viewCount,
+    formattedDate,
+    productUrl,
+    categoryName,
+    productStatus,
+    productTags,
+    productTagsAll,
+    galleryImages,
+    launchDate,
+  } = useMemo(() => {
+    const name = product.name || product.title || "Unnamed Product";
+    const description = product.tagline || product.description || "";
+    const views = product.views?.count ?? 0; // Safer view count access
+    const date = formatDate(product.launchedAt || product.createdAt);
+    const launchDate = formatDate(product.launchedAt) || formatDate(product.createdAt);
+    const url = getProductUrl(product);
+    const category = (typeof product.category === 'object' ? product.category.name : product.category) || null; // Null if no category
+    const status = product.status || "Published";
+    const tags = Array.isArray(product.tags) ? product.tags : (typeof product.tags === 'string' ? product.tags.split(',').map(t => t.trim()) : []);
+    const images = getGalleryImages(product);
 
-  // Determine product name from various possible fields
-  const productName = name || title || "Unnamed Product";
+    return {
+      productName: name,
+      shortDescription: description,
+      viewCount: views,
+      formattedDate: date,
+      launchDate: launchDate,
+      productUrl: url,
+      categoryName: category,
+      productStatus: status,
+      productTags: tags.slice(0, minimal ? 1 : 3), // Show fewer tags in minimal mode
+      productTagsAll: tags,
+      galleryImages: images,
+    };
+  }, [product, minimal]);
 
-  // Get short description
-  const shortDescription = tagline || description || "";
+  // Slider navigation with improved touch support
+  const changeImage = (direction, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const newIndex = (currentImageIndex + direction + galleryImages.length) % galleryImages.length;
+    setCurrentImageIndex(newIndex);
+    setImageLoading(true); // Reset loading state for new image
+  };
 
-  // Calculate upvotes count
-  const upvoteCount = upvotesCount || (Array.isArray(upvotes) ? upvotes.length : upvotes) || 0;
+  const setImageIndex = (index, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (index !== currentImageIndex) {
+      setCurrentImageIndex(index);
+      setImageLoading(true); // Reset loading state for new image
+    }
+  };
 
-  // Get thumbnail URL, with fallbacks
-  const thumbnailUrl =
-    (thumbnailImage && thumbnailImage.url) ||
-    (thumbnailImage && typeof thumbnailImage === 'string' ? thumbnailImage : null) ||
-    (images && images.length > 0 && images[0].url) ||
-    (images && images.length > 0 && typeof images[0] === 'string' ? images[0] : null) ||
-    "https://images.unsplash.com/photo-1744167602287-77dc1cabd4e6?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+  // Handle image load events
+  const handleImageLoad = () => {
+    setImageLoading(false);
+    setError(false);
+  };
 
-  // Get formatted date
-  const formattedDate = formatDate(launchedAt || createdAt);
+  const handleImageError = () => {
+    setImageLoading(false);
+    setError(true);
+  };
 
-  // Get product URL
-  const productUrl = getProductUrl(product);
+  // Enhanced animation variants with more elegant approach
+  const cardVariants = {
+    initial: { opacity: 0, y: 15 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
+    hover: {
+      y: -4,
+      transition: { duration: 0.3, ease: "easeOut" }
+    }
+  };
 
-  // Get category name
-  const categoryName =
-    (typeof category === 'object' ? category.name : category) ||
-    "Uncategorized";
+  const contentVariants = {
+    initial: { opacity: 0 },
+    animate: { opacity: 1, transition: { delay: 0.1, duration: 0.3 } },
+  };
 
-  // Get status with default
-  const productStatus = status || "Published";
+  const imageVariants = {
+    initial: { opacity: 0, scale: 1.05 },
+    animate: { opacity: 1, scale: 1, transition: { duration: 0.4 } },
+    exit: { opacity: 0, scale: 0.95, transition: { duration: 0.3 } },
+    hover: { scale: 1.05, transition: { duration: 0.5, ease: "easeOut" } }
+  };
 
-  // Format tags for display
-  const productTags = Array.isArray(tags) ? tags :
-    (typeof tags === 'string' ? tags.split(',').map(t => t.trim()) : []);
+  // Button hover animations
+  const buttonVariants = {
+    initial: { opacity: 0, scale: 0.9 },
+    animate: { opacity: 1, scale: 1, transition: { duration: 0.2 } },
+    hover: { scale: 1.05, transition: { duration: 0.2 } },
+    tap: { scale: 0.95 }
+  };
+
+  // Removed TagIcon as it's not needed in the minimalistic design
 
   return (
     <motion.div
-      whileHover={{ y: -6, transition: { duration: 0.3 } }}
-      className={`relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-md hover:border-violet-100 ${minimal ? 'h-full' : ''}`}
+      variants={cardVariants}
+      initial="initial"
+      animate="animate"
+      whileHover="hover"
+      className={`relative overflow-hidden rounded-xl border border-gray-100 bg-white transition-all duration-300 hover:shadow-lg hover:shadow-violet-100/20 ${minimal ? 'h-full' : ''} ${className}`}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+      layout // Add layout animation for smoother updates if list changes
     >
-      {status && status !== "Published" && (
-        <div className="absolute top-3 right-3 z-10">
-          <motion.span
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className={`text-xs font-medium px-3 py-1 rounded-full border ${
-              status === "Draft"
-                ? "bg-amber-50 text-amber-700 border-amber-200"
-                : status === "Archived"
-                  ? "bg-gray-50 text-gray-700 border-gray-200"
-                  : "bg-violet-50 text-violet-700 border-violet-200"
-            }`}
-          >
-            {status}
-          </motion.span>
+      {/* Status Badge (Top Right) - Minimalistic design */}
+      {productStatus && productStatus !== "Published" && (
+        <motion.span
+          initial={{ opacity: 0, scale: 0.8, y: -5 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.3 }}
+          className={`absolute top-3 right-3 z-10 text-xs font-medium px-2 py-0.5 rounded-full backdrop-blur-sm ${
+            productStatus === "Draft"
+              ? "bg-amber-50/90 text-amber-600 border border-amber-100/50"
+              : productStatus === "Archived"
+                ? "bg-gray-50/90 text-gray-500 border border-gray-200/50"
+                : "bg-blue-50/90 text-blue-500 border border-blue-100/50" // For any other status
+          }`}
+        >
+          {productStatus}
+        </motion.span>
+      )}
+
+      {/* Owner Action Buttons (Top Left) - Enhanced with improved animations and accessibility */}
+      {isOwner && onEdit && onDelete && (
+        <div className="absolute top-3 left-3 z-20 flex gap-2">
+           <motion.button
+                aria-label="Edit Product"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(product); }}
+                variants={buttonVariants}
+                initial="initial"
+                animate={isHovering ? "animate" : "initial"}
+                whileHover="hover"
+                whileTap="tap"
+                className="w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:text-violet-600 flex items-center justify-center transition-all duration-200 border border-violet-100/30 shadow-sm"
+                title="Edit Product"
+            >
+                <FiEdit2 className="w-3.5 h-3.5" />
+            </motion.button>
+            <motion.button
+                aria-label="Delete Product"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(product); }}
+                variants={buttonVariants}
+                initial="initial"
+                animate={isHovering ? "animate" : "initial"}
+                whileHover="hover"
+                whileTap="tap"
+                className="w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:text-red-600 flex items-center justify-center transition-all duration-200 border border-red-100/30 shadow-sm"
+                title="Delete Product"
+            >
+                <FiTrash2 className="w-3.5 h-3.5" />
+            </motion.button>
         </div>
       )}
 
-      <Link href={productUrl}>
-        <div className="w-full aspect-video relative overflow-hidden group">
-          <Image
-            src={thumbnailUrl}
-            alt={productName}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-        </div>
+      <Link href={productUrl} passHref legacyBehavior>
+        <a className="group cursor-pointer h-full flex flex-col" aria-label={`View details for ${productName}`}>
+          {/* Image Area - Enhanced with better loading states and accessibility */}
+          <div className="relative w-full aspect-[16/9] overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100/30">
+             {/* Loading state */}
+             {imageLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-10">
+                  <div className="w-6 h-6 rounded-full border-2 border-violet-200 border-t-violet-500 animate-spin shadow-sm"></div>
+                </div>
+             )}
 
-        <div className="p-5">
-          <h3 className="font-medium text-gray-900 line-clamp-1 text-base md:text-lg">{productName}</h3>
+             {/* Fallback Icon if no image or error */}
+             {(error || (galleryImages.length === 1 && galleryImages[0].includes('via.placeholder.com'))) && (
+                <div className="absolute inset-0 flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-white z-5 flex">
+                    <FiImage className="w-10 h-10 text-gray-300 mb-1 opacity-60" />
+                    <span className="text-xs text-gray-400 font-medium">No image</span>
+                </div>
+             )}
 
-          {!minimal && shortDescription && (
-            <p className="mt-2 text-sm text-gray-500 line-clamp-2">{shortDescription}</p>
-          )}
-
-          {minimal && shortDescription && (
-            <p className="mt-1 text-xs text-gray-500 line-clamp-1">{shortDescription}</p>
-          )}
-
-          <div className="mt-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {!minimal && (
-                <motion.div
-                  className="flex items-center text-gray-500 text-xs gap-1.5"
-                  whileHover={{ scale: 1.05, color: "#8b5cf6" }}
-                >
-                  <FiEye className="w-3.5 h-3.5" />
-                  <span>{views || 0}</span>
-                </motion.div>
-              )}
-
+            <AnimatePresence initial={false} mode="wait">
               <motion.div
-                className="flex items-center text-gray-500 text-xs gap-1.5"
-                whileHover={{ scale: 1.05, color: "#8b5cf6" }}
+                key={currentImageIndex}
+                variants={imageVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="absolute inset-0"
               >
-                <FiArrowUp className="w-3.5 h-3.5" />
-                <span>{upvoteCount}</span>
+                <Image
+                  src={galleryImages[currentImageIndex]}
+                  alt={`${productName} - Image ${currentImageIndex + 1}`}
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  className={`object-cover transition-transform duration-500 ease-in-out ${isHovering ? 'scale-105' : 'scale-100'}`}
+                  onLoadingComplete={handleImageLoad}
+                  onError={handleImageError}
+                  priority={currentImageIndex === 0} // Prioritize first image
+                  loading="eager"
+                />
               </motion.div>
+            </AnimatePresence>
 
-              {!minimal && formattedDate && (
-                <motion.div
-                  className="flex items-center text-gray-500 text-xs gap-1.5"
-                  whileHover={{ scale: 1.05, color: "#8b5cf6" }}
-                >
-                  <FiCalendar className="w-3.5 h-3.5" />
-                  <span>{formattedDate}</span>
-                </motion.div>
-              )}
-            </div>
+            {/* Image Counter Badge - Minimalistic design */}
+            {galleryImages.length > 1 && (
+              <div className="absolute top-3 left-3 z-10 bg-black/30 text-white text-xs px-1.5 py-0.5 rounded-full backdrop-blur-sm border border-white/10">
+                {currentImageIndex + 1}/{galleryImages.length}
+              </div>
+            )}
 
-            {!minimal && categoryName && (
-              <motion.span
-                className="text-xs px-3 py-1 bg-violet-50 text-violet-600 rounded-full border border-violet-100"
-                whileHover={{ scale: 1.05, y: -2, backgroundColor: "#ede9fe" }}
-              >
-                {categoryName}
-              </motion.span>
+            {/* Image Navigation (Show on hover if multiple images) - Enhanced for accessibility */}
+            {galleryImages.length > 1 && (
+              <AnimatePresence>
+                {isHovering && (
+                  <>
+                    <motion.button
+                      aria-label="Previous image"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/70 backdrop-blur-sm flex items-center justify-center text-gray-700 hover:bg-white transition-all z-10 border border-white/20 shadow-sm"
+                      initial={{ opacity: 0, scale: 0.8, x: -5 }}
+                      animate={{ opacity: 1, scale: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, x: -5 }}
+                      whileHover={{ scale: 1.1, backgroundColor: "rgba(255, 255, 255, 0.9)" }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={(e) => changeImage(-1, e)}
+                    >
+                      <FiChevronLeft className="w-5 h-5" />
+                    </motion.button>
+                    <motion.button
+                      aria-label="Next image"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/70 backdrop-blur-sm flex items-center justify-center text-gray-700 hover:bg-white transition-all z-10 border border-white/20 shadow-sm"
+                      initial={{ opacity: 0, scale: 0.8, x: 5 }}
+                      animate={{ opacity: 1, scale: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, x: 5 }}
+                      whileHover={{ scale: 1.1, backgroundColor: "rgba(255, 255, 255, 0.9)" }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={(e) => changeImage(1, e)}
+                    >
+                      <FiChevronRight className="w-5 h-5" />
+                    </motion.button>
+                  </>
+                )}
+              </AnimatePresence>
+            )}
+
+            {/* Image Indicator Dots - Enhanced for better visibility */}
+            {galleryImages.length > 1 && (
+              <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2 z-10">
+                {galleryImages.map((_, index) => (
+                  <motion.button
+                    key={index}
+                    aria-label={`Go to image ${index + 1}`}
+                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                      currentImageIndex === index
+                        ? 'bg-white scale-110 shadow-sm border border-white/20'
+                        : 'bg-white/30 hover:bg-white/60 border border-white/10'
+                    }`}
+                    onClick={(e) => setImageIndex(index, e)}
+                    whileHover={{ scale: 1.3 }}
+                    whileTap={{ scale: 0.9 }}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: currentImageIndex === index ? 1.25 : 1 }}
+                    transition={{ delay: index * 0.05 }}
+                  />
+                ))}
+              </div>
             )}
           </div>
 
-          {!minimal && productTags.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {productTags.slice(0, 3).map((tag, index) => (
+          {/* Content Area - Enhanced layout and responsive design */}
+          <motion.div variants={contentVariants} className="p-4 space-y-3 flex-grow flex flex-col">
+            {/* Top Row: Title & Category */}
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-medium text-gray-800 text-base leading-tight line-clamp-2 group-hover:text-violet-600 transition-colors tracking-tight">
+                {productName}
+              </h3>
+              {!minimal && categoryName && (
+                 <span className="text-[11px] font-medium px-2 py-0.5 bg-violet-50 text-violet-500 rounded-full whitespace-nowrap flex-shrink-0 mt-0.5 border border-violet-100/30">
+                    {categoryName}
+                </span>
+              )}
+            </div>
+
+            {/* Description */}
+            {!minimal && shortDescription && (
+              <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed tracking-wide">{shortDescription}</p>
+            )}
+
+            {/* Minimal mode: Show only short description */}
+            {minimal && shortDescription && (
+              <p className="text-xs text-gray-500 line-clamp-1 leading-relaxed tracking-wide">{shortDescription}</p>
+            )}
+
+            {/* Tags Cloud - Enhanced layout */}
+            {!minimal && productTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-auto pt-2">
+                {productTags.map((tag, index) => (
+                  <motion.span
+                    key={index}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="text-[10px] px-2 py-0.5 bg-violet-50 text-violet-500 rounded-full border border-violet-100/30"
+                  >
+                    {tag}
+                  </motion.span>
+                ))}
+                {productTagsAll.length > productTags.length && (
+                  <span className="text-[10px] px-2 py-0.5 bg-gray-50 text-gray-400 rounded-full border border-gray-100/30">
+                    +{productTagsAll.length - productTags.length} more
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Bottom Row: Stats - Enhanced with clearer metrics */}
+            <div className={`flex flex-wrap items-center ${minimal ? 'justify-center mt-auto' : 'justify-between'} gap-x-3 gap-y-2 pt-2 mt-auto border-t border-gray-50`}>
+              {/* Stats - Removed upvote info */}
+              <div className="flex items-center gap-2">
+                {!minimal && (
+                  <>
+                    <span className="flex items-center text-gray-400 text-xs gap-1 hover:text-violet-500 transition-colors" title={`${viewCount} Views`}>
+                      <FiEye className="w-3 h-3 text-violet-400" />
+                      {viewCount}
+                    </span>
+                    {formattedDate && (
+                      <>
+                        <span className="text-gray-200">•</span>
+                        <span className="flex items-center text-gray-400 text-xs gap-1 hover:text-violet-500 transition-colors" title={`${launchDate ? 'Launched' : 'Created'} on ${formattedDate}`}>
+                           <FiCalendar className="w-3 h-3 text-violet-400" />
+                           {formattedDate}
+                       </span>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Minimal Tags */}
+              {minimal && productTags.length > 0 && (
+                 <span className="text-[10px] px-2 py-0.5 bg-violet-50 text-violet-500 rounded-full border border-violet-100/30">
+                    {productTags[0]}
+                    {productTagsAll.length > 1 && ` +${productTagsAll.length - 1}`}
+                </span>
+              )}
+
+              {/* View indicator for larger cards */}
+              {!minimal && (
                 <motion.span
-                  key={index}
-                  className="text-xs px-3 py-1 bg-gray-50 text-gray-600 rounded-full border border-gray-100"
-                  whileHover={{ scale: 1.05, y: -2, backgroundColor: "#f5f3ff" }}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 * index }}
+                  className="text-xs font-medium text-violet-500 opacity-0 group-hover:opacity-100 transition-all flex items-center gap-1 group-hover:translate-x-0.5"
+                  initial={{ x: -5, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.2 }}
                 >
-                  {tag}
-                </motion.span>
-              ))}
-              {productTags.length > 3 && (
-                <motion.span
-                  className="text-xs px-3 py-1 bg-gray-50 text-gray-600 rounded-full border border-gray-100"
-                  whileHover={{ scale: 1.05, y: -2, backgroundColor: "#f5f3ff" }}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  +{productTags.length - 3}
+                  View Details
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </motion.span>
               )}
             </div>
-          )}
-        </div>
+          </motion.div>
+        </a>
       </Link>
     </motion.div>
   );

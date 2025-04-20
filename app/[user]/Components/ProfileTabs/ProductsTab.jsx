@@ -1,8 +1,8 @@
 // src/components/ProductsTab.jsx
 import { motion } from "framer-motion";
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../../../../Contexts/Auth/AuthContext";
-import AddProductModal from "../../../../Components/Modal/Product/AddProductModal";
 import EditProductModal from "../../../../Components/Modal/Product/EditProductModal";
 import DeleteConfirmModal from "../../../../Components/Modal/Product/DeleteConfirmModal";
 import ProfileProductCard from "../../../../Components/Product/ProfileProductCard";
@@ -24,12 +24,12 @@ export default function ProductsTab({
   userId,
   isOwner = false,
 }) {
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   const { user } = useAuth();
+  const router = useRouter();
 
   // Determine if current user is the owner if not explicitly set
   const currentUserIsOwner = isOwner || (user && userId && user._id === userId);
@@ -37,7 +37,6 @@ export default function ProductsTab({
   // Handlers for modal operations
   const handleModalClose = useCallback(
     (updatedProduct) => {
-      setIsAddModalOpen(false);
       setIsEditModalOpen(false);
       setIsDeleteModalOpen(false);
       setSelectedProduct(null);
@@ -49,6 +48,11 @@ export default function ProductsTab({
     },
     [onProductUpdated]
   );
+
+  // Handler for navigating to add product page
+  const handleAddProduct = () => {
+    router.push('/product/new');
+  };
 
   const handleEditProduct = (product) => {
     setSelectedProduct(product);
@@ -92,7 +96,7 @@ export default function ProductsTab({
             actionButton={
               currentUserIsOwner && (
                 <motion.button
-                  onClick={() => setIsAddModalOpen(true)}
+                  onClick={handleAddProduct}
                   className="px-6 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors flex items-center gap-2"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -116,9 +120,7 @@ export default function ProductsTab({
             }
           />
         </motion.div>
-        {currentUserIsOwner && (
-          <AddProductModal isOpen={isAddModalOpen} onClose={handleModalClose} />
-        )}
+        {/* No modal needed here anymore */}
       </>
     );
   }
@@ -134,7 +136,7 @@ export default function ProductsTab({
           <h2 className="text-2xl font-semibold text-gray-900">Products</h2>
           {currentUserIsOwner && (
             <motion.button
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={handleAddProduct}
               className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors flex items-center gap-2"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -208,23 +210,18 @@ export default function ProductsTab({
         )}
       </motion.div>
 
-      {currentUserIsOwner && (
+      {currentUserIsOwner && selectedProduct && (
         <>
-          <AddProductModal isOpen={isAddModalOpen} onClose={handleModalClose} />
-          {selectedProduct && (
-            <>
-              <EditProductModal
-                isOpen={isEditModalOpen}
-                onClose={handleModalClose}
-                product={selectedProduct}
-              />
-              <DeleteConfirmModal
-                isOpen={isDeleteModalOpen}
-                onClose={handleModalClose}
-                product={selectedProduct}
-              />
-            </>
-          )}
+          <EditProductModal
+            isOpen={isEditModalOpen}
+            onClose={handleModalClose}
+            product={selectedProduct}
+          />
+          <DeleteConfirmModal
+            isOpen={isDeleteModalOpen}
+            onClose={handleModalClose}
+            product={selectedProduct}
+          />
         </>
       )}
     </>

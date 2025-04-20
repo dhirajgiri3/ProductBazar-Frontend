@@ -34,13 +34,22 @@ export default function DeleteConfirmModal({ isOpen, onClose, product }) {
 
     try {
       const result = await deleteProduct(product.slug);
-      if (result.success) {
+      if (result) {
         toast.success("Product deleted successfully!");
-        onClose(true); // Pass success indicator to parent
+        // Pass the deleted product to the parent component for immediate UI update
+        onClose(product); // Pass the deleted product to parent
       }
     } catch (err) {
-      logger.error("Error deleting product:", err);
-      toast.error(err.message || "Failed to delete product. Please try again.");
+      // Special handling for 404 errors - the product is already deleted
+      if (err.response && err.response.status === 404) {
+        logger.warn(`Product ${product.slug} not found (404). It may have been already deleted.`);
+        toast.info("This product has already been deleted.");
+        // Still pass the product to the parent to ensure it's removed from the UI
+        onClose(product);
+      } else {
+        logger.error("Error deleting product:", err);
+        toast.error(err.message || "Failed to delete product. Please try again.");
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -60,14 +69,14 @@ export default function DeleteConfirmModal({ isOpen, onClose, product }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="h-full fixed inset-0 bg-black/40 backdrop-blur-[10px] flex items-center justify-center z-50 p-4"
           onClick={handleClose}
         >
           <motion.div
             initial={{ scale: 0.95 }}
             animate={{ scale: 1 }}
             exit={{ scale: 0.95 }}
-            className="bg-white rounded-xl w-full max-w-md shadow-lg"
+            className="bg-white rounded-xl w-full max-w-md shadow-lg fixed top-[5rem]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}

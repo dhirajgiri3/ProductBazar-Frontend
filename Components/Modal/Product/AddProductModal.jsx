@@ -339,7 +339,7 @@ const AddProductModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-[10px] flex items-center justify-center p-4">
       <Tooltip id="tooltip" className="z-[100]" />
       <AnimatePresence>
         <motion.div

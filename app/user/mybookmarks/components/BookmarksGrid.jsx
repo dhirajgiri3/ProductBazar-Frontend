@@ -43,17 +43,6 @@ const BookmarksGrid = ({ bookmarks, onRefresh }) => {
     },
   };
 
-  // Handle bookmark removal with optimistic update
-  const handleRemoveBookmark = () => {
-    // Show toast notification
-    toast.success("Bookmark removed");
-
-    // Call the refresh function to update the list
-    if (onRefresh) {
-      onRefresh();
-    }
-  };
-
   return (
     <motion.div
       className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"

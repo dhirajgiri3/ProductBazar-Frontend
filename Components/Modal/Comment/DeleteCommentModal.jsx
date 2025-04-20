@@ -65,7 +65,7 @@ const DeleteCommentModal = ({
       {isOpen && (
         <motion.div
           key="delete-comment-modal"
-          className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          className="h-full fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-[10px] flex items-center justify-center z-50 p-4"
           variants={backdropVariants}
           initial="hidden"
           animate="visible"
@@ -73,7 +73,7 @@ const DeleteCommentModal = ({
           onClick={handleBackdropClick}
         >
           <motion.div
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full overflow-hidden"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full overflow-hidden fixed top-[5rem]"
             variants={modalVariants}
             initial="hidden"
             animate="visible"

@@ -33,7 +33,11 @@ import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 
 const sortOptions = [
-  { id: "createdAt", label: "Recently Bookmarked", icon: <FiClock size={14} /> },
+  {
+    id: "createdAt",
+    label: "Recently Bookmarked",
+    icon: <FiClock size={14} />,
+  },
   { id: "name", label: "Product Name", icon: <FiTag size={14} /> },
   { id: "upvotes", label: "Most Upvoted", icon: <FiArrowUp size={14} /> },
   { id: "views", label: "Most Viewed", icon: <FiEye size={14} /> },
@@ -50,14 +54,13 @@ const MyBookmarksPage = () => {
   const [bookmarks, setBookmarks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [viewMode, setViewMode] = useState("grid");
+  const [viewMode, setViewMode] = useState("list");
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedTags, setSelectedTags] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isTagsFilterOpen, setIsTagsFilterOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalBookmarks, setTotalBookmarks] = useState(0);
@@ -70,95 +73,102 @@ const MyBookmarksPage = () => {
   // Extract unique tags from bookmarks for filtering
   const extractTags = useCallback((bookmarksList) => {
     const tagsSet = new Set();
-    bookmarksList.forEach(bookmark => {
+    bookmarksList.forEach((bookmark) => {
       if (bookmark.product.tags && Array.isArray(bookmark.product.tags)) {
-        bookmark.product.tags.forEach(tag => tagsSet.add(tag));
+        bookmark.product.tags.forEach((tag) => tagsSet.add(tag));
       }
     });
     return Array.from(tagsSet).sort();
   }, []);
 
   // Fetch bookmarks with enhanced error handling and data processing
-  const fetchBookmarks = useCallback(async (isRefresh = false) => {
-    if (!isAuthenticated) {
-      router.push("/auth/login?redirect=/user/mybookmarks");
-      return;
-    }
-
-    try {
-      if (!isRefresh) {
-        setLoading(true);
-      } else {
-        setIsRefreshing(true);
-        toast.loading("Refreshing bookmarks...", { id: "refresh-toast" });
+  const fetchBookmarks = useCallback(
+    async (isRefresh = false) => {
+      if (!isAuthenticated) {
+        router.push("/auth/login?redirect=/user/mybookmarks");
+        return;
       }
-      setError(null);
 
-      // Build query parameters
-      const params = {
-        page,
-        limit: 12,
-        sortBy,
-        sortOrder,
-        ...(selectedCategory !== "all" && { category: selectedCategory }),
-        ...(searchQuery && { search: searchQuery }),
-        ...(selectedTags.length > 0 && { tags: selectedTags.join(',') }),
-        ...(dateRange && {
-          fromDate: dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
-          toDate: dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined
-        }),
-      };
-
-      // Use the dedicated bookmarks endpoint
-      const response = await makePriorityRequest("GET", "/user/bookmarks", {
-        params
-      });
-
-      if (response.data.success) {
-        setBookmarks(response.data.data);
-        setTotalPages(response.data.pagination.pages);
-        setTotalBookmarks(response.data.pagination.total);
-
-        // Extract available tags for filtering
-        const tags = extractTags(response.data.data);
-        setAvailableTags(tags);
-
-        // Show success message on refresh
-        if (isRefresh) {
-          toast.success("Bookmarks refreshed", { id: "refresh-toast" });
+      try {
+        if (!isRefresh) {
+          setLoading(true);
+        } else {
+          setIsRefreshing(true);
+          toast.loading("Refreshing bookmarks...", { id: "refresh-toast" });
         }
-      } else {
-        setError(response.data.message || "Failed to fetch bookmarks");
+        setError(null);
+
+        // Build query parameters
+        const params = {
+          page,
+          limit: 12,
+          sortBy,
+          sortOrder,
+          ...(selectedCategory !== "all" && { category: selectedCategory }),
+          ...(searchQuery && { search: searchQuery }),
+          ...(selectedTags.length > 0 && { tags: selectedTags.join(",") }),
+          ...(dateRange && {
+            fromDate: dateRange.from
+              ? format(dateRange.from, "yyyy-MM-dd")
+              : undefined,
+            toDate: dateRange.to
+              ? format(dateRange.to, "yyyy-MM-dd")
+              : undefined,
+          }),
+        };
+
+        // Use the dedicated bookmarks endpoint
+        const response = await makePriorityRequest("GET", "/user/bookmarks", {
+          params,
+        });
+
+        if (response.data.success) {
+          setBookmarks(response.data.data);
+          setTotalPages(response.data.pagination.pages);
+          setTotalBookmarks(response.data.pagination.total);
+
+          // Extract available tags for filtering
+          const tags = extractTags(response.data.data);
+          setAvailableTags(tags);
+
+          // Show success message on refresh
+          if (isRefresh) {
+            toast.success("Bookmarks refreshed", { id: "refresh-toast" });
+          }
+        } else {
+          setError(response.data.message || "Failed to fetch bookmarks");
+          setBookmarks([]);
+          if (isRefresh) {
+            toast.error("Failed to refresh bookmarks", { id: "refresh-toast" });
+          }
+        }
+      } catch (err) {
+        logger.error("Error fetching bookmarks:", err);
+        setError("Something went wrong while fetching your bookmarks");
         setBookmarks([]);
         if (isRefresh) {
-          toast.error("Failed to refresh bookmarks", { id: "refresh-toast" });
+          toast.error("Error refreshing bookmarks", { id: "refresh-toast" });
         }
+      } finally {
+        setLoading(false);
+        setIsSearching(false);
+        setIsRefreshing(false);
+        setSkeletonLoading(false);
       }
-    } catch (err) {
-      logger.error("Error fetching bookmarks:", err);
-      setError("Something went wrong while fetching your bookmarks");
-      setBookmarks([]);
-      if (isRefresh) {
-        toast.error("Error refreshing bookmarks", { id: "refresh-toast" });
-      }
-    } finally {
-      setLoading(false);
-      setIsSearching(false);
-      setIsRefreshing(false);
-      setSkeletonLoading(false);
-    }
-  }, [
-    isAuthenticated,
-    router,
-    page,
-    sortBy,
-    sortOrder,
-    selectedCategory,
-    selectedTags,
-    searchQuery,
-    dateRange,
-    extractTags
-  ]);
+    },
+    [
+      isAuthenticated,
+      router,
+      page,
+      sortBy,
+      sortOrder,
+      selectedCategory,
+      selectedTags,
+      searchQuery,
+      dateRange,
+      extractTags,
+    ]
+  );
 
   // Handle refresh button click
   const handleRefresh = useCallback(() => {
@@ -197,7 +207,6 @@ const MyBookmarksPage = () => {
     };
   }, [searchQuery, fetchBookmarks]);
 
-
   // Handle search form submission
   const handleSearch = (e) => {
     e.preventDefault();
@@ -230,9 +239,9 @@ const MyBookmarksPage = () => {
 
   // Handle tag selection
   const handleTagSelection = (tag) => {
-    setSelectedTags(prev => {
+    setSelectedTags((prev) => {
       const newTags = prev.includes(tag)
-        ? prev.filter(t => t !== tag)
+        ? prev.filter((t) => t !== tag)
         : [...prev, tag];
       setPage(1);
       return newTags;
@@ -278,7 +287,7 @@ const MyBookmarksPage = () => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Ctrl+K or Cmd+K to focus search
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
         if (searchInputRef.current) {
           searchInputRef.current.focus();
@@ -286,8 +295,8 @@ const MyBookmarksPage = () => {
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Loading state
@@ -313,9 +322,13 @@ const MyBookmarksPage = () => {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center">
               <FiBookmark className="text-violet-600 w-6 h-6 mr-2" />
-              <h1 className="text-2xl font-semibold text-gray-900">My Bookmarks</h1>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                My Bookmarks
+              </h1>
               {totalBookmarks > 0 && (
-                <span className="ml-2 text-sm text-gray-500">{totalBookmarks} {totalBookmarks === 1 ? 'item' : 'items'}</span>
+                <span className="ml-2 text-sm text-gray-500">
+                  {totalBookmarks} {totalBookmarks === 1 ? "item" : "items"}
+                </span>
               )}
             </div>
 
@@ -349,25 +362,56 @@ const MyBookmarksPage = () => {
                 <button
                   onClick={handleRefresh}
                   disabled={isRefreshing}
-                  className={`flex items-center justify-center w-10 h-10 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`flex items-center justify-center w-10 h-10 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all ${
+                    isRefreshing ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                   title="Refresh bookmarks"
                 >
-                  <FiRefreshCw className={`text-gray-500 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <FiRefreshCw
+                    className={`text-gray-500 ${
+                      isRefreshing ? "animate-spin" : ""
+                    }`}
+                  />
                 </button>
 
                 <div className="relative">
                   <button
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className={`flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50 transition-all ${isFilterOpen || selectedCategory !== 'all' || (Array.isArray(selectedTags) && selectedTags.length > 0) ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-gray-200 text-gray-700'}`}
+                    className={`flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50 transition-all ${
+                      isFilterOpen ||
+                      selectedCategory !== "all" ||
+                      (Array.isArray(selectedTags) && selectedTags.length > 0)
+                        ? "border-violet-300 bg-violet-50 text-violet-700"
+                        : "border-gray-200 text-gray-700"
+                    }`}
                   >
-                    <FiFilter className={isFilterOpen || selectedCategory !== 'all' || (Array.isArray(selectedTags) && selectedTags.length > 0) ? 'text-violet-500' : 'text-gray-500'} />
+                    <FiFilter
+                      className={
+                        isFilterOpen ||
+                        selectedCategory !== "all" ||
+                        (Array.isArray(selectedTags) && selectedTags.length > 0)
+                          ? "text-violet-500"
+                          : "text-gray-500"
+                      }
+                    />
                     <span className="text-sm font-medium">Filter</span>
-                    {(selectedCategory !== 'all' || (Array.isArray(selectedTags) && selectedTags.length > 0)) && (
+                    {(selectedCategory !== "all" ||
+                      (Array.isArray(selectedTags) &&
+                        selectedTags.length > 0)) && (
                       <span className="flex items-center justify-center w-5 h-5 bg-violet-600 text-white text-xs rounded-full">
-                        {(selectedCategory !== 'all' ? 1 : 0) + (Array.isArray(selectedTags) ? selectedTags.length : 0)}
+                        {(selectedCategory !== "all" ? 1 : 0) +
+                          (Array.isArray(selectedTags)
+                            ? selectedTags.length
+                            : 0)}
                       </span>
                     )}
-                    <FiChevronDown className={`transition-transform ${isFilterOpen ? 'rotate-180 text-violet-500' : 'text-gray-500'}`} />
+                    <FiChevronDown
+                      className={`transition-transform ${
+                        isFilterOpen
+                          ? "rotate-180 text-violet-500"
+                          : "text-gray-500"
+                      }`}
+                    />
                   </button>
 
                   {/* Enhanced Filter Dropdown */}
@@ -383,7 +427,10 @@ const MyBookmarksPage = () => {
                         <div className="p-4">
                           <div className="mb-4">
                             <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
-                              <FiTrendingUp className="mr-1.5 text-violet-500" size={14} />
+                              <FiTrendingUp
+                                className="mr-1.5 text-violet-500"
+                                size={14}
+                              />
                               Sort By
                             </h3>
                             <div className="space-y-1.5">
@@ -403,19 +450,27 @@ const MyBookmarksPage = () => {
                               ))}
                             </div>
                             <div className="mt-2 flex justify-between items-center">
-                              <span className="text-xs text-gray-500">Order</span>
+                              <span className="text-xs text-gray-500">
+                                Order
+                              </span>
                               <button
                                 onClick={toggleSortOrder}
                                 className="flex items-center gap-1.5 px-2.5 py-1 rounded text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                               >
                                 {sortOrder === "asc" ? (
                                   <>
-                                    <FiArrowUp size={14} className="text-gray-500" />
+                                    <FiArrowUp
+                                      size={14}
+                                      className="text-gray-500"
+                                    />
                                     <span>Ascending</span>
                                   </>
                                 ) : (
                                   <>
-                                    <FiArrowUp size={14} className="text-gray-500 transform rotate-180" />
+                                    <FiArrowUp
+                                      size={14}
+                                      className="text-gray-500 transform rotate-180"
+                                    />
                                     <span>Descending</span>
                                   </>
                                 )}
@@ -425,7 +480,10 @@ const MyBookmarksPage = () => {
 
                           <div className="mb-4">
                             <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
-                              <FiTag className="mr-1.5 text-violet-500" size={14} />
+                              <FiTag
+                                className="mr-1.5 text-violet-500"
+                                size={14}
+                              />
                               Categories
                             </h3>
                             <div className="max-h-40 overflow-y-auto space-y-1 pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
@@ -439,45 +497,53 @@ const MyBookmarksPage = () => {
                               >
                                 All Categories
                               </button>
-                              {Array.isArray(categories) && categories.map((category) => (
-                                <button
-                                  key={category._id}
-                                  onClick={() => handleCategoryChange(category.slug)}
-                                  className={`flex items-center w-full text-left px-2.5 py-1.5 rounded text-sm transition-colors ${
-                                    selectedCategory === category.slug
-                                      ? "bg-violet-50 text-violet-700 font-medium"
-                                      : "text-gray-700 hover:bg-gray-50"
-                                  }`}
-                                >
-                                  {category.name}
-                                </button>
-                              ))}
+                              {Array.isArray(categories) &&
+                                categories.map((category) => (
+                                  <button
+                                    key={category._id}
+                                    onClick={() =>
+                                      handleCategoryChange(category.slug)
+                                    }
+                                    className={`flex items-center w-full text-left px-2.5 py-1.5 rounded text-sm transition-colors ${
+                                      selectedCategory === category.slug
+                                        ? "bg-violet-50 text-violet-700 font-medium"
+                                        : "text-gray-700 hover:bg-gray-50"
+                                    }`}
+                                  >
+                                    {category.name}
+                                  </button>
+                                ))}
                             </div>
                           </div>
 
-                          {Array.isArray(availableTags) && availableTags.length > 0 && (
-                            <div className="mb-4">
-                              <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
-                                <FiTag className="mr-1.5 text-violet-500" size={14} />
-                                Tags
-                              </h3>
-                              <div className="flex flex-wrap gap-1.5">
-                                {Array.isArray(availableTags) && availableTags.map(tag => (
-                                  <button
-                                    key={tag}
-                                    onClick={() => handleTagSelection(tag)}
-                                    className={`text-xs px-2 py-1 rounded-full transition-colors ${
-                                      selectedTags.includes(tag)
-                                        ? "bg-violet-100 text-violet-700 border border-violet-300"
-                                        : "bg-gray-100 text-gray-700 border border-transparent hover:border-gray-300"
-                                    }`}
-                                  >
-                                    {tag}
-                                  </button>
-                                ))}
+                          {Array.isArray(availableTags) &&
+                            availableTags.length > 0 && (
+                              <div className="mb-4">
+                                <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                                  <FiTag
+                                    className="mr-1.5 text-violet-500"
+                                    size={14}
+                                  />
+                                  Tags
+                                </h3>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {Array.isArray(availableTags) &&
+                                    availableTags.map((tag) => (
+                                      <button
+                                        key={tag}
+                                        onClick={() => handleTagSelection(tag)}
+                                        className={`text-xs px-2 py-1 rounded-full transition-colors ${
+                                          selectedTags.includes(tag)
+                                            ? "bg-violet-100 text-violet-700 border border-violet-300"
+                                            : "bg-gray-100 text-gray-700 border border-transparent hover:border-gray-300"
+                                        }`}
+                                      >
+                                        {tag}
+                                      </button>
+                                    ))}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
 
                           <div className="pt-2 border-t border-gray-100 flex justify-between">
                             <button
@@ -504,7 +570,11 @@ const MyBookmarksPage = () => {
                 <button
                   onClick={toggleViewMode}
                   className="flex items-center justify-center w-10 h-10 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
-                  title={viewMode === "grid" ? "Switch to list view" : "Switch to grid view"}
+                  title={
+                    viewMode === "grid"
+                      ? "Switch to list view"
+                      : "Switch to grid view"
+                  }
                 >
                   {viewMode === "grid" ? <FiList /> : <FiGrid />}
                 </button>
@@ -517,7 +587,9 @@ const MyBookmarksPage = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Active Filters */}
-        {(selectedCategory !== "all" || searchQuery || (Array.isArray(selectedTags) && selectedTags.length > 0)) && (
+        {(selectedCategory !== "all" ||
+          searchQuery ||
+          (Array.isArray(selectedTags) && selectedTags.length > 0)) && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -531,7 +603,13 @@ const MyBookmarksPage = () => {
                 className="inline-flex items-center bg-violet-50 text-violet-700 rounded-full px-3 py-1.5 text-sm border border-violet-100"
               >
                 <FiTag size={12} className="mr-1.5" />
-                <span>Category: {Array.isArray(categories) && categories.find(c => c.slug === selectedCategory)?.name || selectedCategory}</span>
+                <span>
+                  Category:{" "}
+                  {(Array.isArray(categories) &&
+                    categories.find((c) => c.slug === selectedCategory)
+                      ?.name) ||
+                    selectedCategory}
+                </span>
                 <button
                   onClick={() => handleCategoryChange("all")}
                   className="ml-2 text-violet-500 hover:text-violet-700 transition-colors"
@@ -541,24 +619,25 @@ const MyBookmarksPage = () => {
               </motion.div>
             )}
 
-            {Array.isArray(selectedTags) && selectedTags.map(tag => (
-              <motion.div
-                key={tag}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="inline-flex items-center bg-violet-50 text-violet-700 rounded-full px-3 py-1.5 text-sm border border-violet-100"
-              >
-                <FiTag size={12} className="mr-1.5" />
-                <span>{tag}</span>
-                <button
-                  onClick={() => handleTagSelection(tag)}
-                  className="ml-2 text-violet-500 hover:text-violet-700 transition-colors"
+            {Array.isArray(selectedTags) &&
+              selectedTags.map((tag) => (
+                <motion.div
+                  key={tag}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="inline-flex items-center bg-violet-50 text-violet-700 rounded-full px-3 py-1.5 text-sm border border-violet-100"
                 >
-                  <FiX size={14} />
-                </button>
-              </motion.div>
-            ))}
+                  <FiTag size={12} className="mr-1.5" />
+                  <span>{tag}</span>
+                  <button
+                    onClick={() => handleTagSelection(tag)}
+                    className="ml-2 text-violet-500 hover:text-violet-700 transition-colors"
+                  >
+                    <FiX size={14} />
+                  </button>
+                </motion.div>
+              ))}
 
             {searchQuery && (
               <motion.div
@@ -598,7 +677,9 @@ const MyBookmarksPage = () => {
             <div className="flex items-start">
               <FiAlertCircle className="text-red-500 mt-0.5 mr-2 flex-shrink-0" />
               <div>
-                <h3 className="text-sm font-medium text-red-800">Error loading bookmarks</h3>
+                <h3 className="text-sm font-medium text-red-800">
+                  Error loading bookmarks
+                </h3>
                 <p className="text-sm text-red-700 mt-1">{error}</p>
                 <button
                   onClick={() => fetchBookmarks()}
@@ -615,8 +696,12 @@ const MyBookmarksPage = () => {
         {/* Loading State */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-12">
-            <LoaderComponent text={isSearching ? "Searching..." : "Loading bookmarks..."} />
-            <p className="text-sm text-gray-500 mt-4 animate-pulse">Fetching your bookmarked products...</p>
+            <LoaderComponent
+              text={isSearching ? "Searching..." : "Loading bookmarks..."}
+            />
+            <p className="text-sm text-gray-500 mt-4 animate-pulse">
+              Fetching your bookmarked products...
+            </p>
           </div>
         )}
 
@@ -624,7 +709,10 @@ const MyBookmarksPage = () => {
         {!loading && skeletonLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div
+                key={index}
+                className="bg-white rounded-xl border border-gray-100 overflow-hidden"
+              >
                 <div className="h-48 bg-gray-200 animate-pulse" />
                 <div className="p-4">
                   <div className="h-6 bg-gray-200 rounded animate-pulse mb-2" />
@@ -662,7 +750,12 @@ const MyBookmarksPage = () => {
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    transition={{ delay: 0.3, type: "spring", stiffness: 500, damping: 15 }}
+                    transition={{
+                      delay: 0.3,
+                      type: "spring",
+                      stiffness: 500,
+                      damping: 15,
+                    }}
                     className="absolute -top-2 -right-2 bg-violet-100 text-violet-600 rounded-full p-1"
                   >
                     <FiX className="w-4 h-4" />
@@ -670,26 +763,32 @@ const MyBookmarksPage = () => {
                 </div>
               }
               title={
-                searchQuery || selectedCategory !== "all" || (Array.isArray(selectedTags) && selectedTags.length > 0)
+                searchQuery ||
+                selectedCategory !== "all" ||
+                (Array.isArray(selectedTags) && selectedTags.length > 0)
                   ? "No matching bookmarks found"
                   : "You haven't bookmarked any products yet"
               }
               description={
-                searchQuery || selectedCategory !== "all" || (Array.isArray(selectedTags) && selectedTags.length > 0)
+                searchQuery ||
+                selectedCategory !== "all" ||
+                (Array.isArray(selectedTags) && selectedTags.length > 0)
                   ? "Try changing your search or filter criteria to find what you're looking for"
                   : "Bookmark products you're interested in to keep track of them here"
               }
               action={
-                searchQuery || selectedCategory !== "all" || (Array.isArray(selectedTags) && selectedTags.length > 0)
+                searchQuery ||
+                selectedCategory !== "all" ||
+                (Array.isArray(selectedTags) && selectedTags.length > 0)
                   ? {
                       label: "Clear Filters",
                       onClick: clearAllFilters,
-                      icon: <FiX size={14} className="mr-1.5" />
+                      icon: <FiX size={14} className="mr-1.5" />,
                     }
                   : {
                       label: "Discover Products",
                       onClick: () => router.push("/"),
-                      icon: <FiSearch size={14} className="mr-1.5" />
+                      icon: <FiSearch size={14} className="mr-1.5" />,
                     }
               }
             />
@@ -704,15 +803,15 @@ const MyBookmarksPage = () => {
             transition={{ duration: 0.3 }}
           >
             <AnimatePresence mode="wait">
-              {viewMode === "grid" ? (
-                <BookmarksGrid
-                  key="grid"
+              {viewMode === "list" ? (
+                <BookmarksList
+                  key="list"
                   bookmarks={bookmarks}
                   onRefresh={fetchBookmarks}
                 />
               ) : (
-                <BookmarksList
-                  key="list"
+                <BookmarksGrid
+                  key="grid"
                   bookmarks={bookmarks}
                   onRefresh={fetchBookmarks}
                 />
@@ -744,19 +843,21 @@ const MyBookmarksPage = () => {
                   {/* Dynamic pagination with ellipsis for many pages */}
                   {totalPages <= 7 ? (
                     // Show all pages if 7 or fewer
-                    Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                      <button
-                        key={pageNum}
-                        onClick={() => handlePageChange(pageNum)}
-                        className={`w-9 h-9 rounded-md transition-colors ${
-                          pageNum === page
-                            ? "bg-violet-100 text-violet-700 font-medium border border-violet-200"
-                            : "text-gray-700 hover:bg-violet-50 hover:text-violet-600"
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    ))
+                    Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (pageNum) => (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`w-9 h-9 rounded-md transition-colors ${
+                            pageNum === page
+                              ? "bg-violet-100 text-violet-700 font-medium border border-violet-200"
+                              : "text-gray-700 hover:bg-violet-50 hover:text-violet-600"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      )
+                    )
                   ) : (
                     // Show limited pages with ellipsis for many pages
                     <>
@@ -779,8 +880,14 @@ const MyBookmarksPage = () => {
 
                       {/* Pages around current page */}
                       {Array.from({ length: totalPages }, (_, i) => i + 1)
-                        .filter(num => num !== 1 && num !== totalPages && (num >= page - 1 && num <= page + 1))
-                        .map(pageNum => (
+                        .filter(
+                          (num) =>
+                            num !== 1 &&
+                            num !== totalPages &&
+                            num >= page - 1 &&
+                            num <= page + 1
+                        )
+                        .map((pageNum) => (
                           <button
                             key={pageNum}
                             onClick={() => handlePageChange(pageNum)}
@@ -792,8 +899,7 @@ const MyBookmarksPage = () => {
                           >
                             {pageNum}
                           </button>
-                        ))
-                      }
+                        ))}
 
                       {/* Ellipsis or second-to-last page */}
                       {page < totalPages - 2 && (

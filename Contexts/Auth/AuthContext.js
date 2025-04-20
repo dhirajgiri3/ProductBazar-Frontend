@@ -1387,6 +1387,28 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const getUserByUsername = useCallback(async (username) => {
+    // Create an abort controller to handle request cancellation
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    try {
+      // Make the request with the abort signal
+      const response = await api.get(`/auth/user/username/${username}`, { signal });
+
+      if (response.data.status === "success") {
+        return response.data.data.user;
+      }
+      return null;
+    } catch (err) {
+      // Don't log canceled errors as they're expected during navigation
+      if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
+        logger.error(`Failed to get user by username ${username}:`, err);
+      }
+      return null;
+    }
+  }, []);
+
   // Check if the user's profile is completed
   const isProfileCompleted = useCallback(() => {
     if (!user) return false;
@@ -1451,6 +1473,7 @@ export const AuthProvider = ({ children }) => {
     updateProfilePicture,
     updateBannerImage,
     getCurrentUser,
+    getUserByUsername,
     registerWithEmail,
     loginWithEmail,
     registerWithPhone,

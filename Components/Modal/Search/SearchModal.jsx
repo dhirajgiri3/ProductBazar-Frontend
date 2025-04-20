@@ -191,9 +191,9 @@ const SearchModal = ({ isOpen, onClose, initialQuery = "" }) => {
 
   // Modal animation variants
   const modalVariants = {
-    hidden: { opacity: 0, y: -20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
-    exit: { opacity: 0, y: -20, transition: { duration: 0.2 } }
+    hidden: { opacity: 0, scale: 0.95, y: 20 },
+    visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.3, type: "spring", damping: 25, stiffness: 300 } },
+    exit: { opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.2, ease: "easeInOut" } }
   };
 
   // Render search result items by type
@@ -241,12 +241,12 @@ const SearchModal = ({ isOpen, onClose, initialQuery = "" }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/50 backdrop-blur-sm">
+    <div className="h-full fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[10px]">
       <AnimatePresence mode="sync">
         <motion.div
           key="search-modal"
           ref={modalRef}
-          className="w-full max-w-3xl bg-white rounded-xl shadow-2xl overflow-hidden"
+          className="w-full max-w-3xl bg-white rounded-xl shadow-xl overflow-hidden fixed top-[5rem]"
           variants={modalVariants}
           initial="hidden"
           animate="visible"
@@ -533,7 +533,7 @@ const ProductResultItem = ({ product, onClose }) => {
         <p className="text-xs text-gray-500 truncate">{product.tagline}</p>
         <div className="flex items-center mt-1 text-xs text-gray-400">
           <span className="flex items-center">
-            {product.upvotes} upvotes
+            {typeof product.upvotes === 'object' ? product.upvotes.count || 0 : product.upvotes || 0} upvotes
           </span>
           <span className="mx-2">•</span>
           <span>{getCategoryName()}</span>

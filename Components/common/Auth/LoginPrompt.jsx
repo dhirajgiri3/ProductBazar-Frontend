@@ -64,7 +64,7 @@ const LoginPrompt = ({
       {isOpen && (
         <motion.div
           key="login-prompt-backdrop"
-          className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-[10px] flex items-center justify-center z-50 p-4"
           variants={backdropVariants}
           initial="hidden"
           animate="visible"

@@ -50,36 +50,14 @@ const ReviewSection = ({
     switch (pricing.type) {
       case "free":
         return "Free";
-
       case "contact":
-        return "Contact for Pricing" + (pricing.contactEmail ? ` • ${pricing.contactEmail}` : "");
-
+        return "Contact for Pricing (Coming Soon)";
       case "freemium":
-        return "Freemium";
-
+        return "Freemium (Coming Soon)";
       case "paid":
-        let paidDisplay = "One-time Purchase";
-        if (pricing.amount) {
-          paidDisplay += ` • ${pricing.currency} ${parseFloat(pricing.amount).toFixed(2)}`;
-          if (pricing.discounted && pricing.originalAmount) {
-            paidDisplay += ` (was ${pricing.currency} ${parseFloat(pricing.originalAmount).toFixed(2)})`;
-          }
-        }
-        return paidDisplay;
-
+        return "One-time Purchase (Coming Soon)";
       case "subscription":
-        let subDisplay = "Subscription";
-        if (pricing.amount) {
-          subDisplay += ` • ${pricing.currency} ${parseFloat(pricing.amount).toFixed(2)}`;
-          if (pricing.interval) {
-            subDisplay += ` / ${pricing.interval}`;
-          }
-          if (pricing.discounted && pricing.originalAmount) {
-            subDisplay += ` (was ${pricing.currency} ${parseFloat(pricing.originalAmount).toFixed(2)})`;
-          }
-        }
-        return subDisplay;
-
+        return "Subscription (Coming Soon)";
       default:
         return "Pricing not specified";
     }
@@ -228,8 +206,6 @@ const ReviewSection = ({
                   <p className="text-sm font-medium text-gray-800 flex items-center gap-2">
                     {pricing.type === "free" ? (
                       <Check size={14} className="text-emerald-500" />
-                    ) : pricing.type === "contact" ? (
-                      <Calendar size={14} className="text-violet-500" />
                     ) : (
                       <DollarSign size={14} className="text-emerald-500" />
                     )}
@@ -238,49 +214,6 @@ const ReviewSection = ({
                 </div>
               </div>
             </div>
-
-            {/* Contact Information for Pricing */}
-            {pricing.type === "contact" && (
-              <div className="space-y-1">
-                <h4 className="text-xs uppercase tracking-wider text-gray-500 font-medium">
-                  Contact Information for Pricing
-                </h4>
-                <div className="bg-gray-50 p-3 rounded-lg border-l-2 border-violet-400">
-                  <div className="space-y-2">
-                    <div className="flex items-start gap-2">
-                      <span className="text-xs font-medium text-gray-700 min-w-[80px]">
-                        Email:
-                      </span>
-                      <span className="text-xs text-violet-600">
-                        {pricing.contactEmail}
-                      </span>
-                    </div>
-
-                    {pricing.contactPhone && (
-                      <div className="flex items-start gap-2">
-                        <span className="text-xs font-medium text-gray-700 min-w-[80px]">
-                          Phone:
-                        </span>
-                        <span className="text-xs text-gray-800">
-                          {pricing.contactPhone}
-                        </span>
-                      </div>
-                    )}
-
-                    {pricing.contactInstructions && (
-                      <div className="flex items-start gap-2">
-                        <span className="text-xs font-medium text-gray-700 min-w-[80px]">
-                          Instructions:
-                        </span>
-                        <span className="text-xs text-gray-800">
-                          {pricing.contactInstructions}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Links */}
             {Object.keys(links).length > 0 && (
