@@ -20,7 +20,7 @@ import {
   AreaChart,
   ComposedChart,
 } from "recharts";
-import viewService from "../../services/viewService";
+import { useView } from "../../Contexts/View/ViewContext";
 
 // Icons
 import {
@@ -265,43 +265,19 @@ const DashboardLoader = () => (
  * Main ViewsAnalyticsDashboard component
  */
 const ViewsAnalyticsDashboard = ({ productId }) => {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { getProductViewStats, viewStats: stats, loading, error, realTimeEnabled, toggleRealTimeUpdates } = useView();
   const [timeframe, setTimeframe] = useState(7);
   const [activeChart, setActiveChart] = useState("combined");
   const [activeInsight, setActiveInsight] = useState(0);
 
   // Enhanced data processing with the API response structure
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        // Fetch at least double the timeframe to calculate period-over-period changes
-        const daysToFetch = Math.max(timeframe * 2, 30);
-        const response = await viewService.getProductViewStats(productId, {
-          days: daysToFetch,
-        });
-
-        if (response?.stats) {
-          setStats(response.stats);
-        } else {
-          throw new Error("Invalid stats data structure");
-        }
-
-        setError(null);
-      } catch (err) {
-        console.error("Failed to fetch view statistics:", err);
-        setError("Failed to load view statistics. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (productId) {
-      fetchStats();
+      // Fetch at least double the timeframe to calculate period-over-period changes
+      const daysToFetch = Math.max(timeframe * 2, 30);
+      getProductViewStats(productId, daysToFetch);
     }
-  }, [productId, timeframe]);
+  }, [productId, timeframe, getProductViewStats]);
 
   // Format daily views data using our custom hook
   const formattedDailyViews = useFormattedDailyData(
@@ -574,7 +550,7 @@ const ViewsAnalyticsDashboard = ({ productId }) => {
     stats?.devices?.map((device) => ({
       ...device,
       percentage: (
-        (device.count / (stats.totals.totalViews || 1)) *
+        (device.count / (stats?.totals?.totalViews || 1)) *
         100
       ).toFixed(1),
     })) || [];
@@ -582,7 +558,7 @@ const ViewsAnalyticsDashboard = ({ productId }) => {
   // Format traffic sources for better visualization
   const formattedSources =
     stats?.sources?.map((source, index) => {
-      const total = stats.totals.totalViews || 1;
+      const total = stats?.totals?.totalViews || 1;
       const percentage = ((source.count / total) * 100).toFixed(1);
 
       // For demo purposes, simulate change data (in a real app, this would come from the API)
@@ -767,6 +743,30 @@ const ViewsAnalyticsDashboard = ({ productId }) => {
                 <span className="w-2 h-2 rounded-full bg-indigo-400 mr-1.5"></span>
                 <span>Last updated: {new Date().toLocaleTimeString()}</span>
               </div>
+
+              {/* Real-time toggle */}
+              <div className="flex items-center px-3 py-1 rounded-md bg-indigo-900/30 text-indigo-300 border border-indigo-700/30">
+                <span className="text-xs mr-2">Real-time</span>
+                <button
+                  onClick={() => toggleRealTimeUpdates(!realTimeEnabled)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-400 ${realTimeEnabled ? 'bg-indigo-600' : 'bg-gray-700'}`}
+                  role="switch"
+                  aria-checked={realTimeEnabled}
+                >
+                  <span
+                    className={`${realTimeEnabled ? 'translate-x-5' : 'translate-x-1'} inline-block h-3 w-3 transform rounded-full bg-white transition-transform`}
+                  />
+                </button>
+                {realTimeEnabled && (
+                  <span className="ml-2 flex items-center text-xs text-green-400">
+                    <span className="relative flex h-2 w-2 mr-1">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    Live
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -888,7 +888,7 @@ const ViewsAnalyticsDashboard = ({ productId }) => {
                 </div>
               </div>
               <p className="text-4xl font-bold text-white mb-2 tracking-tight">
-                {stats.totals.totalViews.toLocaleString() || 0}
+                {stats?.totals?.totalViews ? stats.totals.totalViews.toLocaleString() : '0'}
               </p>
               <div className="flex items-center mt-2 text-indigo-300 text-sm">
                 {metrics?.viewsChange >= 0 ? (
@@ -939,7 +939,7 @@ const ViewsAnalyticsDashboard = ({ productId }) => {
                 </div>
               </div>
               <p className="text-4xl font-bold text-white mb-2 tracking-tight">
-                {stats.totals.uniqueViewers.toLocaleString() || 0}
+                {stats?.totals?.uniqueViewers ? stats.totals.uniqueViewers.toLocaleString() : '0'}
               </p>
               <div className="flex items-center mt-2 text-blue-300 text-sm">
                 {metrics?.uniqueChange >= 0 ? (
@@ -988,7 +988,7 @@ const ViewsAnalyticsDashboard = ({ productId }) => {
               </div>
               <p className="text-4xl font-bold text-white mb-2 tracking-tight">
                 {(() => {
-                  const duration = stats.totals.avgDuration || 0;
+                  const duration = stats?.totals?.avgDuration || 0;
                   const minutes = Math.floor(duration / 60);
                   const seconds = Math.floor(duration % 60);
                   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
@@ -997,9 +997,9 @@ const ViewsAnalyticsDashboard = ({ productId }) => {
               <div className="flex items-center mt-2 text-green-300 text-sm">
                 <Clock size={14} className="text-green-400 mr-1" />
                 <span>
-                  {stats.totals.avgDuration > 180
+                  {(stats?.totals?.avgDuration || 0) > 180
                     ? "High engagement time"
-                    : stats.totals.avgDuration > 60
+                    : (stats?.totals?.avgDuration || 0) > 60
                     ? "Good engagement time"
                     : "Average engagement time"}
                 </span>

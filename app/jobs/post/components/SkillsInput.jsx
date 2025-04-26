@@ -1,39 +1,39 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Plus, Tag } from "lucide-react";
+import { X, Plus, Tag, Search, AlertCircle, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Common tech skills for suggestions
 const COMMON_SKILLS = [
   // Programming Languages
   "JavaScript", "TypeScript", "Python", "Java", "C#", "C++", "Ruby", "PHP", "Go", "Swift", "Kotlin",
-  
+
   // Frontend
   "React", "Angular", "Vue.js", "Next.js", "HTML", "CSS", "SASS", "LESS", "Tailwind CSS", "Bootstrap",
   "Redux", "GraphQL", "REST API", "Webpack", "Responsive Design", "UI/UX", "Material UI", "Figma",
-  
+
   // Backend
   "Node.js", "Express", "Django", "Flask", "Spring Boot", "Laravel", "ASP.NET", "Ruby on Rails",
   "FastAPI", "Nest.js", "Microservices", "API Development", "WebSockets",
-  
+
   // Database
   "SQL", "MySQL", "PostgreSQL", "MongoDB", "Firebase", "Redis", "Elasticsearch", "DynamoDB",
   "Oracle", "SQLite", "NoSQL", "Database Design",
-  
+
   // DevOps & Cloud
   "AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "CI/CD", "Jenkins", "GitHub Actions",
   "Terraform", "Ansible", "Linux", "Nginx", "Apache", "Serverless",
-  
+
   // Mobile
   "React Native", "Flutter", "iOS", "Android", "Mobile Development", "Xamarin", "Ionic",
-  
+
   // Testing
   "Jest", "Mocha", "Cypress", "Selenium", "TDD", "Unit Testing", "Integration Testing", "QA",
-  
+
   // Other Tech
   "Machine Learning", "AI", "Data Science", "Blockchain", "IoT", "AR/VR", "Cybersecurity",
-  
+
   // Soft Skills
   "Communication", "Teamwork", "Problem Solving", "Agile", "Scrum", "Project Management",
   "Leadership", "Time Management", "Critical Thinking"
@@ -140,7 +140,7 @@ const SkillsInput = ({ value = "", onChange, placeholder = "Add skills..." }) =>
 
   return (
     <div className="relative">
-      <div className="flex flex-wrap items-center gap-2 p-2 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-violet-500 focus-within:border-violet-500 bg-white">
+      <div className="flex flex-wrap items-center gap-2 p-3 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-violet-500 focus-within:border-violet-500 bg-white hover:border-violet-300 transition-all duration-200">
         <AnimatePresence>
           {skills.map((skill, index) => (
             <motion.div
@@ -149,22 +149,26 @@ const SkillsInput = ({ value = "", onChange, placeholder = "Add skills..." }) =>
               initial="initial"
               animate="animate"
               exit="exit"
-              className="flex items-center gap-1 px-2 py-1 bg-violet-100 text-violet-800 rounded-md"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-100 text-violet-800 rounded-lg border border-violet-200 shadow-sm"
+              whileHover={{ scale: 1.02, boxShadow: '0 2px 4px rgba(139, 92, 246, 0.1)' }}
             >
-              <Tag size={14} />
-              <span className="text-sm">{skill}</span>
-              <button
+              <Tag size={14} className="text-violet-600" />
+              <span className="text-sm font-medium">{skill}</span>
+              <motion.button
                 type="button"
                 onClick={() => removeSkill(skill)}
-                className="text-violet-600 hover:text-violet-800"
+                className="text-violet-500 hover:text-violet-700 ml-1"
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.9 }}
               >
                 <X size={14} />
-              </button>
+              </motion.button>
             </motion.div>
           ))}
         </AnimatePresence>
-        
-        <div className="flex-1 min-w-[120px]">
+
+        <div className="flex-1 min-w-[120px] flex items-center">
+          <Search size={16} className="text-gray-400 mr-2" />
           <input
             ref={inputRef}
             type="text"
@@ -172,37 +176,47 @@ const SkillsInput = ({ value = "", onChange, placeholder = "Add skills..." }) =>
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             onFocus={() => setShowSuggestions(true)}
-            className="w-full border-none focus:ring-0 p-1 text-sm"
+            className="w-full border-none focus:ring-0 p-1.5 text-sm"
             placeholder={skills.length === 0 ? placeholder : "Add more skills..."}
           />
         </div>
       </div>
-      
+
       {/* Suggestions dropdown */}
-      {showSuggestions && suggestions.length > 0 && (
-        <div
-          ref={suggestionsRef}
-          className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
-        >
-          <ul className="py-1">
-            {suggestions.map((suggestion, index) => (
-              <li
-                key={index}
-                onClick={() => handleSuggestionClick(suggestion)}
-                className="px-4 py-2 hover:bg-violet-50 cursor-pointer flex items-center gap-2 text-sm"
-              >
-                <Plus size={14} className="text-violet-500" />
-                {suggestion}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      
+      <AnimatePresence>
+        {showSuggestions && suggestions.length > 0 && (
+          <motion.div
+            ref={suggestionsRef}
+            className="absolute z-10 mt-1 w-full bg-white border border-violet-200 rounded-lg shadow-lg max-h-60 overflow-auto"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.15 }}
+          >
+            <ul className="py-1">
+              {suggestions.map((suggestion, index) => (
+                <motion.li
+                  key={index}
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className="px-4 py-2.5 hover:bg-violet-50 cursor-pointer flex items-center gap-2 text-sm"
+                  whileHover={{ x: 4 }}
+                >
+                  <Plus size={16} className="text-violet-500" />
+                  <span>{suggestion}</span>
+                </motion.li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Helper text */}
-      <p className="mt-1 text-xs text-gray-500">
-        Press Enter or comma to add a skill. Click on a skill to remove it.
-      </p>
+      <div className="mt-1.5 flex items-center gap-1.5">
+        <Info size={14} className="text-violet-500" />
+        <p className="text-xs text-gray-600">
+          Press Enter or comma to add a skill. Click on a skill to remove it.
+        </p>
+      </div>
     </div>
   );
 };

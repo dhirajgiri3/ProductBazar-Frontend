@@ -21,14 +21,28 @@ const SectionWrapper = ({ children, delay = 0, className = "" }) => (
   </motion.div>
 );
 
-const PersonalizedSection = () => {
+const PersonalizedSection = ({ componentName = 'home', products = [], isLoading: externalLoading = false, error = null }) => {
   const { isAuthenticated } = useAuth();
   const { getPersonalizedRecommendations } = useRecommendation();
-  const [isLoading, setIsLoading] = useState(true);
-  const [personalized, setPersonalized] = useState([]);
+  const [isLoading, setIsLoading] = useState(externalLoading);
+  const [personalized, setPersonalized] = useState(products);
+
+  // Update local state when props change
+  useEffect(() => {
+    if (products.length > 0) {
+      setPersonalized(products);
+      setIsLoading(false);
+    }
+  }, [products]);
 
   useEffect(() => {
     let isMounted = true;
+
+    // Skip fetching if we already have products from props
+    if (products.length > 0) {
+      return;
+    }
+
     const fetchRecommendations = async () => {
       if (!isAuthenticated) {
         if (isMounted) setIsLoading(false);
@@ -80,7 +94,7 @@ const PersonalizedSection = () => {
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated, getPersonalizedRecommendations]);
+  }, [isAuthenticated, getPersonalizedRecommendations, products.length, personalized.length]);
 
   if (!isAuthenticated) return null;
 

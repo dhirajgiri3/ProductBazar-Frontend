@@ -1,4 +1,19 @@
-import api from '../Utils/api';
+import { makePriorityRequest } from '../Utils/api';
+
+/**
+ * Generate a unique session ID if not exists
+ * @returns {string} Session ID
+ */
+const getSessionId = () => {
+  if (typeof window === "undefined") return null;
+
+  let sessionId = sessionStorage.getItem("viewSessionId");
+  if (!sessionId) {
+    sessionId = `sess-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    sessionStorage.setItem("viewSessionId", sessionId);
+  }
+  return sessionId;
+};
 
 /**
  * Record a product view
@@ -8,8 +23,22 @@ import api from '../Utils/api';
  */
 export const recordProductView = async (productId, viewData = {}) => {
   try {
+    if (!productId) {
+      console.warn('Attempted to record view without productId');
+      return { success: false, error: 'Missing productId' };
+    }
+
+    console.log('Recording view for product:', productId, 'with data:', viewData);
+
     // Get referrer information
     const referrer = typeof document !== 'undefined' ? (document.referrer || window.location.pathname) : '';
+
+    // Get device information
+    const deviceInfo = {};
+    if (typeof window !== 'undefined') {
+      deviceInfo.viewport = `${window.innerWidth}x${window.innerHeight}`;
+      deviceInfo.userAgent = navigator.userAgent;
+    }
 
     // Merge provided data with automatically detected data
     const viewPayload = {
@@ -17,11 +46,39 @@ export const recordProductView = async (productId, viewData = {}) => {
       referrer: viewData.referrer || referrer,
       recommendationType: viewData.recommendationType || null,
       position: viewData.position || null,
+      sessionId: viewData.sessionId || getSessionId(),
+      ...deviceInfo,
       ...viewData,
     };
 
-    const response = await api.post(`/views/product/${productId}`, viewPayload);
-    return response.data;
+    // Use a retry mechanism for reliability
+    let retries = 2;
+    let lastError = null;
+
+    while (retries >= 0) {
+      try {
+        console.log(`Attempt ${2-retries}: Sending view request to /api/v1/views/product/${productId}`);
+        // Use makePriorityRequest instead of direct API call
+        const response = await makePriorityRequest('post', `/views/product/${productId}`, {
+          data: viewPayload
+        });
+        console.log('View recorded successfully:', response.data);
+        return response.data;
+      } catch (err) {
+        console.error(`Attempt ${2-retries} failed:`, err.message);
+        lastError = err;
+        if (retries > 0) {
+          // Wait before retrying (exponential backoff with jitter)
+          const delay = Math.min(1000 * Math.pow(2, 2 - retries), 3000) + Math.random() * 200;
+          console.log(`Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        retries--;
+      }
+    }
+
+    console.error('All view recording attempts failed:', lastError);
+    throw lastError; // Throw the last error if all retries failed
   } catch (error) {
     console.error('Error recording product view:', error);
     // Silent fail - don't interrupt user experience for tracking errors
@@ -45,10 +102,14 @@ export const updateViewDuration = async (productId, startTime, engagementData = 
 
     const payload = {
       viewDuration,
+      sessionId: getSessionId(),
       ...engagementData
     };
 
-    const response = await api.post(`/views/product/${productId}/duration`, payload);
+    // Use makePriorityRequest instead of direct API call
+    const response = await makePriorityRequest('post', `/views/product/${productId}/duration`, {
+      data: payload
+    });
     return response.data;
   } catch (error) {
     console.error('Error updating view duration:', error);
@@ -74,16 +135,20 @@ export const recordViewDuration = async (productId, startTime, exitPage = null) 
 
     const viewPayload = {
       viewDuration,
+      sessionId: getSessionId(),
       exitPage: exitPage || (typeof window !== 'undefined' ? window.location.pathname : ''),
     };
 
     // Use a beacon for reliability during page unload if in browser
     if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
       const blob = new Blob([JSON.stringify(viewPayload)], { type: 'application/json' });
+      // Use the correct API endpoint with /api/v1 prefix
       navigator.sendBeacon(`/api/v1/views/product/${productId}/duration`, blob);
     } else {
-      // Fallback to standard request
-      await api.post(`/views/product/${productId}/duration`, viewPayload);
+      // Fallback to priority request
+      await makePriorityRequest('post', `/views/product/${productId}/duration`, {
+        data: viewPayload
+      });
     }
   } catch (error) {
     console.error('Error recording view duration:', error);
@@ -93,13 +158,71 @@ export const recordViewDuration = async (productId, startTime, exitPage = null) 
 
 /**
  * Get user's view history
- * @param {number} page - The page number for pagination
- * @param {number} limit - Number of items per page
+ * @param {Object} options - Options for the request
+ * @param {number} options.page - The page number for pagination
+ * @param {number} options.limit - Number of items per page
+ * @param {string} options.productId - Optional product ID to filter history
  * @returns {Promise} Promise object representing the API response
  */
-export const getUserViewHistory = async (page = 1, limit = 10) => {
+export const getUserViewHistory = async (options = {}) => {
+  const { page = 1, limit = 10, productId = null } = options;
+
+  // Generate a cache key based on parameters
+  const cacheKey = `viewHistory:${page}:${limit}${productId ? `:${productId}` : ''}`;
+
   try {
-    const response = await api.get(`/views/history?page=${page}&limit=${limit}`);
+    // Check browser storage for cached data
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedData = sessionStorage.getItem(cacheKey);
+        if (cachedData) {
+          const { data, timestamp } = JSON.parse(cachedData);
+          // Use cached data if it's less than 30 seconds old
+          if (Date.now() - timestamp < 30000) {
+            console.log(`Using cached data for ${cacheKey}`);
+            return data;
+          }
+        }
+      } catch (cacheError) {
+        console.warn('Cache read error:', cacheError);
+        // Continue with API call if cache fails
+      }
+    }
+
+    // Prepare request parameters
+    const params = { page, limit };
+    if (productId) {
+      params.productId = productId;
+    }
+
+    // Use makePriorityRequest instead of direct API call
+    const response = await makePriorityRequest('get', `/views/history`, {
+      params,
+      // Add a unique timestamp to prevent browser caching
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
+
+    // Cache the response
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          data: response.data,
+          timestamp: Date.now()
+        }));
+
+        // Also cache per-page data for pagination
+        sessionStorage.setItem(`viewHistoryPage${page}`, JSON.stringify({
+          data: response.data.data,
+          timestamp: Date.now()
+        }));
+      } catch (cacheError) {
+        console.warn('Cache write error:', cacheError);
+      }
+    }
+
     return response.data;
   } catch (error) {
     console.error('Error fetching view history:', error);
@@ -122,12 +245,13 @@ export const getProductViewStats = async (productId, options = {}) => {
       throw new Error('Invalid product ID');
     }
 
-    // Build query string for options
-    const params = new URLSearchParams();
-    if (options.days) params.append('days', options.days);
+    // Use makePriorityRequest instead of direct API call
+    const params = {};
+    if (options.days) params.days = options.days;
 
-    const queryString = params.toString() ? `?${params.toString()}` : '';
-    const response = await api.get(`/views/product/${productId}/stats${queryString}`);
+    const response = await makePriorityRequest('get', `/views/product/${productId}/stats`, {
+      params
+    });
 
     if (!response.data.success) {
       throw new Error(response.data.message || 'Failed to fetch view statistics');
@@ -170,11 +294,12 @@ export const getProductViewStats = async (productId, options = {}) => {
  */
 export const getProductDeviceAnalytics = async (productId, options = {}) => {
   try {
-    const params = new URLSearchParams();
-    if (options.days) params.append('days', options.days);
+    const params = {};
+    if (options.days) params.days = options.days;
 
-    const queryString = params.toString() ? `?${params.toString()}` : '';
-    const response = await api.get(`/views/product/${productId}/devices${queryString}`);
+    const response = await makePriorityRequest('get', `/views/product/${productId}/devices`, {
+      params
+    });
     return response.data;
   } catch (error) {
     console.error(`Error fetching device analytics for product ${productId}:`, error);
@@ -191,7 +316,9 @@ export const getProductDeviceAnalytics = async (productId, options = {}) => {
 export const getUserEngagementMetrics = async (userId = null, days = 30) => {
   try {
     const endpoint = userId ? `/views/user/${userId}/engagement` : '/views/engagement';
-    const response = await api.get(`${endpoint}?days=${days}`);
+    const response = await makePriorityRequest('get', endpoint, {
+      params: { days }
+    });
     return response.data;
   } catch (error) {
     console.error('Error fetching user engagement metrics:', error);
@@ -205,7 +332,7 @@ export const getUserEngagementMetrics = async (userId = null, days = 30) => {
  */
 export const clearUserViewHistory = async () => {
   try {
-    const response = await api.delete('/views/history');
+    const response = await makePriorityRequest('delete', '/views/history');
     return response.data;
   } catch (error) {
     console.error('Error clearing view history:', error);
@@ -221,7 +348,9 @@ export const clearUserViewHistory = async () => {
  */
 export const getPopularProducts = async (limit = 10, period = 'week') => {
   try {
-    const response = await api.get(`/views/popular?limit=${limit}&period=${period}`);
+    const response = await makePriorityRequest('get', '/views/popular', {
+      params: { limit, period }
+    });
     return response.data;
   } catch (error) {
     console.error('Error fetching popular products:', error);
@@ -237,7 +366,9 @@ export const getPopularProducts = async (limit = 10, period = 'week') => {
  */
 export const getRelatedProducts = async (productId, limit = 5) => {
   try {
-    const response = await api.get(`/views/related/${productId}?limit=${limit}`);
+    const response = await makePriorityRequest('get', `/views/related/${productId}`, {
+      params: { limit }
+    });
     return response.data;
   } catch (error) {
     console.error('Error fetching related products:', error);
@@ -253,7 +384,9 @@ export const getRelatedProducts = async (productId, limit = 5) => {
  */
 export const getAdminDailyAnalytics = async (startDate, endDate) => {
   try {
-    const response = await api.get(`/views/analytics/daily?startDate=${startDate}&endDate=${endDate}`);
+    const response = await makePriorityRequest('get', '/views/analytics/daily', {
+      params: { startDate, endDate }
+    });
     return response.data;
   } catch (error) {
     console.error('Error fetching daily analytics:', error);
@@ -269,7 +402,9 @@ export const getAdminDailyAnalytics = async (startDate, endDate) => {
  */
 export const getProductEngagementMetrics = async (productId, days = 30) => {
   try {
-    const response = await api.get(`/views/product/${productId}/engagement?days=${days}`);
+    const response = await makePriorityRequest('get', `/views/product/${productId}/engagement`, {
+      params: { days }
+    });
     return response.data;
   } catch (error) {
     console.error('Error fetching product engagement metrics:', error);
@@ -287,10 +422,32 @@ export const useProductView = (productId, viewData = {}) => {
   useEffect(() => {
     if (!productId) return;
 
+    // Check if this view was already tracked in this session
+    const isAlreadyTracked = () => {
+      if (typeof window === 'undefined') return false;
+
+      const viewKey = `view-${productId}-${viewData.source || 'direct'}`;
+      const lastView = sessionStorage.getItem(viewKey);
+      const SESSION_TTL = 5 * 60 * 1000; // 5 minutes - reduced from 30 minutes to allow more frequent tracking
+
+      return lastView && (Date.now() - parseInt(lastView)) < SESSION_TTL;
+    };
+
+    // Skip if already tracked in this session
+    if (isAlreadyTracked()) return;
+
     const startTime = Date.now();
 
     // Record the initial view
-    recordProductView(productId, viewData);
+    recordProductView(productId, viewData).then(result => {
+      if (result.success) {
+        // Mark as tracked in this session
+        if (typeof window !== 'undefined') {
+          const viewKey = `view-${productId}-${viewData.source || 'direct'}`;
+          sessionStorage.setItem(viewKey, Date.now().toString());
+        }
+      }
+    });
 
     // Return cleanup function to record view duration when component unmounts
     return () => {
@@ -298,7 +455,7 @@ export const useProductView = (productId, viewData = {}) => {
         recordViewDuration(productId, startTime);
       }
     };
-  }, [productId]); // Only re-run if productId changes
+  }, [productId, viewData.source]); // Re-run if productId or source changes
 };
 
 export default {

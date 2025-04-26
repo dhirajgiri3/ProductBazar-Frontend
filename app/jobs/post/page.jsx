@@ -56,25 +56,6 @@ export default function PostJobPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="text-center mb-12">
-          <motion.h1
-            className="text-4xl md:text-5xl font-bold text-gray-900"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-          >
-            Post a Job
-          </motion.h1>
-          <motion.p
-            className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-          >
-            Find the perfect talent for your team by posting a job on ProductBazar
-          </motion.p>
-        </div>
-
         <JobPostForm />
       </motion.div>
     </div>

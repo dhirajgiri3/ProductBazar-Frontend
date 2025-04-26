@@ -15,6 +15,10 @@ import { useAuth } from "../../../Contexts/Auth/AuthContext";
 import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext";
 import { useSocket } from "../../../Contexts/Socket/SocketContext";
 
+// Global map to track subscriptions across all instances
+// This prevents duplicate subscriptions for the same product ID
+const globalSubscriptionMap = new Map();
+
 // Memoize the component to prevent unnecessary re-renders
 const NumberedProductCard = React.memo(function NumberedProductCard({
   product,
@@ -27,6 +31,7 @@ const NumberedProductCard = React.memo(function NumberedProductCard({
 
   // Store product ID in a ref to avoid re-subscriptions when only other props change
   const productIdRef = useRef(product?._id);
+  const componentId = useRef(`card-${Math.random().toString(36).substring(2, 9)}`);
 
   // Update the ref if the product ID changes
   useEffect(() => {
@@ -35,28 +40,53 @@ const NumberedProductCard = React.memo(function NumberedProductCard({
     }
   }, [product?._id]);
 
-  // Subscribe to socket updates for this product - only once per product ID
+  // Subscribe to socket updates for this product - using global tracking
   useEffect(() => {
-    const productId = productIdRef.current;
-    if (!productId || !subscribeToProductUpdates) return;
+    // Skip if no product ID or no subscription function
+    if (!productIdRef.current || !subscribeToProductUpdates) return;
 
-    // Subscribe to product updates via socket
-    const unsubscribe = subscribeToProductUpdates(productId);
+    const productId = productIdRef.current;
+
+    // Check if this product is already subscribed globally
+    if (!globalSubscriptionMap.has(productId)) {
+      // If not subscribed, create a new subscription entry with a Set of component IDs
+      globalSubscriptionMap.set(productId, {
+        components: new Set([componentId.current]),
+        unsubscribe: subscribeToProductUpdates(productId)
+      });
+    } else {
+      // If already subscribed, just add this component ID to the Set
+      const subscription = globalSubscriptionMap.get(productId);
+      subscription.components.add(componentId.current);
+    }
 
     // Cleanup subscription on unmount
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (globalSubscriptionMap.has(productId)) {
+        const subscription = globalSubscriptionMap.get(productId);
+        // Remove this component ID from the Set
+        subscription.components.delete(componentId.current);
+
+        // If no components are using this subscription anymore, unsubscribe and remove from map
+        if (subscription.components.size === 0) {
+          if (subscription.unsubscribe) {
+            subscription.unsubscribe();
+          }
+          globalSubscriptionMap.delete(productId);
+        }
+      }
     };
-  }, [subscribeToProductUpdates]); // Only depend on subscribeToProductUpdates, not product ID
+  }, [subscribeToProductUpdates]); // Only re-run if subscribeToProductUpdates changes
 
   if (!product) return null;
 
   // Handle product view interaction - memoize to prevent recreation on each render
   const handleProductView = useCallback(() => {
-    if (!isAuthenticated || !recordInteraction) return;
+    if (!isAuthenticated || !recordInteraction || !product?._id) return;
 
     // Use a non-blocking approach to avoid delaying navigation
-    setTimeout(async () => {
+    // Use requestIdleCallback or setTimeout as fallback
+    const recordView = async () => {
       try {
         await recordInteraction(product._id, "view", {
           source: recommendationType || "home",
@@ -64,14 +94,32 @@ const NumberedProductCard = React.memo(function NumberedProductCard({
           timestamp: new Date().toISOString()
         });
       } catch (error) {
-        console.error("Failed to record product view:", error);
+        // Reduce console noise by not logging every view error
       }
-    }, 10); // Very small delay to ensure it doesn't block navigation
-  }, [isAuthenticated, recordInteraction, product._id, recommendationType, position]);
+    };
+
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(() => recordView());
+    } else {
+      setTimeout(recordView, 10);
+    }
+  }, [isAuthenticated, recordInteraction, product?._id, recommendationType, position]);
 
   // Memoized empty success handler - the global cache handles updates
   // Using useCallback to prevent recreation on each render
   const handleInteractionSuccess = useCallback(() => {}, []);
+
+  // Memoize product data to prevent unnecessary re-renders of child components
+  const memoizedProductData = useCallback(() => ({
+    upvoteCount: product?.upvoteCount ?? product?.upvotes?.count ?? 0,
+    hasUpvoted: product?.upvoted ?? product?.upvotes?.userHasUpvoted ?? product?.userInteractions?.hasUpvoted ?? false,
+    bookmarkCount: product?.bookmarkCount ?? product?.bookmarks?.count ?? 0,
+    hasBookmarked: product?.bookmarked ?? product?.bookmarks?.userHasBookmarked ?? product?.userInteractions?.hasBookmarked ?? false
+  }), [product?.upvoteCount, product?.upvotes?.count, product?.upvoted, product?.upvotes?.userHasUpvoted,
+       product?.userInteractions?.hasUpvoted, product?.bookmarkCount, product?.bookmarks?.count,
+       product?.bookmarked, product?.bookmarks?.userHasBookmarked, product?.userInteractions?.hasBookmarked]);
+
+  const productData = memoizedProductData();
 
   // Data preparation with fallbacks
   const imageUrl =
@@ -181,7 +229,10 @@ const NumberedProductCard = React.memo(function NumberedProductCard({
                 product={product}
                 size="sm"
                 source={recommendationType || "home"}
-                onSuccess={(result) => handleInteractionSuccess(result, 'upvote')}
+                // Pass explicit counts to ensure proper initialization
+                upvoteCount={productData.upvoteCount}
+                hasUpvoted={productData.hasUpvoted}
+                onSuccess={handleInteractionSuccess}
               />
 
               {/* Bookmark Button */}
@@ -189,7 +240,10 @@ const NumberedProductCard = React.memo(function NumberedProductCard({
                 product={product}
                 size="sm"
                 source={recommendationType || "home"}
-                onSuccess={(result) => handleInteractionSuccess(result, 'bookmark')}
+                // Pass explicit counts to ensure proper initialization
+                bookmarkCount={productData.bookmarkCount}
+                hasBookmarked={productData.hasBookmarked}
+                onSuccess={handleInteractionSuccess}
               />
 
               {/* Comments Count */}

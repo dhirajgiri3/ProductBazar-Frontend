@@ -11,6 +11,7 @@ import { ProductProvider } from "../Contexts/Product/ProductContext";
 import { ProjectProvider } from "../Contexts/Project/ProjectContext";
 import { RecommendationProvider } from "../Contexts/Recommendation/RecommendationContext";
 import { SocketProvider } from "../Contexts/Socket/SocketContext";
+import { ViewProvider } from "../Contexts/View/ViewContext";
 import Header from "../Components/Header/Header";
 import runAllCleanup from "../Utils/cleanupUtils";
 
@@ -41,11 +42,13 @@ export default function RootLayout({ children }) {
                   <CategoryProvider>
                     <RecommendationProvider>
                       <SocketProvider>
-                        <GlobalStyle />
-                        <Header />
-                        {children}
-                        <Toaster />
-                        <Footer />
+                        <ViewProvider>
+                          <GlobalStyle />
+                          <Header />
+                          {children}
+                          <Toaster />
+                          <Footer />
+                        </ViewProvider>
                       </SocketProvider>
                     </RecommendationProvider>
                   </CategoryProvider>

@@ -38,7 +38,8 @@ import {
   AlertTriangle,
   Clock,
   MoreHorizontal,
-  Download
+  Download,
+  StarIcon
 } from "lucide-react";
 import { useAuth } from "../../../Contexts/Auth/AuthContext";
 import { useProject } from "../../../Contexts/Project/ProjectContext";
@@ -531,7 +532,7 @@ export default function ProjectDetailPage() {
                           repeatDelay: 4,
                         }}
                       >
-                        <Star size={14} className="mr-1.5 text-amber-300" />
+                        <StarIcon size={14} className="mr-1.5 text-amber-300" />
                       </motion.div>
                       Featured
                     </motion.span>

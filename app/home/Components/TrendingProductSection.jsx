@@ -10,23 +10,34 @@ import logger from "../../../Utils/logger";
 import { makePriorityRequest } from "../../../Utils/api";
 import { useToast } from "../../../Contexts/Toast/ToastContext";
 
-const TrendingProductsSection = () => {
+const TrendingProductsSection = ({ products = [], isLoading: externalLoading = false, error = null }) => {
   const { getTrendingRecommendations } = useRecommendation();
   const { showToast } = useToast();
-  const [trendingProducts, setTrendingProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [trendingProducts, setTrendingProducts] = useState(products);
+  const [isLoading, setIsLoading] = useState(externalLoading);
   const [timeRange, setTimeRange] = useState(7); // days
   const [activeFilter, setActiveFilter] = useState('week'); // 'today', 'week', 'month'
   const [isChangingFilter, setIsChangingFilter] = useState(false);
+
+  // Update local state when props change
+  useEffect(() => {
+    if (products.length > 0 && !isChangingFilter) {
+      setTrendingProducts(products);
+      setIsLoading(false);
+    }
+  }, [products, isChangingFilter]);
 
   useEffect(() => {
     let isMounted = true;
     let abortController = new AbortController();
 
-    // When timeRange or activeFilter changes, we should always fetch new data
-    // This ensures the time filter buttons work correctly
-    if (isMounted && (trendingProducts.length === 0 || isChangingFilter)) {
+    // Only fetch data when filter changes or we don't have data
+    // This prevents unnecessary API calls when data is provided by parent
+    if (isMounted && ((trendingProducts.length === 0 && products.length === 0) || isChangingFilter)) {
       setIsLoading(true);
+    } else if (trendingProducts.length > 0 && !isChangingFilter) {
+      // If we already have data and aren't changing filters, don't fetch
+      return;
     }
 
     const fetchTrendingProducts = async () => {
@@ -211,7 +222,7 @@ const TrendingProductsSection = () => {
       isMounted = false;
       abortController.abort();
     };
-  }, [timeRange, activeFilter, isChangingFilter, getTrendingRecommendations, trendingProducts.length]);
+  }, [timeRange, activeFilter, isChangingFilter, getTrendingRecommendations, products.length]);
 
   const handleTimeRangeChange = useCallback((days, filterName) => {
     // Show loading indicator for filter change

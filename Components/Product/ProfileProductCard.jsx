@@ -3,7 +3,7 @@ import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { FiEye, FiCalendar, FiEdit2, FiTrash2, FiChevronLeft, FiChevronRight, FiImage } from "react-icons/fi";
+import { FiEye, FiCalendar, FiEdit2, FiTrash2, FiChevronLeft, FiChevronRight, FiImage, FiBarChart2 } from "react-icons/fi";
 import { format, parseISO, isValid } from "date-fns";
 
 // --- Helper Functions ---
@@ -218,34 +218,52 @@ const ProfileProductCard = ({
       )}
 
       {/* Owner Action Buttons (Top Left) - Enhanced with improved animations and accessibility */}
-      {isOwner && onEdit && onDelete && (
+      {isOwner && (
         <div className="absolute top-3 left-3 z-20 flex gap-2">
-           <motion.button
-                aria-label="Edit Product"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(product); }}
+           {onEdit && (
+             <motion.button
+                  aria-label="Edit Product"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(product); }}
+                  variants={buttonVariants}
+                  initial="initial"
+                  animate={isHovering ? "animate" : "initial"}
+                  whileHover="hover"
+                  whileTap="tap"
+                  className="w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:text-violet-600 flex items-center justify-center transition-all duration-200 border border-violet-100/30 shadow-sm"
+                  title="Edit Product"
+              >
+                  <FiEdit2 className="w-3.5 h-3.5" />
+              </motion.button>
+           )}
+           {onDelete && (
+              <motion.button
+                  aria-label="Delete Product"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(product); }}
+                  variants={buttonVariants}
+                  initial="initial"
+                  animate={isHovering ? "animate" : "initial"}
+                  whileHover="hover"
+                  whileTap="tap"
+                  className="w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:text-red-600 flex items-center justify-center transition-all duration-200 border border-red-100/30 shadow-sm"
+                  title="Delete Product"
+              >
+                  <FiTrash2 className="w-3.5 h-3.5" />
+              </motion.button>
+           )}
+           <motion.a
+                href={`/product/viewanalytics/${product._id}`}
+                onClick={(e) => { e.stopPropagation(); }}
                 variants={buttonVariants}
                 initial="initial"
                 animate={isHovering ? "animate" : "initial"}
                 whileHover="hover"
                 whileTap="tap"
                 className="w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:text-violet-600 flex items-center justify-center transition-all duration-200 border border-violet-100/30 shadow-sm"
-                title="Edit Product"
+                title="View Analytics"
+                aria-label="View Product Analytics"
             >
-                <FiEdit2 className="w-3.5 h-3.5" />
-            </motion.button>
-            <motion.button
-                aria-label="Delete Product"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(product); }}
-                variants={buttonVariants}
-                initial="initial"
-                animate={isHovering ? "animate" : "initial"}
-                whileHover="hover"
-                whileTap="tap"
-                className="w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:text-red-600 flex items-center justify-center transition-all duration-200 border border-red-100/30 shadow-sm"
-                title="Delete Product"
-            >
-                <FiTrash2 className="w-3.5 h-3.5" />
-            </motion.button>
+                <FiBarChart2 className="w-3.5 h-3.5" />
+            </motion.a>
         </div>
       )}
 
@@ -419,6 +437,20 @@ const ProfileProductCard = ({
                            <FiCalendar className="w-3 h-3 text-violet-400" />
                            {formattedDate}
                        </span>
+                      </>
+                    )}
+                    {isOwner && (
+                      <>
+                        <span className="text-gray-200">•</span>
+                        <a
+                          href={`/product/viewanalytics/${product._id}`}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/product/viewanalytics/${product._id}`; }}
+                          className="flex items-center text-violet-500 text-xs gap-1 hover:text-violet-700 transition-colors font-medium"
+                          title="View product analytics"
+                        >
+                          <FiBarChart2 className="w-3 h-3" />
+                          Analytics
+                        </a>
                       </>
                     )}
                   </>

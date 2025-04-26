@@ -78,11 +78,36 @@ export const SocketProvider = ({ children }) => {
 
   // Set up product event handlers
   const setupProductEventHandlers = useCallback(() => {
-    if (!socket.current) return;
+    if (!socket.current) {
+      logger.error('Cannot set up product event handlers: socket is not initialized');
+      return;
+    }
+
+    // Remove any existing listeners to prevent duplicates
+    socket.current.off('product:view:update');
+    socket.current.off('product:upvote');
+    socket.current.off('product:bookmark');
+    socket.current.off('product:*:update');
+
+    // Handle view events
+    socket.current.on('product:view:update', (data) => {
+      logger.debug(`Received view update event for product ${data.productId}`, data);
+
+      // Broadcast view update event to all components
+      eventBus.publish(EVENT_TYPES.VIEW_UPDATED, {
+        productId: data.productId,
+        count: data.count,
+        unique: data.unique,
+        viewDuration: data.viewDuration,
+        scrollDepth: data.scrollDepth,
+        viewType: data.viewType,
+        timestamp: data.timestamp || Date.now()
+      });
+    });
 
     // Handle upvote events
     socket.current.on('product:upvote', (data) => {
-      logger.debug(`Received upvote event for product ${data.productId}`, data);
+      logger.info(`Received upvote event for product ${data.productId}`, data);
 
       // Update product in cache
       if (data.productId && data.count !== undefined) {
@@ -125,6 +150,13 @@ export const SocketProvider = ({ children }) => {
 
         // Broadcast upvote update event to all components
         const slug = getSlugFromId(data.productId);
+        logger.info(`Broadcasting upvote event for product ${data.productId} (slug: ${slug})`, {
+          count: data.count,
+          action: data.action,
+          isCurrentUserAction
+        });
+
+        // Broadcast to both specific product ID and general upvote events
         eventBus.publish(EVENT_TYPES.UPVOTE_UPDATED, {
           productId: data.productId,
           slug: slug,
@@ -135,12 +167,25 @@ export const SocketProvider = ({ children }) => {
           action: data.action,
           timestamp: Date.now()
         });
+
+        // Also broadcast as a general product update
+        eventBus.publish(EVENT_TYPES.PRODUCT_UPDATED, {
+          productId: data.productId,
+          slug: slug,
+          updates: {
+            upvoteCount: data.count,
+            upvotes: { count: data.count },
+            ...(isCurrentUserAction && { upvoted: data.action === 'add' })
+          },
+          source: 'socket',
+          timestamp: Date.now()
+        });
       }
     });
 
     // Handle bookmark events
     socket.current.on('product:bookmark', (data) => {
-      logger.debug(`Received bookmark event for product ${data.productId}`, data);
+      logger.info(`Received bookmark event for product ${data.productId}`, data);
 
       // Update product in cache
       if (data.productId && data.count !== undefined) {
@@ -183,6 +228,13 @@ export const SocketProvider = ({ children }) => {
 
         // Broadcast bookmark update event to all components
         const slug = getSlugFromId(data.productId);
+        logger.info(`Broadcasting bookmark event for product ${data.productId} (slug: ${slug})`, {
+          count: data.count,
+          action: data.action,
+          isCurrentUserAction
+        });
+
+        // Broadcast to both specific product ID and general bookmark events
         eventBus.publish(EVENT_TYPES.BOOKMARK_UPDATED, {
           productId: data.productId,
           slug: slug,
@@ -193,22 +245,63 @@ export const SocketProvider = ({ children }) => {
           action: data.action,
           timestamp: Date.now()
         });
+
+        // Also broadcast as a general product update
+        eventBus.publish(EVENT_TYPES.PRODUCT_UPDATED, {
+          productId: data.productId,
+          slug: slug,
+          updates: {
+            bookmarkCount: data.count,
+            bookmarks: { count: data.count },
+            ...(isCurrentUserAction && { bookmarked: data.action === 'add' })
+          },
+          source: 'socket',
+          timestamp: Date.now()
+        });
       }
+    });
+
+    // Handle direct product update events
+    socket.current.on('product:*:update', (data) => {
+      if (!data || !data.productId) return;
+
+      logger.info(`Received direct product update for ${data.productId}`, data);
+
+      // Update the product in cache with the received data
+      updateProductBySocketEvent(data.productId, data);
+
+      // Also broadcast as a general product update
+      const slug = getSlugFromId(data.productId);
+      eventBus.publish(EVENT_TYPES.PRODUCT_UPDATED, {
+        productId: data.productId,
+        slug: slug,
+        updates: data,
+        source: 'socket',
+        timestamp: Date.now()
+      });
     });
   }, []);
 
   // Update product in cache based on socket event - with debouncing
   const updateProductBySocketEvent = useCallback((productId, updates) => {
+    if (!productId || !updates) return;
+
     // Create a unique key for this update to prevent duplicate updates
-    const updateKey = `${productId}_${JSON.stringify(updates)}`;
+    // Only use essential fields for the key to avoid unnecessary duplicates
+    const essentialUpdates = {};
+    if (updates.upvoteCount !== undefined) essentialUpdates.upvoteCount = updates.upvoteCount;
+    if (updates.bookmarkCount !== undefined) essentialUpdates.bookmarkCount = updates.bookmarkCount;
+    if (updates.upvoted !== undefined) essentialUpdates.upvoted = updates.upvoted;
+    if (updates.bookmarked !== undefined) essentialUpdates.bookmarked = updates.bookmarked;
+
+    const updateKey = `${productId}_${JSON.stringify(essentialUpdates)}`;
 
     // Check if we've processed this exact update recently
     const lastUpdateTime = updateTimestamps.current[updateKey] || 0;
     const now = Date.now();
 
-    // If we've processed this exact update in the last 500ms, skip it
-    if (now - lastUpdateTime < 500) {
-      logger.debug(`Skipping duplicate socket update for product ${productId} (processed ${now - lastUpdateTime}ms ago)`);
+    // If we've processed this exact update in the last 300ms, skip it
+    if (now - lastUpdateTime < 300) {
       return;
     }
 
@@ -220,17 +313,6 @@ export const SocketProvider = ({ children }) => {
       delete updateTimestamps.current[updateKey];
     }, 5000);
 
-    // Log the update with more details
-    logger.info(`Updating product ${productId} with socket data:`, {
-      ...updates,
-      upvoted: updates.upvoted,
-      bookmarked: updates.bookmarked,
-      userHasUpvoted: updates.upvotes?.userHasUpvoted,
-      userHasBookmarked: updates.bookmarks?.userHasBookmarked,
-      hasUpvoted: updates.userInteractions?.hasUpvoted,
-      hasBookmarked: updates.userInteractions?.hasBookmarked
-    });
-
     // Use the ProductContext to update the product in cache
     if (updateProductInCache) {
       // Check if we have this product ID in our mapping
@@ -239,20 +321,54 @@ export const SocketProvider = ({ children }) => {
         const slug = getSlugFromId(productId);
         if (slug) {
           // Update the product in cache using the slug
-          logger.debug(`Using slug ${slug} to update product ${productId}`);
+          logger.info(`Using slug ${slug} to update product ${productId}`);
           updateProductInCache(slug, updates);
+
+          // Also publish a product updated event to ensure all components are notified
+          eventBus.publish(EVENT_TYPES.PRODUCT_UPDATED, {
+            productId,
+            slug,
+            updates,
+            source: 'socket',
+            timestamp: Date.now()
+          });
         } else {
           // Fallback to using the ID directly
-          logger.debug(`No slug found for ${productId}, using ID directly`);
+          logger.info(`No slug found for ${productId}, using ID directly`);
           updateProductInCache(productId, updates);
+
+          // Also publish a product updated event with ID only
+          eventBus.publish(EVENT_TYPES.PRODUCT_UPDATED, {
+            productId,
+            updates,
+            source: 'socket',
+            timestamp: Date.now()
+          });
         }
       } else {
         // If we don't have the ID in our mapping, try to update by ID directly
-        logger.debug(`Product ID ${productId} not in mapping, using ID directly`);
+        logger.info(`Product ID ${productId} not in mapping, using ID directly`);
         updateProductInCache(productId, updates);
+
+        // Also publish a product updated event with ID only
+        eventBus.publish(EVENT_TYPES.PRODUCT_UPDATED, {
+          productId,
+          updates,
+          source: 'socket',
+          timestamp: Date.now()
+        });
       }
     } else {
-      logger.warn(`Cannot update product ${productId}: updateProductInCache is not available`);
+      logger.error(`Cannot update product ${productId}: updateProductInCache is not available`);
+
+      // Even if we can't update the cache, still publish the event
+      // so components can react to it
+      eventBus.publish(EVENT_TYPES.PRODUCT_UPDATED, {
+        productId,
+        updates,
+        source: 'socket',
+        timestamp: Date.now()
+      });
     }
   }, [updateProductInCache]);
 
@@ -260,19 +376,15 @@ export const SocketProvider = ({ children }) => {
   const subscriptionCounts = useRef({});
 
   // Subscribe to product updates with deduplication and reference counting
+  // This is a stable function that doesn't depend on isConnected to prevent unnecessary re-renders
   const subscribeToProductUpdates = useCallback((productId) => {
-    if (!productId || !isConnected) return;
+    if (!productId) return () => {};
 
     // Initialize or increment the reference count
     subscriptionCounts.current[productId] = (subscriptionCounts.current[productId] || 0) + 1;
 
     // Check if already subscribed to avoid duplicate subscriptions
     if (subscribedProducts.current.has(productId)) {
-      // Only log once per session to reduce noise
-      if (subscriptionCounts.current[productId] === 2) {
-        logger.debug(`Already subscribed to product ${productId}, using existing subscription`);
-      }
-
       // Return an unsubscribe function that decrements the reference count
       return () => {
         // Decrement reference count
@@ -284,7 +396,6 @@ export const SocketProvider = ({ children }) => {
             delete subscriptionCounts.current[productId];
             unsubscribeFromProduct(productId);
             subscribedProducts.current.delete(productId);
-            logger.info(`Unsubscribed from updates for product ${productId}`);
           }
         }
       };
@@ -293,10 +404,11 @@ export const SocketProvider = ({ children }) => {
     // Add to our tracking set
     subscribedProducts.current.add(productId);
 
-    // Subscribe to product updates
-    subscribeToProduct(productId);
-
-    logger.info(`Subscribed to updates for product ${productId}`);
+    // Only actually subscribe if we're connected
+    if (socket.current && socket.current.connected) {
+      // Use the socket.js utility which handles reference counting
+      subscribeToProduct(productId);
+    }
 
     // Return unsubscribe function that decrements the reference count
     return () => {
@@ -309,11 +421,10 @@ export const SocketProvider = ({ children }) => {
           delete subscriptionCounts.current[productId];
           unsubscribeFromProduct(productId);
           subscribedProducts.current.delete(productId);
-          logger.info(`Unsubscribed from updates for product ${productId}`);
         }
       }
     };
-  }, [isConnected]);
+  }, []); // No dependencies to prevent unnecessary re-renders
 
   // Context value
   const value = {

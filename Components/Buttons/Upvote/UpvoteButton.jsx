@@ -1,336 +1,418 @@
+// UpvoteButton.jsx
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useProduct } from "../../../Contexts/Product/ProductContext"; // Adjust path as needed
-import { useAuth } from "../../../Contexts/Auth/AuthContext";         // Adjust path as needed
-import { useToast } from "../../../Contexts/Toast/ToastContext";     // Adjust path as needed
-import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext"; // Adjust path as needed
-import { addProductToMapping } from "../../../Utils/productMappingUtils"; // Adjust path as needed
-import eventBus, { EVENT_TYPES } from "../../../Utils/eventBus";       // Adjust path as needed
-import logger from "../../../Utils/logger";                           // Adjust path as needed
-import AnimatedUpvoteIcon from "./AnimatedUpvoteIcon";               // Import our custom animated icon
+import { useProduct } from "../../../Contexts/Product/ProductContext";
+import { useAuth } from "../../../Contexts/Auth/AuthContext";
+import { useToast } from "../../../Contexts/Toast/ToastContext";
+import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext";
+import { addProductToMapping } from "../../../Utils/productMappingUtils";
+import eventBus, { EVENT_TYPES } from "../../../Utils/eventBus";
+import logger from "../../../Utils/logger";
 
+/**
+ * A circular SVG upvote icon component.
+ * Changes appearance based on the upvoted state.
+ */
+const CircularUpvoteIcon = ({ isUpvoted, size = "md", className = "" }) => {
+  // Size definitions
+  const sizeMap = {
+    sm: { width: 16, height: 16, strokeWidth: 1.5 },
+    md: { width: 20, height: 20, strokeWidth: 1.5 },
+    lg: { width: 24, height: 24, strokeWidth: 1.5 },
+  };
+
+  const { width, height, strokeWidth } = sizeMap[size] || sizeMap.md;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={width}
+      height={height}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`${className} transition-all duration-200`}
+      aria-hidden="true"
+    >
+      <polygon
+        points="12 6 5 15 19 15"
+        fill={isUpvoted ? "currentColor" : "none"}
+      />
+    </svg>
+  );
+};
+
+/**
+ * A circular button component for upvoting/downvoting a product.
+ * Features optimistic UI, loading/disabled states, auth checks,
+ * owner restrictions, real-time updates, and interaction recording.
+ */
 const UpvoteButton = ({
-  product, // The full product object is preferred
-  slug, // Can be provided as an alternative if product object is minimal
-  hasUpvoted: initialHasUpvoted, // Explicit prop to override initial state
-  upvoteCount: initialUpvoteCount, // Explicit prop to override initial count
-  size = "md", // 'sm', 'md', 'lg'
-  source = "unknown", // Context where the button is used (e.g., 'product_card', 'product_page')
-  onSuccess, // Callback function on successful toggle: (result: { success: boolean, upvoted: boolean, count: number }) => void
-  className = "", // Additional CSS classes for the container div
-  showCount = true, // Whether to display the upvote count
-  disabled = false, // Explicitly disable the button
+  product,
+  slug,
+  hasUpvoted: initialHasUpvoted,
+  upvoteCount: initialUpvoteCount,
+  size = "md",
+  source = "unknown",
+  onSuccess,
+  className = "",
+  showCount = true,
+  disabled = false,
 }) => {
-  // Determine product slug
-  const productSlug = slug || product?.slug;
-  const productId = product?._id;
-
-  // Hooks
-  const { toggleUpvote, productCache } = useProduct();
+  // --- Hooks ---
+  const { toggleUpvote } = useProduct();
   const { isAuthenticated, user } = useAuth();
   const { showToast } = useToast();
   const { recordInteraction } = useRecommendation();
 
-  // State
+  // --- Identifiers ---
+  const productSlug = slug || product?.slug;
+  const productId = product?._id;
+
+  // --- State ---
   const [isUpvoted, setIsUpvoted] = useState(false);
   const [count, setCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false); // For API call in progress
-  const [isProcessing, setIsProcessing] = useState(false); // Debounce rapid clicks
-
-  // Ref to track mounted state
+  const [isLoading, setIsLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const isMounted = useRef(true);
 
-  // Check if the current user is the maker/owner of the product
-  const isOwner = user && product && (user._id === product.maker || user._id === product?.maker?._id);
+  // --- Derived State ---
+  const isOwner = Boolean(
+    isAuthenticated &&
+    user &&
+    product &&
+    (user._id === product.maker || user._id === product?.maker?._id)
+  );
+  const isDisabled = disabled || isLoading || isOwner || isProcessing || !productSlug;
 
-  // --- Initial State Calculation ---
+  // --- Initialization ---
   const getInitialUpvoted = useCallback(() => {
-    if (!product && initialHasUpvoted === undefined) return false; // No data to determine state
     if (initialHasUpvoted !== undefined) return initialHasUpvoted;
-    if (product?.userInteractions?.hasUpvoted !== undefined) return product.userInteractions.hasUpvoted;
-    if (product?.upvotes?.userHasUpvoted !== undefined) return product.upvotes.userHasUpvoted;
-    if (product?.upvoted !== undefined) return product.upvoted;
-    return false;
-  }, [product, initialHasUpvoted]); // Dependencies based on props and product structure
+    return product?.userInteractions?.hasUpvoted ?? product?.upvoted ?? false;
+  }, [product, initialHasUpvoted]);
 
   const getInitialCount = useCallback(() => {
-    if (!product && initialUpvoteCount === undefined) return 0; // No data
     if (initialUpvoteCount !== undefined) return initialUpvoteCount;
-    // Prioritize direct count field (expected from API)
-    if (product?.upvoteCount !== undefined && typeof product.upvoteCount === 'number') return product.upvoteCount;
-     // Fallback to nested structure (older cache/data)
-    if (product?.upvotes?.count !== undefined && typeof product.upvotes.count === 'number') return product.upvotes.count;
-    return 0;
-  }, [product, initialUpvoteCount]); // Dependencies based on props and product structure
+    return product?.upvoteCount ?? 0;
+  }, [product, initialUpvoteCount]);
 
-  // Effect to initialize state when component mounts or product changes
-  useEffect(() => {
-    setIsUpvoted(getInitialUpvoted());
-    setCount(getInitialCount());
-  }, [getInitialUpvoted, getInitialCount]);
-
-  // Effect to update state if props/product data change *after* initial mount
-  useEffect(() => {
-    const newUpvoted = getInitialUpvoted();
-    const newCount = getInitialCount();
-
-    if (isUpvoted !== newUpvoted) {
-      logger.debug(`UpvoteButton: Prop/Product update changed upvoted state for ${productSlug}`, { old: isUpvoted, new: newUpvoted });
-      setIsUpvoted(newUpvoted);
-    }
-    if (count !== newCount) {
-      logger.debug(`UpvoteButton: Prop/Product update changed count for ${productSlug}`, { old: count, new: newCount });
-      setCount(newCount);
-    }
-
-     // Add product to mapping for socket updates if available
-     if (productId && productSlug) {
-        addProductToMapping({ _id: productId, slug: productSlug });
-     }
-
-  }, [
-    product?.userInteractions?.hasUpvoted,
-    product?.upvotes?.userHasUpvoted,
-    product?.upvoted,
-    product?.upvoteCount,
-    product?.upvotes?.count,
-    initialHasUpvoted,
-    initialUpvoteCount,
-    productSlug, // Re-run if slug changes
-    productId,   // Re-run if ID changes
-    getInitialCount, // Recalculate if these change
-    getInitialUpvoted
-  ]);
-
-  // Effect for Mounted Ref
   useEffect(() => {
     isMounted.current = true;
+    setIsUpvoted(getInitialUpvoted());
+    setCount(getInitialCount());
+
+    if (productId && productSlug) {
+      addProductToMapping({ _id: productId, slug: productSlug });
+    }
+
+    if (!productSlug) {
+      logger.warn("UpvoteButton initialized without a 'slug' or 'product.slug'.", { component: "UpvoteButton" });
+    }
+
     return () => {
       isMounted.current = false;
     };
-  }, []);
+  }, [getInitialUpvoted, getInitialCount, productId, productSlug]);
 
-  // Effect to listen for global upvote events from EventBus
+  // --- Real-time Updates via Event Bus and Socket ---
   useEffect(() => {
-    if (!productSlug && !productId) return; // Cannot identify product
+    if (!productSlug && !productId) {
+      return;
+    }
 
-    const handleGlobalUpdate = (data) => {
-      // Check if the update is for this specific product
-      if ((productSlug && data.slug === productSlug) || (productId && data.productId === productId)) {
-        if (isMounted.current) {
-          logger.debug(`UpvoteButton: Global event received for ${productSlug || productId}`, data);
-          // Update count
-          if (data.count !== undefined && data.count !== count) {
-             setCount(data.count);
+    // Get the socket instance
+    const socket = window.socket;
+
+    // Create stable references to current state values
+    // This prevents the effect from re-running when these values change
+    const currentProductId = productId;
+    const currentProductSlug = productSlug;
+    const currentUserId = user?._id;
+
+    const handleUpvoteUpdate = (data) => {
+      // Check if this event is for our product
+      const isRelevantProduct =
+        (currentProductSlug && data.slug === currentProductSlug) ||
+        (currentProductId && data.productId === currentProductId);
+
+      if (!isRelevantProduct || !isMounted.current) return;
+
+      // Update count if it changed
+      if (data.count !== undefined) {
+        setCount(prevCount => {
+          if (data.count !== prevCount) {
+            return data.count;
           }
+          return prevCount;
+        });
+      }
 
-          // Update upvoted status based on the event
-          let currentUserId = user?._id || localStorage.getItem('userId');
-          const isCurrentUserAction = data.userId === currentUserId;
+      // Get current user ID from user object or localStorage
+      const userId = currentUserId || localStorage.getItem('userId');
+      const isCurrentUserAction = data.userId === userId;
 
-          if (data.upvoted !== undefined && data.upvoted !== isUpvoted) {
-             setIsUpvoted(data.upvoted);
-          } else if (isCurrentUserAction && data.action) {
-             const newUpvotedState = data.action === 'add';
-             if (newUpvotedState !== isUpvoted) {
-                setIsUpvoted(newUpvotedState);
-             }
+      // Determine if we should update the upvoted state
+      // Case 1: Direct upvoted state is provided
+      if (data.upvoted !== undefined) {
+        setIsUpvoted(prevState => {
+          if (data.upvoted !== prevState) {
+            return data.upvoted;
           }
-        }
+          return prevState;
+        });
+      }
+      // Case 2: Current user's action is provided
+      else if (isCurrentUserAction && data.action) {
+        const newUpvotedState = data.action === "add";
+        setIsUpvoted(prevState => {
+          if (newUpvotedState !== prevState) {
+            return newUpvotedState;
+          }
+          return prevState;
+        });
       }
     };
 
-    const unsubscribe = eventBus.subscribe(EVENT_TYPES.UPVOTE_UPDATED, handleGlobalUpdate);
-    return () => unsubscribe();
+    const handleProductUpdate = (data) => {
+      // Check if this event is for our product
+      const isRelevantProduct =
+        (currentProductSlug && data.slug === currentProductSlug) ||
+        (currentProductId && data.productId === currentProductId);
 
-  }, [productSlug, productId, user?._id, count, isUpvoted]); // Dependencies needed to avoid stale state in handler
+      if (!isRelevantProduct || !data.updates || !isMounted.current) return;
 
-  // Effect to check for updates in the global product cache
-  useEffect(() => {
-    if (!productSlug || !isMounted.current) return;
-    const cachedProduct = productCache[productSlug];
+      const updates = data.updates;
 
-    if (cachedProduct) {
-      // Determine count from cache
-      const cachedCount = cachedProduct.upvoteCount ?? cachedProduct.upvotes?.count ?? count;
-      if (cachedCount !== count) {
-        logger.debug(`UpvoteButton: Cache update changed count for ${productSlug}`, { old: count, new: cachedCount });
-        setCount(cachedCount);
+      // Update count if it changed
+      if (updates.upvoteCount !== undefined) {
+        setCount(prevCount => {
+          if (updates.upvoteCount !== prevCount) {
+            return updates.upvoteCount;
+          }
+          return prevCount;
+        });
       }
 
-      // Determine upvoted state from cache
-      const cachedUpvotedState =
-        cachedProduct.upvoted ??
-        cachedProduct.upvotes?.userHasUpvoted ??
-        cachedProduct.userInteractions?.hasUpvoted ??
-        isUpvoted; // Fallback
-
-      if (cachedUpvotedState !== isUpvoted) {
-        logger.debug(`UpvoteButton: Cache update changed upvoted state for ${productSlug}`, { old: isUpvoted, new: cachedUpvotedState });
-        setIsUpvoted(cachedUpvotedState);
+      // Update upvoted state if it changed
+      if (updates.upvoted !== undefined) {
+        setIsUpvoted(prevState => {
+          if (updates.upvoted !== prevState) {
+            return updates.upvoted;
+          }
+          return prevState;
+        });
       }
+    };
+
+    // Handle direct socket upvote events
+    const handleSocketUpvoteEvent = (data) => {
+      // Check if this event is for our product
+      const isRelevantProduct = (currentProductId && data.productId === currentProductId);
+
+      if (!isRelevantProduct || !isMounted.current) return;
+
+      // Update count if it changed
+      if (data.count !== undefined) {
+        setCount(prevCount => {
+          if (data.count !== prevCount) {
+            return data.count;
+          }
+          return prevCount;
+        });
+      }
+
+      // Get current user ID from user object or localStorage
+      const userId = currentUserId || localStorage.getItem('userId');
+      const isCurrentUserAction = data.userId === userId;
+
+      // Update upvoted state if this is the current user's action
+      if (isCurrentUserAction && data.action) {
+        const newUpvotedState = data.action === "add";
+        setIsUpvoted(prevState => {
+          if (newUpvotedState !== prevState) {
+            return newUpvotedState;
+          }
+          return prevState;
+        });
+      }
+    };
+
+    // Subscribe to events
+    const unsubscribeUpvote = eventBus.subscribe(EVENT_TYPES.UPVOTE_UPDATED, handleUpvoteUpdate);
+    const unsubscribeProduct = eventBus.subscribe(EVENT_TYPES.PRODUCT_UPDATED, handleProductUpdate);
+
+    // Subscribe to socket events if socket is available
+    if (socket && socket.on) {
+      socket.on('product:upvote', handleSocketUpvoteEvent);
     }
-  }, [productSlug, productCache, count, isUpvoted]); // Re-check cache if local state changes
 
+    return () => {
+      unsubscribeUpvote();
+      unsubscribeProduct();
 
-  // Handle upvote action
+      // Unsubscribe from socket events if socket is available
+      if (socket && socket.off) {
+        socket.off('product:upvote', handleSocketUpvoteEvent);
+      }
+    };
+
+  }, [productSlug, productId, user?._id]); // Removed count and isUpvoted from dependencies
+
+  // --- Action Handler ---
   const handleUpvote = async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (!productSlug) {
-      logger.error("UpvoteButton: Cannot toggle upvote without product slug.");
-      showToast("error", "Cannot perform action: Product identifier missing.");
+      showToast("error", "Cannot upvote: Product information is missing.");
+      logger.error("Upvote failed: Missing productSlug.", { component: "UpvoteButton" });
       return;
     }
-
-    if (!isAuthenticated) { showToast("error", "Please log in to upvote products"); return; }
-    if (isOwner) { showToast("info", "You cannot upvote your own product"); return; } // Use info severity
-    if (isLoading || isProcessing) return; // Prevent multiple clicks
+    if (!isAuthenticated) {
+      showToast("info", "Please log in or sign up to upvote.");
+      return;
+    }
+    if (isOwner) {
+      showToast("info", "Creators can't upvote their own products.");
+      return;
+    }
+    if (isLoading || isProcessing) {
+      return;
+    }
 
     setIsLoading(true);
     setIsProcessing(true);
 
-    // Optimistic UI update
-    const previousState = isUpvoted;
-    const previousCount = count;
+    const previousState = { isUpvoted, count };
     setIsUpvoted(!isUpvoted);
-    setCount(prev => isUpvoted ? Math.max(0, prev - 1) : prev + 1);
+    setCount((prev) => (isUpvoted ? Math.max(0, prev - 1) : prev + 1));
 
     try {
-      // Call API via context
       const result = await toggleUpvote(productSlug);
 
-      if (!result.success) {
-        // Revert optimistic update on failure
-        if (isMounted.current) {
-            setIsUpvoted(previousState);
-            setCount(previousCount);
-        }
-        showToast("error", result.message || "Failed to update upvote");
-        logger.warn(`Upvote failed for ${productSlug}: ${result.message}`);
-        return; // Exit early on failure
+      if (!isMounted.current) return;
+
+      if (!result || !result.success) {
+        setIsUpvoted(previousState.isUpvoted);
+        setCount(previousState.count);
+        showToast("error", result?.message || "Failed to update upvote. Please try again.");
+        logger.warn("Upvote API call failed or returned unsuccessful.", { slug: productSlug, result });
+        return;
       }
 
-      // --- Sync with server state ---
-      const serverCount = result.upvoteCount ?? result.count ?? count; // Prioritize specific count field
-      const serverUpvotedState = result.upvoted ?? !previousState; // Use API result if available
+      const serverCount = result.upvoteCount ?? result.count ?? (previousState.isUpvoted ? previousState.count - 1 : previousState.count + 1);
+      const serverUpvotedState = result.upvoted ?? !previousState.isUpvoted;
 
-      if (isMounted.current) {
-          // Update state only if it differs from the server response (handles race conditions)
-          if (serverCount !== count) setCount(serverCount);
-          if (serverUpvotedState !== isUpvoted) setIsUpvoted(serverUpvotedState);
-      }
-      // ---
+      if (serverCount !== count) setCount(serverCount);
+      if (serverUpvotedState !== isUpvoted) setIsUpvoted(serverUpvotedState);
 
-      // Record interaction for recommendations (fire and forget)
-      if (recordInteraction) {
-        recordInteraction(productSlug, serverUpvotedState ? "upvote" : "remove_upvote", {
-            source,
-            previousInteraction: previousState ? "upvoted" : "none",
-        }).catch(err => logger.error(`Failed to record upvote interaction for ${productSlug}:`, err));
-      }
+      recordInteraction?.(
+        productSlug,
+        serverUpvotedState ? "upvote" : "remove_upvote",
+        { source, previousInteraction: previousState.isUpvoted ? "upvoted" : "none" }
+      ).catch((err) => logger.error(`Failed to record interaction: ${err}`, { productSlug }));
 
-      // Call success callback if provided
-      if (onSuccess) {
-        onSuccess({ ...result, count: serverCount, upvoted: serverUpvotedState });
-      }
-
-      // Show success toast
-      // showToast("success", serverUpvotedState ? "Product upvoted!" : "Upvote removed"); // Can be slightly annoying, maybe remove
+      onSuccess?.({ ...result, count: serverCount, upvoted: serverUpvotedState });
 
     } catch (error) {
-      logger.error(`Error toggling upvote for ${productSlug}:`, error);
-      // Revert optimistic update on error
+      logger.error(`Upvote action threw an error for slug ${productSlug}:`, { error });
       if (isMounted.current) {
-          setIsUpvoted(previousState);
-          setCount(previousCount);
+        setIsUpvoted(previousState.isUpvoted);
+        setCount(previousState.count);
       }
-
-      // Extract error message from the error object
-      let errorMessage = "An unexpected error occurred while upvoting.";
-
-      // Check for specific error messages
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      // Show the error message in a toast
-      showToast("error", errorMessage);
+      showToast("error", error.response?.data?.message || error.message || "An unexpected error occurred.");
     } finally {
       if (isMounted.current) {
         setIsLoading(false);
-        // Short delay before allowing another click
         setTimeout(() => {
           if (isMounted.current) setIsProcessing(false);
-        }, 300);
+        }, 250);
       }
     }
   };
 
-  // Dynamic class generation
-  const sizeClasses = {
-    sm: "p-1.5 rounded-md text-xs", // Adjusted rounding
-    md: "p-2 rounded-lg text-sm",   // Adjusted rounding
-    lg: "p-2.5 rounded-lg text-base",// Adjusted rounding
+  // --- Dynamic Styling ---
+  // Size-specific classes for the button
+  const buttonSizeClasses = {
+    sm: "h-8 w-8",
+    md: "h-10 w-10",
+    lg: "h-12 w-12",
   };
-  const iconSizeClasses = {
-    sm: "w-3.5 h-3.5", // Slightly larger icons
-    md: "w-4 h-4",
-    lg: "w-5 h-5",
-  };
-   const countSizeClasses = {
+
+  // Button state styling
+  const buttonStateClasses = isUpvoted
+    ? "bg-violet-100 text-violet-700 border-violet-300 hover:bg-violet-200 hover:border-violet-400 shadow-sm"
+    : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50 hover:text-gray-800 hover:border-gray-400";
+
+  // Classes for disabled/loading states
+  const disabledClasses = isDisabled ? "opacity-60 cursor-not-allowed" : "";
+  const loadingClasses = isLoading ? "opacity-80 cursor-wait" : "";
+
+  // Classes for the count display
+  const countSizeClasses = {
     sm: "text-xs",
     md: "text-sm",
-    lg: "text-sm", // Keep count slightly smaller on lg
+    lg: "text-base",
   };
+  const countColorClasses = isUpvoted ? "text-violet-800" : "text-gray-700";
 
-  const buttonBaseClasses = "transition-all duration-200 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-1";
-  const upvotedClasses = "bg-violet-100 text-violet-700 hover:bg-violet-200";
-  const notUpvotedClasses = "bg-gray-100 text-gray-500 hover:bg-violet-50 hover:text-violet-600";
-  const disabledClasses = "opacity-60 cursor-not-allowed";
-  const processingClasses = "cursor-wait";
+  // Tooltip text based on state
+  const buttonTitle = isOwner
+    ? "You cannot upvote your own product"
+    : isDisabled && !isOwner
+    ? "Upvote button is disabled"
+    : isUpvoted
+    ? "Remove upvote"
+    : "Upvote this product";
+
+  // Animation classes for the button
+  const animationClasses = "transform transition-transform duration-150 active:scale-95";
 
   return (
-    <div className={`flex items-center gap-1.5 ${className}`}>
+    <div className={`flex items-center gap-3 ${className}`}>
       <button
         type="button"
         onClick={handleUpvote}
-        disabled={disabled || isLoading || isOwner || isProcessing}
-        className={`${buttonBaseClasses} ${sizeClasses[size] || sizeClasses.md} ${
-          isUpvoted ? upvotedClasses : notUpvotedClasses
-        } ${isOwner || disabled ? disabledClasses : ""} ${
-          isProcessing ? processingClasses : ""
-        }`}
-        title={
-          isOwner ? "Cannot upvote your own product"
-          : isUpvoted ? "Remove upvote"
-          : "Upvote this product"
-        }
-        aria-pressed={isUpvoted} // Better accessibility
+        disabled={isDisabled}
+        className={`
+          rounded-full
+          flex items-center justify-center
+          border
+          ${buttonSizeClasses[size] || buttonSizeClasses.md}
+          ${buttonStateClasses}
+          ${disabledClasses}
+          ${loadingClasses}
+          ${animationClasses}
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-violet-400
+          transition-all duration-200 ease-in-out
+        `}
+        title={buttonTitle}
+        aria-pressed={isUpvoted}
         aria-label={
-            isOwner ? "Cannot upvote own product"
-            : isUpvoted ? "Remove upvote"
-            : `Upvote ${product?.name || 'product'}` // More descriptive label
+          isOwner
+            ? "Cannot upvote own product"
+            : isUpvoted
+            ? `Remove upvote for ${product?.name || "product"}`
+            : `Upvote ${product?.name || "product"}`
         }
       >
-        <AnimatedUpvoteIcon
+        <CircularUpvoteIcon
           isUpvoted={isUpvoted}
-          isLoading={isLoading}
           size={size}
-          className={iconSizeClasses[size] || iconSizeClasses.md}
         />
       </button>
 
       {showCount && (
         <span
-          className={`font-medium text-gray-700 tabular-nums ${countSizeClasses[size] || countSizeClasses.md}`}
-          aria-live="polite" // Announce count changes
+          className={`font-semibold tabular-nums ${countColorClasses} ${countSizeClasses[size] || countSizeClasses.md}`}
+          aria-live="polite"
+          aria-atomic="true"
         >
-          {count}
+          {count >= 1000 ? `${(count / 1000).toFixed(1)}k` : count}
         </span>
       )}
     </div>

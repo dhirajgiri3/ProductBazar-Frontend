@@ -9,16 +9,32 @@ import { useAuth } from "../../../Contexts/Auth/AuthContext";
 import { globalRecommendationTracker } from "../../../Utils/recommendationUtils";
 import logger from "../../../Utils/logger";
 
-const CommunityPicksSection = ({ componentName = 'home' }) => {
+const CommunityPicksSection = ({ componentName = 'home', products = [], isLoading: externalLoading = false, error: externalError = null }) => {
   const { getCollaborativeRecommendations } = useRecommendation();
   const { isAuthenticated } = useAuth();
-  const [communityPicks, setCommunityPicks] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [communityPicks, setCommunityPicks] = useState(products);
+  const [isLoading, setIsLoading] = useState(externalLoading);
+  const [error, setError] = useState(externalError);
+
+  // Update local state when props change
+  useEffect(() => {
+    if (products.length > 0) {
+      setCommunityPicks(products);
+      setIsLoading(false);
+    }
+    if (externalError) {
+      setError(externalError);
+    }
+  }, [products, externalError]);
 
   useEffect(() => {
     let isMounted = true;
     let abortController = new AbortController();
+
+    // Skip fetching if we already have products from props
+    if (products.length > 0) {
+      return;
+    }
 
     const fetchCommunityPicks = async () => {
       // Only show loading state if we don't have any data yet
@@ -104,7 +120,7 @@ const CommunityPicksSection = ({ componentName = 'home' }) => {
       isMounted = false;
       abortController.abort();
     };
-  }, [getCollaborativeRecommendations, isAuthenticated, communityPicks.length, componentName]);
+  }, [getCollaborativeRecommendations, isAuthenticated, communityPicks.length, componentName, products.length]);
 
   if (!isAuthenticated) return null;
 

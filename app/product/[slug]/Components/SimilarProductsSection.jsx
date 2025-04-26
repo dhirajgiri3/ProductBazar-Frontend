@@ -25,39 +25,76 @@ const SimilarProductsSection = ({ productId, limit = 5 }) => {
   };
 
   useEffect(() => {
-    const fetchSimilarProducts = async () => {
-      if (!productId) {
-        setError("No product ID provided");
-        setLoading(false);
-        return;
-      }
+    // Skip if no productId
+    if (!productId) {
+      setError("No product ID provided");
+      setLoading(false);
+      return;
+    }
 
+    // Create a unique ID for this fetch operation to prevent duplicate logs
+    const fetchId = `similar-${productId}-${Date.now()}`;
+
+    // Check if we've already fetched this data recently
+    const fetchKey = `similar_products_${productId}`;
+    const lastFetch = sessionStorage.getItem(fetchKey);
+    const now = Date.now();
+    const FETCH_TTL = 60000; // 1 minute cache
+
+    if (lastFetch && (now - parseInt(lastFetch)) < FETCH_TTL) {
+      // If we've fetched this recently, don't log to reduce console spam
+      // This is just a silent early return
+      return;
+    }
+
+    const fetchSimilarProducts = async () => {
       try {
         setLoading(true);
         setError(null);
 
+        // Mark as fetched before the API call to prevent duplicate requests
+        try {
+          sessionStorage.setItem(fetchKey, now.toString());
+        } catch (e) {
+          // Ignore storage errors
+        }
+
         // Fetch similar products using the context function
+        // Force refresh=false to use cache if available
         const recommendations = await getSimilarRecommendations(
           productId,
-          limit
+          limit,
+          false // Don't force refresh
         );
 
         if (!Array.isArray(recommendations)) {
           throw new Error("Invalid response format from recommendations");
         }
 
-        // Log the recommendations to see if they include user interaction data
-        logger.debug('Similar products recommendations:',
-          recommendations.map(rec => ({
-            id: rec._id || rec.productId,
-            hasUpvoted: rec.productData?.userInteractions?.hasUpvoted || rec.productData?.upvotes?.userHasUpvoted,
-            hasBookmarked: rec.productData?.userInteractions?.hasBookmarked || rec.productData?.bookmarks?.userHasBookmarked
-          }))
-        );
+        // Only log once per session to reduce console spam
+        const logKey = `similar_log_${productId}`;
+        if (!sessionStorage.getItem(logKey)) {
+          logger.debug(`Similar products recommendations (${fetchId}):`,
+            recommendations.map(rec => ({
+              id: rec._id || rec.productId,
+              hasUpvoted: rec.productData?.userInteractions?.hasUpvoted || rec.productData?.upvotes?.userHasUpvoted,
+              hasBookmarked: rec.productData?.userInteractions?.hasBookmarked || rec.productData?.bookmarks?.userHasBookmarked
+            }))
+          );
+
+          // Mark as logged
+          try {
+            sessionStorage.setItem(logKey, '1');
+            // Clean up after 10 seconds
+            setTimeout(() => sessionStorage.removeItem(logKey), 10000);
+          } catch (e) {
+            // Ignore storage errors
+          }
+        }
 
         setSimilarProducts(recommendations);
       } catch (err) {
-        logger.error("Error fetching similar products:", err);
+        logger.error(`Error fetching similar products (${fetchId}):`, err);
         setError(err.message || "Failed to load similar products");
         setSimilarProducts([]);
       } finally {
@@ -66,7 +103,12 @@ const SimilarProductsSection = ({ productId, limit = 5 }) => {
     };
 
     fetchSimilarProducts();
-  }, [productId, limit, getSimilarRecommendations]);
+
+    // Clean up function
+    return () => {
+      // Optional: Clean up any resources if needed
+    };
+  }, [productId, limit]); // Removed getSimilarRecommendations from deps to prevent unnecessary re-fetches
 
   // Section header component
   const SectionHeader = () => (

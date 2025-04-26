@@ -12,6 +12,7 @@ import { getSocket } from "../../Utils/socket";
 import { addProductToMapping, getSlugFromId, getIdFromSlug, addProductsToMapping } from "../../Utils/productMappingUtils";
 import eventBus, { EVENT_TYPES } from "../../Utils/eventBus";
 import { useAuth } from "../Auth/AuthContext";
+import { optimizeImage } from "../../Utils/Image/fileUpload";
 
 const ProductContext = createContext();
 
@@ -303,7 +304,7 @@ export const ProductProvider = ({ children }) => {
     }
   }, []);
 
-  // Create a new product with thumbnail
+  // Create a new product with thumbnail and gallery
   const createProduct = async (productData) => {
     setLoading(true);
     try {
@@ -312,7 +313,7 @@ export const ProductProvider = ({ children }) => {
 
       // Handle regular fields
       Object.entries(productData).forEach(([key, value]) => {
-        if (value && key !== "thumbnail") {
+        if (value && key !== "thumbnail" && key !== "galleryImages") {
           // Handle pricing object - stringify it
           if (key === "pricing" && typeof value === "object") {
             formData.append(key, JSON.stringify(value));
@@ -367,6 +368,28 @@ export const ProductProvider = ({ children }) => {
       }
 
       const createdProduct = response.data.data;
+
+      // Handle gallery images if present
+      if (productData.galleryImages && productData.galleryImages.length > 0 && createdProduct.slug) {
+        try {
+          logger.info(`Uploading ${productData.galleryImages.length} gallery images for new product ${createdProduct.slug}`);
+
+          // Upload gallery images
+          const galleryResult = await uploadGalleryImages(createdProduct.slug, productData.galleryImages);
+
+          if (galleryResult.success) {
+            logger.info(`Successfully uploaded gallery images for ${createdProduct.slug}`);
+            // Update the created product with gallery data
+            createdProduct.gallery = galleryResult.data;
+          } else {
+            logger.error(`Failed to upload gallery images for ${createdProduct.slug}: ${galleryResult.message}`);
+          }
+        } catch (galleryError) {
+          logger.error(`Error uploading gallery images for new product ${createdProduct.slug}:`, galleryError);
+          // Don't fail the whole operation if gallery upload fails
+        }
+      }
+
       return createdProduct;
     } catch (err) {
       setError(err.message);
@@ -417,6 +440,12 @@ export const ProductProvider = ({ children }) => {
           formData.append("thumbnail", productData.thumbnail);
         }
 
+        // Handle gallery images separately to avoid including them in the main update request
+        const hasGalleryImages = productData.gallery && Array.isArray(productData.gallery) && productData.gallery.length > 0;
+
+        // Store gallery images for later use after the main update request
+        const galleryImagesToUpload = hasGalleryImages ? [...productData.gallery] : [];
+
         // Use makePriorityRequest instead of direct api call to prevent cancellations
         const response = await makePriorityRequest(
           'put',
@@ -442,6 +471,27 @@ export const ProductProvider = ({ children }) => {
         const productId = updatedProduct._id || getIdFromSlug(slug);
         const newSlug = response.data.newSlug || updatedProduct.slug || slug;
         const slugChanged = response.data.slugChanged || false;
+
+        // Handle gallery images upload if present
+        if (galleryImagesToUpload.length > 0) {
+          try {
+            logger.info(`Uploading ${galleryImagesToUpload.length} gallery images for product ${newSlug}`);
+
+            // Upload gallery images
+            const galleryResult = await uploadGalleryImages(newSlug, galleryImagesToUpload);
+
+            if (galleryResult.success) {
+              logger.info(`Successfully uploaded gallery images for ${newSlug}`);
+              // Update the product with gallery data
+              updatedProduct.gallery = galleryResult.data;
+            } else {
+              logger.error(`Failed to upload gallery images for ${newSlug}: ${galleryResult.message}`);
+            }
+          } catch (galleryError) {
+            logger.error(`Error uploading gallery images for product ${newSlug}:`, galleryError);
+            // Don't fail the whole operation if gallery upload fails
+          }
+        }
 
         // Clear local cache for the old slug if it changed
         if (slugChanged && newSlug !== slug) {
@@ -1542,6 +1592,199 @@ export const ProductProvider = ({ children }) => {
     }
   }, []);
 
+  // Upload gallery images for a product
+  const uploadGalleryImages = useCallback(async (slug, images) => {
+    if (!slug || !images || images.length === 0) {
+      logger.error("Missing required parameters for gallery upload");
+      return { success: false, message: "Missing required parameters" };
+    }
+
+    setLoading(true);
+    try {
+      // Create FormData for the gallery images
+      const formData = new FormData();
+
+      // Process images in batches to avoid memory issues
+      const BATCH_SIZE = 3;
+      let processedCount = 0;
+
+      // Process and optimize images before upload
+      for (let i = 0; i < images.length; i += BATCH_SIZE) {
+        const batch = images.slice(i, i + BATCH_SIZE);
+
+        // Optimize each image in the batch
+        for (const file of batch) {
+          try {
+            // Only process if it's a File object
+            if (file instanceof File) {
+              const optimizedImage = await optimizeImage(file, {
+                maxWidth: 1200,
+                quality: 0.8,
+                format: 'webp'
+              });
+
+              // Use the optimized image or fall back to original
+              formData.append('images', optimizedImage || file);
+              processedCount++;
+            }
+          } catch (err) {
+            logger.error(`Error optimizing gallery image: ${err.message}`);
+            // If optimization fails, use the original file
+            formData.append('images', file);
+            processedCount++;
+          }
+        }
+      }
+
+      logger.info(`Uploading ${processedCount} gallery images for product ${slug}`);
+
+      // Make the API request
+      const response = await api.post(`/products/${slug}/gallery`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to upload gallery images");
+      }
+
+      // Update the current product if this is the active product
+      if (currentProduct && currentProduct.slug === slug) {
+        setCurrentProduct(prev => ({
+          ...prev,
+          gallery: response.data.data
+        }));
+      }
+
+      // Update the product in cache
+      updateProductInCache(slug, { gallery: response.data.data });
+
+      // Broadcast gallery updated event
+      eventBus.publish(EVENT_TYPES.PRODUCT_UPDATED, {
+        slug,
+        productId: getIdFromSlug(slug),
+        galleryUpdated: true,
+        timestamp: Date.now()
+      });
+
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message || "Gallery images uploaded successfully"
+      };
+    } catch (err) {
+      logger.error(`Error uploading gallery images for ${slug}:`, err);
+      setError(err.message);
+      return {
+        success: false,
+        message: err.message || "Failed to upload gallery images"
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, [currentProduct]);
+
+  // Remove a gallery image
+  const removeGalleryImage = useCallback(async (slug, imageId) => {
+    if (!slug || !imageId) {
+      logger.error("Missing required parameters for gallery image removal");
+      return { success: false, message: "Missing required parameters" };
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.delete(`/products/${slug}/gallery/${imageId}`);
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to remove gallery image");
+      }
+
+      // Update the current product if this is the active product
+      if (currentProduct && currentProduct.slug === slug) {
+        setCurrentProduct(prev => ({
+          ...prev,
+          gallery: response.data.data
+        }));
+      }
+
+      // Update the product in cache
+      updateProductInCache(slug, { gallery: response.data.data });
+
+      // Broadcast gallery updated event
+      eventBus.publish(EVENT_TYPES.PRODUCT_UPDATED, {
+        slug,
+        productId: getIdFromSlug(slug),
+        galleryUpdated: true,
+        timestamp: Date.now()
+      });
+
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message || "Gallery image removed successfully"
+      };
+    } catch (err) {
+      logger.error(`Error removing gallery image for ${slug}:`, err);
+      setError(err.message);
+      return {
+        success: false,
+        message: err.message || "Failed to remove gallery image"
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, [currentProduct]);
+
+  // Reorder gallery images
+  const reorderGalleryImages = useCallback(async (slug, imageIds) => {
+    if (!slug || !imageIds || !Array.isArray(imageIds) || imageIds.length === 0) {
+      logger.error("Missing required parameters for gallery reordering");
+      return { success: false, message: "Missing required parameters" };
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.put(`/products/${slug}/gallery/reorder`, { imageIds });
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to reorder gallery images");
+      }
+
+      // Update the current product if this is the active product
+      if (currentProduct && currentProduct.slug === slug) {
+        setCurrentProduct(prev => ({
+          ...prev,
+          gallery: response.data.data
+        }));
+      }
+
+      // Update the product in cache
+      updateProductInCache(slug, { gallery: response.data.data });
+
+      // Broadcast gallery updated event
+      eventBus.publish(EVENT_TYPES.PRODUCT_UPDATED, {
+        slug,
+        productId: getIdFromSlug(slug),
+        galleryUpdated: true,
+        timestamp: Date.now()
+      });
+
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message || "Gallery order updated successfully"
+      };
+    } catch (err) {
+      logger.error(`Error reordering gallery images for ${slug}:`, err);
+      setError(err.message);
+      return {
+        success: false,
+        message: err.message || "Failed to reorder gallery images"
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, [currentProduct]);
+
   const value = {
     loading,
     error,
@@ -1571,6 +1814,10 @@ export const ProductProvider = ({ children }) => {
     editReply,
     deleteReply,
     updateProductInCache, // Expose this function for socket updates
+    // Gallery management functions
+    uploadGalleryImages,
+    removeGalleryImage,
+    reorderGalleryImages,
   };
 
   return (

@@ -11,12 +11,14 @@ import {
   DollarSign,
   Globe,
   Check,
-  Sparkles
+  Sparkles,
+  ImageIcon
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useProduct } from "../../../../Contexts/Product/ProductContext";
 import { useCategories } from "../../../../Contexts/Category/CategoryContext";
 import ThumbnailUploadSection from "./Components/ThumbnailUploadSection";
+import GalleryUploadSection from "./Components/GalleryUploadSection";
 import SmartDescriptionSection from "./Components/SmartDescriptionSection";
 import LinksTagsSection from "./Components/LinksTagsSection";
 import PricingSection from "./Components/PricingSection";
@@ -33,9 +35,15 @@ const STEPS = [
   },
   {
     id: "visuals",
-    title: "Visuals",
-    description: "Add eye-catching images of your product",
+    title: "Thumbnail",
+    description: "Add a primary image for your product",
     icon: Camera,
+  },
+  {
+    id: "gallery",
+    title: "Gallery",
+    description: "Add additional images to showcase your product",
+    icon: ImageIcon,
   },
   {
     id: "details",
@@ -83,6 +91,7 @@ const AddProductForm = () => {
     description: "",
     category: "",
     thumbnail: null,
+    galleryImages: [],
     tags: [],
     links: {},
     pricing: {
@@ -372,8 +381,20 @@ const AddProductForm = () => {
               setFormData({ ...formData, thumbnail: thumb })
             }
             onBack={() => setCurrentStep("start")}
-            onNext={() => setCurrentStep("details")}
+            onNext={() => setCurrentStep("gallery")}
             error={!formData.thumbnail ? "Please add a thumbnail image" : null}
+          />
+        );
+      case "gallery":
+        return (
+          <GalleryUploadSection
+            galleryImages={formData.galleryImages}
+            setGalleryImages={(images) =>
+              setFormData({ ...formData, galleryImages: images })
+            }
+            onBack={() => setCurrentStep("visuals")}
+            onNext={() => setCurrentStep("details")}
+            error={null} // Gallery is optional
           />
         );
       case "details":

@@ -1,79 +1,71 @@
+// GitHub Copilot: Current Date/Time: 2025-04-20 15:17:05 UTC | User: dhirajgiri3
 "use client";
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Avatar } from "@mui/material";
-import { FormatTimeAgo } from "../../../../../../Utils/FormatTimeAgo";
-import CommentActions from "./CommentActions";
-import CommentForm from "./CommentForm";
+import { Avatar } from "@mui/material"; // Assuming Material UI is used for Avatar
+import { FormatTimeAgo } from "../../../../../../Utils/FormatTimeAgo"; // Verify path
+import CommentActions from "./CommentActions"; // Verify path
+import CommentForm from "./CommentForm"; // Verify path
 import { FaChevronDown, FaChevronRight, FaReply, FaUser } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck } from "lucide-react"; // Using lucide-react for check badge
 
-// Enhanced animation variants
+// Animation Variants
 const commentVariants = {
-  initial: { opacity: 0, y: 20 },
-  animate: { 
-    opacity: 1, 
-    y: 0, 
-    transition: { duration: 0.4, type: "spring", stiffness: 100 } 
+  initial: { opacity: 0, y: 15 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.3, ease: "easeOut" }
   },
-  exit: { 
+  exit: {
     opacity: 0,
-    y: -10,
-    transition: { duration: 0.2 } 
+    height: 0, // Animate height out
+    marginBottom: 0, // Animate margin out
+    paddingTop: 0,
+    paddingBottom: 0,
+    transition: { duration: 0.2, ease: "easeIn" }
   }
 };
 
 const repliesVariants = {
-  hidden: { 
-    opacity: 0, 
+  hidden: {
+    opacity: 0,
     height: 0,
-    transition: { duration: 0.3, when: "afterChildren" }
+    transition: { duration: 0.2, when: "afterChildren" }
   },
   visible: {
     opacity: 1,
     height: "auto",
-    transition: { 
-      duration: 0.4, 
+    transition: {
+      duration: 0.3,
       when: "beforeChildren",
-      staggerChildren: 0.1 
+      staggerChildren: 0.05 // Faster stagger
     }
   }
 };
 
-// Improved NestedReplies component with better visual hierarchy
+// Nested Replies Component
 const NestedReplies = ({ replies, parentComment, depth, ...handlers }) => {
   if (!replies || replies.length === 0) return null;
 
-  // Better indentation with diminishing returns for deeper nesting
-  const getIndentClass = () => {
-    if (depth === 0) return "ml-0";
-    if (depth === 1) return "ml-4";
-    if (depth === 2) return "ml-6";
-    if (depth >= 3) return "ml-8";
-  };
-  
-  // Better border styling for depth levels
-  const getBorderClass = () => {
-    if (depth === 0) return "pl-0";
-    if (depth === 1) return "border-l-2 border-violet-200 dark:border-violet-800/40 pl-4";
-    if (depth === 2) return "border-l-2 border-violet-100 dark:border-violet-900/30 pl-4";
-    if (depth >= 3) return "border-l border-gray-200 dark:border-gray-700 pl-4";
-  };
+  const indentClass = depth >= 0 ? "pl-5 sm:pl-6" : ""; // Consistent indent from depth 0 onwards
 
   return (
-    <motion.div 
-      className={`mt-4 ${getIndentClass()} ${getBorderClass()} space-y-4`}
+    <motion.div
+      className={`mt-4 ${indentClass} space-y-4 relative`}
       variants={repliesVariants}
       initial="hidden"
       animate="visible"
       exit="hidden"
     >
+      {/* Thin vertical line */}
+      <div className="absolute left-[18px] top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-700/60 -z-10"></div>
       {replies.map((reply) => (
         <CommentItem
           key={reply._id}
           comment={reply}
-          parentComment={parentComment}
+          parentComment={parentComment} // Pass the immediate parent
           depth={depth + 1}
           isReply={true}
           {...handlers}
@@ -83,10 +75,11 @@ const NestedReplies = ({ replies, parentComment, depth, ...handlers }) => {
   );
 };
 
-// Enhanced CommentItem with better accessibility and animations
+
+// Main CommentItem Component
 const CommentItem = ({
   comment,
-  parentComment = null,
+  parentComment = null, // Immediate parent
   depth = 0,
   isReply = false,
   user,
@@ -102,24 +95,21 @@ const CommentItem = ({
   activeEditId,
   isSubmitting,
 }) => {
-  const [showReplies, setShowReplies] = useState(depth < 2); // Auto-expand first two levels
-  const [isHovered, setIsHovered] = useState(false);
+  const [showReplies, setShowReplies] = useState(depth < 1); // Auto-expand only top-level replies
   const commentRef = useRef(null);
-  
-  // Derive state based on props
+
   const isReplying = activeReplyId === comment._id;
   const isEditing = activeEditId === comment._id;
-  const effectiveParentComment = isReply ? parentComment : comment;
+  // Determine the root comment's ID. If this is a reply, use parent's rootId or parent's _id. If top-level, use own _id.
+  const rootCommentId = isReply ? (parentComment?.rootId || parentComment?._id) : comment._id;
 
-  // Check if the current user is the comment owner or admin
+
   const isOwnComment = user && comment.user && user._id === comment.user._id;
   const isAdmin = user && user.role === 'admin';
-  const isMaker = comment.user?.isMaker || false;
+  const isMaker = comment.user?.isMaker || false; // Assuming this flag exists on the comment's user object
 
-  // Scroll into view when replying or editing
   useEffect(() => {
     if ((isReplying || isEditing) && commentRef.current) {
-      // Delay to ensure UI is updated
       setTimeout(() => {
         commentRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
@@ -131,15 +121,12 @@ const CommentItem = ({
   }, []);
 
   const handleLike = useCallback(() => {
-    const parentId = isReply ? parentComment?._id : null;
-    const isNestedReply = !!parentComment;
-    onLike(comment._id, isNestedReply, parentId);
+    // Pass immediate parent's ID if it's a reply
+    onLike(comment._id, isReply, parentComment?._id || null);
   }, [onLike, comment._id, isReply, parentComment]);
 
   const handleStartReply = useCallback(() => {
-    if (isOwnComment) {
-      return;
-    }
+    if (isOwnComment) return;
     onStartReply(comment._id, comment.user?.fullName || "User");
   }, [onStartReply, comment._id, comment.user?.fullName, isOwnComment]);
 
@@ -148,43 +135,31 @@ const CommentItem = ({
   }, [onStartEdit, comment]);
 
   const handleDelete = useCallback(() => {
-    const parentId = isReply ? parentComment?._id : null;
-    onDelete(parentId, comment._id);
-  }, [onDelete, isReply, parentComment?._id, comment._id]);
+    // Pass immediate parent's ID if it's a reply
+    onDelete(parentComment?._id || null, comment._id, comment.content, isReply);
+  }, [onDelete, parentComment?._id, comment._id, comment.content, isReply]);
 
   const handleSubmitLocalReply = useCallback(
     (content) => {
-      onSubmitReply(effectiveParentComment._id, comment._id, content);
+      // Pass rootId and the ID of the comment being replied to (comment._id)
+      onSubmitReply(rootCommentId, comment._id, content);
     },
-    [onSubmitReply, effectiveParentComment._id, comment._id]
+    [onSubmitReply, rootCommentId, comment._id]
   );
 
   const handleSubmitLocalEdit = useCallback(
     (content) => {
-      const isReply = !!parentComment;
-      onSubmitEdit(
-        isReply ? parentComment._id : null,
-        comment._id,
-        content,
-        isReply
-      );
+      // Pass rootId (if it's a reply), the item's own ID, content, and isReply flag
+      onSubmitEdit(isReply ? rootCommentId : null, comment._id, content, isReply);
     },
-    [onSubmitEdit, comment._id, parentComment]
+    [onSubmitEdit, comment._id, rootCommentId, isReply]
   );
 
+
   const hasNestedReplies = comment.replies && comment.replies.length > 0;
-  const replyTargetName = comment.replyingTo?.fullName || "";
-
-  // Determine avatar size based on depth
-  const avatarSize = isReply ? 30 : 36;
-
-  // Enhanced shade for depth
-  const getBackgroundClass = () => {
-    if (depth === 0) return "bg-white dark:bg-gray-800";
-    if (depth === 1) return "bg-white dark:bg-gray-800/95";
-    if (depth === 2) return "bg-gray-50/80 dark:bg-gray-800/90";
-    return "bg-gray-50/60 dark:bg-gray-800/80";
-  };
+  const replyTargetName = comment.replyingToUser?.fullName || "";
+  const avatarSize = 36; // Consistent size
+  const backgroundClass = "bg-white dark:bg-gray-800/50"; // Keep consistent background
 
   return (
     <motion.div
@@ -194,101 +169,97 @@ const CommentItem = ({
       initial="initial"
       animate="animate"
       exit="exit"
-      className={`${getBackgroundClass()} rounded-lg p-4 shadow-sm transition-all duration-200 ${
-        isEditing ? "ring-2 ring-violet-400 dark:ring-violet-500" : ""
-      } ${isReplying ? "ring-1 ring-violet-200 dark:ring-violet-800" : ""}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className={`${backgroundClass} rounded-lg p-4 transition-colors duration-200 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 relative ${
+        isEditing ? "ring-2 ring-violet-300 dark:ring-violet-600" : ""
+      } ${isReplying ? "ring-1 ring-violet-200 dark:ring-violet-700" : ""}`}
       id={`comment-${comment._id}`}
     >
       <div className="flex gap-3">
-        {/* Enhanced avatar with status indicators */}
-        <div className="relative flex-shrink-0">
+        {/* Avatar */}
+        <div className="relative flex-shrink-0 mt-1">
           <Avatar
             src={comment.user?.profilePicture?.url}
             alt={comment.user?.fullName || "User"}
             sx={{
               width: avatarSize,
               height: avatarSize,
-              bgcolor: isMaker ? "primary.main" : "secondary.main",
+              bgcolor: 'secondary.light', // Consistent bg
+              fontSize: '0.875rem'
             }}
-            className={`flex-shrink-0 ${isMaker ? "ring-2 ring-violet-300 dark:ring-violet-600" : ""}`}
+            className={`flex-shrink-0 ${isMaker ? "ring-1 ring-offset-1 ring-violet-400 dark:ring-violet-500" : ""}`}
           >
-            {comment.user?.firstName?.charAt(0) || <FaUser />}
+            {comment.user?.firstName?.charAt(0) || <FaUser size={16}/>}
           </Avatar>
-          
-          {/* Verified badge for maker or admin */}
           {(isMaker || isAdmin) && (
-            <div className="absolute -bottom-1 -right-1 bg-violet-500 text-white rounded-full p-0.5 border border-white dark:border-gray-800">
-              <BadgeCheck size={10} />
-            </div>
+             <div className="absolute -bottom-1 -right-1 bg-white dark:bg-gray-700 rounded-full p-px">
+               <BadgeCheck
+                 size={14}
+                 className={isAdmin ? "text-blue-500" : "text-violet-500"}
+               />
+             </div>
           )}
         </div>
-        
+
+        {/* Main Content Area */}
         <div className="flex-grow min-w-0">
-          <div className="flex justify-between items-start flex-wrap gap-x-2">
-            <div>
-              <h4 className="font-medium text-sm text-gray-800 dark:text-gray-100 flex items-center group">
-                {comment.user?.fullName || "Anonymous User"}
-                
-                {/* Role badge */}
-                {isMaker && (
-                  <span className="ml-2 text-xs py-0.5 px-1.5 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 rounded-full">
-                    Maker
-                  </span>
-                )}
-                {isAdmin && !isMaker && (
-                  <span className="ml-2 text-xs py-0.5 px-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-full">
-                    Admin
-                  </span>
-                )}
-                
-                {isReply && replyTargetName && (
-                  <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1.5 inline-flex items-center">
-                    <FaReply
-                      className="inline mr-0.5 transform scale-x-[-1]"
-                      size={10}
-                    />
-                    @{replyTargetName.split(" ")[0]}
-                  </span>
-                )}
-              </h4>
-              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                {FormatTimeAgo(comment.createdAt)}
-                {comment.createdAt !== comment.updatedAt && (
-                  <span className="italic ml-1.5 opacity-80">
-                    (edited)
-                  </span>
-                )}
-              </span>
+          {/* User Info */}
+          <div className="flex justify-between items-center flex-wrap gap-x-2 mb-1">
+            <div className="flex items-center gap-2">
+               <h4 className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                 {comment.user?.fullName || "Anonymous User"}
+               </h4>
+               {isMaker && (
+                 <span className="text-[10px] font-medium py-0.5 px-1.5 bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300 rounded">
+                   Maker
+                 </span>
+               )}
+               {isAdmin && !isMaker && (
+                 <span className="text-[10px] font-medium py-0.5 px-1.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded">
+                   Admin
+                 </span>
+               )}
             </div>
+            <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 whitespace-nowrap">
+              {FormatTimeAgo(comment.createdAt)}
+              {comment.createdAt !== comment.updatedAt && (
+                <span className="italic ml-1.5 opacity-70">(edited)</span>
+              )}
+            </span>
           </div>
 
-          {/* Comment Content or Edit Form */}
-          {isEditing ? (
-            <CommentForm
-              user={user}
-              onSubmit={handleSubmitLocalEdit}
-              initialContent={comment.content}
-              onCancel={onCancelEdit}
-              isSubmitting={isSubmitting}
-              submitLabel="Save"
-              placeholder={isReply ? "Edit your reply..." : "Edit your comment..."}
-              autoFocus={true}
-              maxLength={isReply ? 500 : 1000} // Different limits for comments vs replies
-            />
-          ) : (
-            <motion.p 
-              className="text-sm text-gray-700 dark:text-gray-300 mt-2 break-words leading-relaxed whitespace-pre-line"
-              initial={{ opacity: 0.8 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              {comment.content}
-            </motion.p>
+          {/* Replying To Indicator */}
+          {isReply && replyTargetName && (
+             <div className="text-xs font-normal text-gray-500 dark:text-gray-400 mb-1.5 inline-flex items-center bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded">
+               <FaReply className="inline mr-1 transform scale-x-[-1]" size={9} />
+               Replying to @{replyTargetName.split(" ")[0]}
+             </div>
           )}
 
-          {/* Actions only shown when not editing */}
+          {/* Content / Edit Form */}
+          <div className="mt-1">
+            {isEditing ? (
+              <CommentForm
+                user={user}
+                onSubmit={handleSubmitLocalEdit}
+                initialContent={comment.content}
+                onCancel={onCancelEdit}
+                isSubmitting={isSubmitting}
+                submitLabel="Save Edit"
+                placeholder={isReply ? "Edit reply..." : "Edit comment..."}
+                autoFocus={true}
+                maxLength={isReply ? 500 : 1000}
+              />
+            ) : (
+              <div
+                className="prose prose-sm dark:prose-invert prose-p:my-0 max-w-none text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line break-words"
+                // Add dangerouslySetInnerHTML={{ __html: sanitizedHtml }} here if rendering markdown safely
+              >
+                {comment.content}
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
           {!isEditing && (
             <CommentActions
               comment={comment}
@@ -298,89 +269,81 @@ const CommentItem = ({
               onEdit={handleStartEdit}
               onDelete={handleDelete}
               depth={depth}
-              canReply={!isOwnComment && depth < 5} // Disable reply if it's own comment or max depth reached
+              canReply={!isOwnComment && depth < 4} // Limit reply depth
             />
           )}
 
-          {/* Replies toggle with animation */}
+          {/* Replies Toggle */}
           {hasNestedReplies && !isEditing && (
             <motion.button
               onClick={handleToggleReplies}
-              className="mt-3 flex items-center gap-1.5 text-xs font-medium text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 rounded-md px-2 py-1"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+              className="mt-3 flex items-center gap-1 text-xs font-medium text-violet-600 dark:text-violet-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 rounded"
               aria-expanded={showReplies}
               aria-controls={`replies-${comment._id}`}
             >
-              <motion.div
-                animate={{ rotate: showReplies ? 90 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                {showReplies ? <FaChevronDown size={10} /> : <FaChevronRight size={10} />}
+              <motion.div animate={{ rotate: showReplies ? 0 : -90 }} transition={{ duration: 0.2 }}>
+                <FaChevronDown size={9} />
               </motion.div>
               <span>
-                {showReplies ? "Hide" : "Show"} {comment.replies.length}{" "}
+                {comment.replies.length}{" "}
                 {comment.replies.length === 1 ? "reply" : "replies"}
               </span>
             </motion.button>
           )}
-
-          {/* Render Nested Replies */}
-          <AnimatePresence>
-            {showReplies && !isEditing && (
-              <div id={`replies-${comment._id}`}>
-                <NestedReplies
-                  replies={comment.replies}
-                  parentComment={effectiveParentComment}
-                  depth={depth}
-                  user={user}
-                  onLike={onLike}
-                  onStartReply={onStartReply}
-                  onSubmitReply={onSubmitReply}
-                  onCancelReply={onCancelReply}
-                  onStartEdit={onStartEdit}
-                  onSubmitEdit={onSubmitEdit}
-                  onCancelEdit={onCancelEdit}
-                  onDelete={onDelete}
-                  activeReplyId={activeReplyId}
-                  activeEditId={activeEditId}
-                  isSubmitting={isSubmitting}
-                />
-              </div>
-            )}
-          </AnimatePresence>
         </div>
-      </div>
-      
-      {/* Reply Form */}
+      </div> {/* End main flex container */}
+
+      {/* Reply Form Container */}
       <AnimatePresence>
         {isReplying && (
           <motion.div
             key="reply-form"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700"
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: "auto", marginTop: "1rem" }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 35 }}
+            className="pl-5 sm:pl-6" // Indent reply form
           >
+            {/* Pass rootCommentId correctly */}
             <CommentForm
               user={user}
               onSubmit={handleSubmitLocalReply}
               onCancel={onCancelReply}
               isSubmitting={isSubmitting}
-              submitLabel="Reply"
+              submitLabel="Post Reply"
               placeholder={`Replying to ${comment.user?.fullName || "User"}...`}
               autoFocus={true}
-              initialContent={
-                comment.replyMention
-                  ? `@${comment.replyMention.split(" ")[0]} `
-                  : ""
-              }
-              maxLength={500} // Shorter max length for replies
+              maxLength={500}
             />
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Nested Replies Container */}
+      <AnimatePresence initial={false}>
+        {showReplies && hasNestedReplies && !isEditing && (
+           <div id={`replies-${comment._id}`}>
+             <NestedReplies
+               replies={comment.replies}
+               parentComment={comment} // Current comment is parent for next level
+               depth={depth} // Current depth
+               user={user}
+               onLike={onLike}
+               onStartReply={onStartReply}
+               onSubmitReply={onSubmitReply}
+               onCancelReply={onCancelReply}
+               onStartEdit={onStartEdit}
+               onSubmitEdit={onSubmitEdit}
+               onCancelEdit={onCancelEdit}
+               onDelete={onDelete} // Pass onDelete correctly
+               activeReplyId={activeReplyId}
+               activeEditId={activeEditId}
+               isSubmitting={isSubmitting}
+             />
+           </div>
+        )}
+      </AnimatePresence>
+
     </motion.div>
   );
 };

@@ -10,15 +10,31 @@ import { makePriorityRequest } from "../../../Utils/api";
 
 
 
-const NewProductsSection = () => {
+const NewProductsSection = ({ products = [], isLoading: externalLoading = false, error: externalError = null }) => {
   const { getNewRecommendations } = useRecommendation();
-  const [newProducts, setNewProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [newProducts, setNewProducts] = useState(products);
+  const [isLoading, setIsLoading] = useState(externalLoading);
+  const [error, setError] = useState(externalError);
+
+  // Update local state when props change
+  useEffect(() => {
+    if (products.length > 0) {
+      setNewProducts(products);
+      setIsLoading(false);
+    }
+    if (externalError) {
+      setError(externalError);
+    }
+  }, [products, externalError]);
 
   useEffect(() => {
     let isMounted = true;
     let abortController = new AbortController();
+
+    // Skip fetching if we already have products from props
+    if (products.length > 0) {
+      return;
+    }
 
     const fetchNewProducts = async () => {
       // Only show loading state if we don't have any data yet
@@ -244,7 +260,7 @@ const NewProductsSection = () => {
       isMounted = false;
       abortController.abort();
     };
-  }, [getNewRecommendations, error, newProducts.length]);
+  }, [getNewRecommendations, error, newProducts.length, products.length]);
 
   return (
     <div>

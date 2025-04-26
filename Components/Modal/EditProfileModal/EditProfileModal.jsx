@@ -331,6 +331,15 @@ const EditProfileModal = ({ isOpen, onClose }) => {
     exit: { opacity: 0, transition: { duration: 0.2 } }
   };
 
+  // We're using layoutId for the tab indicator, so we don't need these variants
+
+  // Tab content animation variants
+  const tabContentVariants = {
+    hidden: { opacity: 0, x: -10 },
+    visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
+    exit: { opacity: 0, x: 10, transition: { duration: 0.2 } }
+  };
+
   const tabs = [
     { id: "basics", label: "Profile Basics", icon: FiUser },
     { id: "details", label: "Profile Details", icon: FiInfo },
@@ -365,7 +374,7 @@ const EditProfileModal = ({ isOpen, onClose }) => {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="h-full fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-[10px]"
+          className="h-full fixed inset-0 z-50 overflow-y-auto bg-gradient-to-br from-black/40 to-black/60 backdrop-blur-[12px]"
           variants={overlayVariants}
           initial="hidden"
           animate="visible"
@@ -373,151 +382,337 @@ const EditProfileModal = ({ isOpen, onClose }) => {
         >
           <div className="flex items-center justify-center w-full px-4 py-6">
             <motion.div
-              className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden fixed top-[5rem]"
+              className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden fixed top-[5rem] border border-gray-100"
               variants={modalVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
+              style={{
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1)"
+              }}
             >
               {/* Decorative elements */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-violet-50 rounded-full opacity-20 -mr-32 -mt-32 z-0"></div>
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-50 rounded-full opacity-20 -ml-32 -mb-32 z-0"></div>
 
               {/* Header */}
-              <div className="relative z-10 flex items-center justify-between p-6 border-b border-gray-100">
+              <motion.div
+                className="relative z-10 p-6 bg-gradient-to-r from-violet-100/50 to-white border-b border-gray-100 flex justify-between items-center"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.3, ease: "easeOut" }}
+              >
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Edit Profile</h2>
-                  <p className="mt-1 text-sm text-gray-500">Update your profile information and preferences</p>
+                  <motion.h2
+                    className="text-2xl font-bold text-gray-800 flex items-center gap-2"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2, duration: 0.3 }}
+                  >
+                    <motion.span
+                      className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center shadow-sm"
+                      initial={{ scale: 0.8, rotate: -10 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ delay: 0.3, duration: 0.4, type: "spring" }}
+                    >
+                      <FiUser className="w-5 h-5 text-violet-600" />
+                    </motion.span>
+                    <span className="bg-gradient-to-r from-violet-700 to-indigo-600 text-transparent bg-clip-text">Edit Profile</span>
+                  </motion.h2>
+                  <motion.p
+                    className="text-gray-500 mt-1 ml-10"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4, duration: 0.3 }}
+                  >
+                    Update your personal information and preferences
+                  </motion.p>
                 </div>
-                <button
+                <motion.button
                   onClick={onClose}
-                  className="p-2 text-gray-400 hover:text-gray-500 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
-                  aria-label="Close"
+                  className="text-gray-400 hover:text-violet-600 p-2 rounded-full hover:bg-violet-50 transition-all duration-200"
+                  aria-label="Close modal"
+                  whileHover={{ scale: 1.05, rotate: 90 }}
+                  whileTap={{ scale: 0.95 }}
+                  initial={{ opacity: 0, rotate: 45 }}
+                  animate={{ opacity: 1, rotate: 0 }}
+                  transition={{ delay: 0.3, duration: 0.3 }}
                 >
                   <HiX className="w-6 h-6" />
-                </button>
-              </div>
+                </motion.button>
+              </motion.div>
 
               {/* Tabs */}
-              <div className="relative z-10 border-b border-gray-100 px-6 bg-white">
-                <nav className="flex space-x-1 overflow-x-auto hide-scrollbar" aria-label="Tabs">
-                  {filteredTabs.map((tab) => {
+              <motion.div
+                className="relative z-10 border-b border-gray-100 px-6 bg-white"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.3 }}
+              >
+                <div className="flex space-x-1 py-2 w-full overflow-x-auto hide-scrollbar">
+                  {filteredTabs.map((tab, index) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
                     return (
-                      <button
+                      <motion.button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center py-4 px-4 border-b-2 font-medium text-sm whitespace-nowrap transition-all ${isActive
-                          ? "border-violet-500 text-violet-600 bg-violet-50 bg-opacity-50"
-                          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50"}`}
+                        className={`relative flex items-center space-x-1.5 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${
+                          isActive
+                            ? "text-violet-700"
+                            : "text-gray-500 hover:text-violet-600"
+                        }`}
+                        whileHover={{
+                          backgroundColor: isActive ? "rgba(237, 233, 254, 0.4)" : "rgba(237, 233, 254, 0.2)",
+                          y: -1
+                        }}
+                        whileTap={{ y: 0, backgroundColor: "rgba(237, 233, 254, 0.5)" }}
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          transition: { delay: 0.1 + (index * 0.05), duration: 0.2 }
+                        }}
                       >
-                        <Icon className={`mr-2 ${isActive ? "text-violet-500" : "text-gray-400"}`} />
-                        {tab.label}
-                      </button>
+                        {/* Active tab background */}
+                        {isActive && (
+                          <motion.div
+                            className="absolute inset-0 bg-violet-50/80 rounded-md border border-violet-100/50"
+                            layoutId="tabBackground"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                          />
+                        )}
+
+                        <motion.div
+                          className="flex items-center space-x-1.5 relative z-10"
+                          animate={isActive ? { scale: 1.02 } : { scale: 1 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <Icon className={`w-4 h-4 ${isActive ? "text-violet-600" : "text-gray-400"}`} />
+                          <span className="whitespace-nowrap">{tab.label}</span>
+                        </motion.div>
+                      </motion.button>
                     );
                   })}
-                </nav>
-              </div>
+                </div>
+
+                {/* Bottom indicator line */}
+                <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gray-100">
+                  <motion.div
+                    className="absolute bottom-0 h-[2px] bg-gradient-to-r from-violet-500 to-indigo-500"
+                    layoutId="tabIndicator"
+                    style={{
+                      left: `${(100 / filteredTabs.length) * filteredTabs.findIndex(t => t.id === activeTab)}%`,
+                      width: `${100 / filteredTabs.length}%`
+                    }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                </div>
+              </motion.div>
 
               {/* Content */}
-              <div className="relative z-10 p-6 max-h-[calc(100vh-20rem)] overflow-y-auto bg-white">
+              <motion.div
+                className="relative z-10 p-6 max-h-[calc(100vh-20rem)] overflow-y-auto bg-white"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <AnimatePresence>
+                  <AnimatePresence mode="wait">
                     {activeTab === "basics" && (
-                      <ProfileBasicsSection
-                        formData={formData}
-                        setFormData={setFormData}
-                        validationErrors={validationErrors}
-                        setValidationErrors={setValidationErrors}
-                        setHasUnsavedChanges={setHasUnsavedChanges}
-                      />
+                      <motion.div
+                        key="basics-tab"
+                        variants={tabContentVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                      >
+                        <ProfileBasicsSection
+                          formData={formData}
+                          setFormData={setFormData}
+                          validationErrors={validationErrors}
+                          setValidationErrors={setValidationErrors}
+                          setHasUnsavedChanges={setHasUnsavedChanges}
+                        />
+                      </motion.div>
                     )}
                     {activeTab === "details" && (
-                      <ProfileDetailsSection
-                        formData={formData}
-                        setFormData={setFormData}
-                        validationErrors={validationErrors}
-                        setValidationErrors={setValidationErrors}
-                        setHasUnsavedChanges={setHasUnsavedChanges}
-                      />
+                      <motion.div
+                        key="details-tab"
+                        variants={tabContentVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                      >
+                        <ProfileDetailsSection
+                          formData={formData}
+                          setFormData={setFormData}
+                          validationErrors={validationErrors}
+                          setValidationErrors={setValidationErrors}
+                          setHasUnsavedChanges={setHasUnsavedChanges}
+                        />
+                      </motion.div>
                     )}
                     {activeTab === "interests" && (
-                      <SkillsInterestsSection
-                        formData={formData}
-                        setFormData={setFormData}
-                        validationErrors={validationErrors}
-                        setValidationErrors={setValidationErrors}
-                        setHasUnsavedChanges={setHasUnsavedChanges}
-                      />
+                      <motion.div
+                        key="interests-tab"
+                        variants={tabContentVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                      >
+                        <SkillsInterestsSection
+                          formData={formData}
+                          setFormData={setFormData}
+                          validationErrors={validationErrors}
+                          setValidationErrors={setValidationErrors}
+                          setHasUnsavedChanges={setHasUnsavedChanges}
+                        />
+                      </motion.div>
                     )}
                     {activeTab === "social" && (
-                      <SocialLinksSection
-                        formData={formData}
-                        setFormData={setFormData}
-                        validationErrors={validationErrors}
-                        setValidationErrors={setValidationErrors}
-                        setHasUnsavedChanges={setHasUnsavedChanges}
-                      />
+                      <motion.div
+                        key="social-tab"
+                        variants={tabContentVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                      >
+                        <SocialLinksSection
+                          formData={formData}
+                          setFormData={setFormData}
+                          validationErrors={validationErrors}
+                          setValidationErrors={setValidationErrors}
+                          setHasUnsavedChanges={setHasUnsavedChanges}
+                        />
+                      </motion.div>
                     )}
                     {activeTab === "location" && (
-                      <LocationSection
-                        formData={formData}
-                        setFormData={setFormData}
-                        validationErrors={validationErrors}
-                        setValidationErrors={setValidationErrors}
-                        setHasUnsavedChanges={setHasUnsavedChanges}
-                      />
+                      <motion.div
+                        key="location-tab"
+                        variants={tabContentVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                      >
+                        <LocationSection
+                          formData={formData}
+                          setFormData={setFormData}
+                          validationErrors={validationErrors}
+                          setValidationErrors={setValidationErrors}
+                          setHasUnsavedChanges={setHasUnsavedChanges}
+                        />
+                      </motion.div>
                     )}
                     {activeTab === "professional" && (
-                      <ProfessionalSection
-                        formData={formData}
-                        setFormData={setFormData}
-                        validationErrors={validationErrors}
-                        setValidationErrors={setValidationErrors}
-                        setHasUnsavedChanges={setHasUnsavedChanges}
-                      />
+                      <motion.div
+                        key="professional-tab"
+                        variants={tabContentVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                      >
+                        <ProfessionalSection
+                          formData={formData}
+                          setFormData={setFormData}
+                          validationErrors={validationErrors}
+                          setValidationErrors={setValidationErrors}
+                          setHasUnsavedChanges={setHasUnsavedChanges}
+                        />
+                      </motion.div>
                     )}
                     {activeTab === "role" && (
-                      <RoleSpecificSection
-                        formData={formData}
-                        setFormData={setFormData}
-                        setHasUnsavedChanges={setHasUnsavedChanges}
-                      />
+                      <motion.div
+                        key="role-tab"
+                        variants={tabContentVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                      >
+                        <RoleSpecificSection
+                          formData={formData}
+                          setFormData={setFormData}
+                          setHasUnsavedChanges={setHasUnsavedChanges}
+                        />
+                      </motion.div>
                     )}
                   </AnimatePresence>
                 </form>
-              </div>
+              </motion.div>
 
               {/* Footer */}
-              <div className="relative z-10 flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-white rounded-b-2xl">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1 transition-all duration-200 shadow-sm"
-                  disabled={authLoading}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  className="px-5 py-2.5 text-sm font-medium text-white bg-violet-600 rounded-xl hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm flex items-center gap-2"
-                  disabled={authLoading || !hasUnsavedChanges}
-                >
-                  {authLoading ? (
-                    <>
-                      <LoaderComponent size="small" color="white" text="" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                      <FiSave className="w-4 h-4" />
-                      <span>Save Changes</span>
-                    </>
-                  )}
-                </button>
-              </div>
+              <motion.div
+                className="relative z-10 flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gradient-to-r from-white to-violet-50/30 rounded-b-2xl"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.4 }}
+              >
+                <div className="flex text-sm">
+                  <AnimatePresence mode="wait">
+                    {hasUnsavedChanges && (
+                      <motion.span
+                        key="unsaved-changes"
+                        className="text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-100 flex items-center gap-1 shadow-sm"
+                        initial={{ opacity: 0, scale: 0.8, x: -10 }}
+                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                        exit={{ opacity: 0, scale: 0.8, x: -10 }}
+                        transition={{ duration: 0.3, type: "spring" }}
+                      >
+                        <FiInfo className="w-4 h-4" />
+                        You have unsaved changes
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className="flex space-x-4">
+                  <motion.button
+                    type="button"
+                    onClick={onClose}
+                    className="px-5 py-2.5 bg-white border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow font-medium"
+                    disabled={authLoading}
+                    whileHover={{ y: -2, backgroundColor: "#f9fafb" }}
+                    whileTap={{ y: 0, scale: 0.98 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4, duration: 0.2 }}
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={authLoading || !hasUnsavedChanges}
+                    className="px-6 py-2.5 bg-gradient-to-r from-violet-600 to-violet-700 text-white rounded-lg hover:from-violet-700 hover:to-violet-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm hover:shadow font-medium"
+                    whileHover={{ y: -2, boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)" }}
+                    whileTap={{ y: 0, scale: 0.98 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5, duration: 0.2 }}
+                  >
+                    {authLoading ? (
+                      <>
+                        <LoaderComponent size="small" color="white" text="" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <motion.div
+                          initial={{ rotate: -10, scale: 0.9 }}
+                          animate={{ rotate: 0, scale: 1 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <FiSave className="w-5 h-5" />
+                        </motion.div>
+                        <span>Save Changes</span>
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              </motion.div>
             </motion.div>
           </div>
         </motion.div>

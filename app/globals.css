@@ -3,21 +3,21 @@
 @tailwind utilities;
 
 :root {
-  --background: #f5f5ff; /* Light mode base */
+  --background: #f5f5ff;
   --foreground: #6e6e6e;
-  --primary: #7c3aed; /* violet-600 */
-  --secondary: #a78bfa; /* violet-400 */
-  --accent: #8b5cf6; /* violet-500 */
-  --accent-dark: #6d28d9; /* violet-700 */
-  --border: #d8b4fe; /* violet-200 */
-  --radius: 0.75rem; /* Softer, futuristic curves */
-  --dark: #1e1b4b; /* indigo-950 for dark mode */
-  --para: #c4b5fd; /* violet-300 */
+  --primary: #7c3aed;
+  --secondary: #a78bfa;
+  --accent: #8b5cf6;
+  --accent-dark: #6d28d9;
+  --border: #d8b4fe;
+  --radius: 0.75rem;
+  --dark: #1e1b4b;
+  --para: #c4b5fd;
   --white: #ffffff;
-  --light: #ede9fe; /* violet-100 */
+  --light: #ede9fe;
   --black: #000000;
-  --violet-glow: #8b5cf6; /* violet-500 */
-  --violet-glow-dark: #7c3aed; /* violet-600 */
+  --violet-glow: #8b5cf6;
+  --violet-glow-dark: #7c3aed;
   --sm: 0.9rem;
   --nm: 1rem;
   --md: 1.2rem;
@@ -29,30 +29,16 @@
 }
 
 .dark {
-  --background: #1e1b4b; /* Deep indigo/violet dark mode */
-  --foreground: #e9d5ff; /* violet-200 for text */
-  --border: #6d28d9; /* violet-700 */
+  --background: #1e1b4b;
+  --foreground: #e9d5ff;
+  --border: #6d28d9;
   --radius: 0.5rem;
 }
 
-@layer base {
-  /* Applying the background and foreground colors */
-  body {
-    @apply bg-background text-foreground;
-  }
-  .bg-background {
-    background-color: var(--background);
-  }
-  .text-foreground {
-    color: var(--foreground);
-  }
-  /* Define other classes as needed */
-}
-
-/* Animations */
 @keyframes blob {
-  0% {
-    transform: translate(0px, 0px) scale(1);
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
   }
   33% {
     transform: translate(30px, -50px) scale(1.1);
@@ -60,19 +46,14 @@
   66% {
     transform: translate(-20px, 20px) scale(0.9);
   }
-  100% {
-    transform: translate(0px, 0px) scale(1);
-  }
 }
 
 .animate-blob {
   animation: blob 7s infinite;
 }
-
 .animation-delay-2000 {
   animation-delay: 2s;
 }
-
 .animation-delay-4000 {
   animation-delay: 4s;
 }
@@ -91,7 +72,6 @@
 .animation-delay-150 {
   animation-delay: 150ms;
 }
-
 .animate-fade-in-down {
   animation: fadeInDown 0.6s ease-out;
 }
@@ -107,7 +87,6 @@
   }
 }
 
-/* Keyframes for Shimmer Effect */
 @keyframes shimmer {
   0% {
     background-position: -100% 0;
@@ -120,10 +99,7 @@
 .skeleton-shimmer::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: linear-gradient(
     to right,
     transparent 0%,
@@ -132,7 +108,7 @@
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite linear;
-  border-radius: inherit; /* Ensure shimmer respects parent's border-radius */
+  border-radius: inherit;
 }
 
 .dark .skeleton-shimmer::before {
@@ -142,10 +118,8 @@
     theme("colors.gray.600/50") 50%,
     transparent 100%
   );
-  background-size: 200% 100%; /* Re-apply size for dark */
 }
 
-/* Pulsating Glow Effect */
 @keyframes pulseGlow {
   0%,
   100% {
@@ -156,7 +130,6 @@
   }
 }
 
-/* Floating Particle Effect */
 @keyframes floatParticle {
   0% {
     transform: translate(0, 0) scale(1);
@@ -172,7 +145,6 @@
   }
 }
 
-/* 3D Flip Effect */
 @keyframes flip3D {
   0% {
     transform: perspective(600px) rotateY(0deg);
@@ -185,20 +157,16 @@
   }
 }
 
-/* Neon Wave Effect */
 @keyframes neonWave {
-  0% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {
     background-position: 100% 50%;
   }
-  100% {
-    background-position: 0% 50%;
-  }
 }
 
-/* Dynamic Burst */
 @keyframes burst {
   0% {
     transform: scale(1);
@@ -210,27 +178,23 @@
   }
 }
 
-/* Slow ping animation for timeline dots */
 @keyframes ping-slow {
-  75%, 100% {
+  75%,
+  100% {
     transform: scale(2);
     opacity: 0;
   }
 }
 
-/* Apply to elements */
 .glow-pulse {
   animation: pulseGlow 2s infinite ease-in-out;
 }
-
 .float-particle {
   animation: floatParticle 5s infinite ease-in-out;
 }
-
 .flip-3d {
   animation: flip3D 4s infinite ease-in-out;
 }
-
 .neon-wave-bg {
   background: linear-gradient(
     90deg,
@@ -241,16 +205,13 @@
   background-size: 200% 200%;
   animation: neonWave 6s infinite ease-in-out;
 }
-
 .burst-effect {
   animation: burst 0.5s ease-out forwards;
 }
-
 .animate-ping-slow {
   animation: ping-slow 3s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
-/* Add this class definition to your existing CSS */
 .bg-radial-gradient {
   background: radial-gradient(
     circle at center,
@@ -278,3 +239,94 @@
 .hide-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: rgba(79, 70, 229, 0.6);
 }
+
+@layer utilities {
+  .hide-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99, 102, 241, 0.4) transparent;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .hide-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .hide-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(99, 102, 241, 0.4);
+    border-radius: 10px;
+  }
+  .hide-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(99, 102, 241, 0.6);
+  }
+}
+
+.simple-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.simple-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.simple-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(167, 139, 250, 0.3);
+  border-radius: 10px;
+  border: none;
+}
+
+.dark .simple-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(124, 58, 237, 0.4);
+}
+
+.bg-grid-gray-700\/\[0\.2\] {
+  background-image: linear-gradient(
+      to right,
+      rgba(55, 65, 81, 0.2) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgba(55, 65, 81, 0.2) 1px, transparent 1px);
+}
+.bg-grid-violet-100\/\[0\.4\] {
+  background-image: linear-gradient(
+      to right,
+      rgba(221, 214, 254, 0.4) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgba(221, 214, 254, 0.4) 1px, transparent 1px);
+}
+
+@layer utilities {
+  .bg-grid-gray-700\/\[0\.15\] {
+    background-image: linear-gradient(
+        to right,
+        rgba(55, 65, 81, 0.15) 1px,
+        transparent 1px
+      ),
+      linear-gradient(to bottom, rgba(55, 65, 81, 0.15) 1px, transparent 1px);
+  }
+  .bg-grid-violet-100\/\[0\.3\] {
+    background-image: linear-gradient(
+        to right,
+        rgba(221, 214, 254, 0.3) 1px,
+        transparent 1px
+      ),
+      linear-gradient(to bottom, rgba(221, 214, 254, 0.3) 1px, transparent 1px);
+  }
+}
+
+/* Loader for Spline component */
+@keyframes loader-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loader {
+  width: 48px;
+  height: 48px;
+  border: 5px solid rgba(124, 58, 237, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--primary);
+  animation: loader-spin 1s linear infinite;
+  display: inline-block;
+}
+

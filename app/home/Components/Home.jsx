@@ -5,7 +5,6 @@ import React, {
   useEffect,
   useCallback,
   useRef,
-  useMemo,
   lazy,
   Suspense,
 } from "react";
@@ -52,18 +51,37 @@ const SectionWrapper = ({ children, delay = 0, className = "" }) => (
   </motion.div>
 );
 
-// Section divider component
-const SectionDivider = () => (
-  <div className="my-12 border-t border-gray-100"></div>
+// Border divider used in the layout
+const BorderDivider = () => (
+  <div className="my-8 border-t border-gray-100"></div>
 );
 
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
-  const { recordInteraction } = useRecommendation();
+  const {
+    recordInteraction,
+    getTrendingRecommendations,
+    getPersonalizedRecommendations,
+    getNewRecommendations,
+    getCollaborativeRecommendations,
+    getFeedRecommendations,
+    getInterestsRecommendations
+  } = useRecommendation();
   const { showToast } = useToast();
   const [userType, setUserType] = useState("general");
   const [pageLoaded, setPageLoaded] = useState(false);
   const rateLimitWarningShown = useRef(false);
+  const hasInitiallyFetched = useRef(false);
+
+  // Centralized state for all recommendations
+  const [recommendations, setRecommendations] = useState({
+    trending: { data: [], loading: true, error: null },
+    personalized: { data: [], loading: true, error: null },
+    new: { data: [], loading: true, error: null },
+    collaborative: { data: [], loading: true, error: null },
+    feed: { data: [], loading: true, error: null },
+    interests: { data: [], loading: true, error: null },
+  });
 
   // Determine user type for personalized content
   useEffect(() => {
@@ -133,9 +151,161 @@ export default function Home() {
     };
   }, [isAuthenticated, userType, recordInteraction]);
 
-  // Set page loaded state and check for rate limiting
-  useEffect(() => {
+  // Centralized data fetching function
+  const fetchAllRecommendations = useCallback(async () => {
+    // Set page loaded state
     setPageLoaded(true);
+
+    // Check if we've fetched recently to avoid excessive API calls
+    const lastFetchKey = 'home_recommendations_last_fetch';
+    const lastFetch = parseInt(sessionStorage.getItem(lastFetchKey) || '0');
+    const now = Date.now();
+    const refreshInterval = 5 * 60 * 1000; // 5 minutes
+
+    // If we've fetched recently, don't fetch again
+    if (now - lastFetch < refreshInterval) {
+      logger.debug('Using cached home recommendations (fetched ' + Math.round((now - lastFetch) / 1000) + ' seconds ago)');
+      return;
+    }
+
+    // Store the fetch time
+    try {
+      sessionStorage.setItem(lastFetchKey, now.toString());
+    } catch (e) {
+      // Ignore storage errors
+    }
+
+    // Helper function to update a specific recommendation type
+    const updateRecommendation = (type, data, error = null) => {
+      setRecommendations(prev => ({
+        ...prev,
+        [type]: {
+          data: data || [],
+          loading: false,
+          error
+        }
+      }));
+    };
+
+    // Start with feed recommendations as they're most comprehensive
+    try {
+      const feedResults = await getFeedRecommendations(12, 0, false);
+      updateRecommendation('feed', feedResults);
+
+      // Extract products by source from feed results to avoid duplicate requests
+      const trendingFromFeed = feedResults.filter(item => item.reason === 'trending');
+      const personalizedFromFeed = feedResults.filter(item => item.reason === 'personalized');
+      const newFromFeed = feedResults.filter(item => item.reason === 'new');
+
+      // Only fetch specific recommendation types if we don't have enough from the feed
+      if (trendingFromFeed.length < 6) {
+        const trendingResults = await getTrendingRecommendations(6, 0, 7, false);
+        updateRecommendation('trending', trendingResults);
+      } else {
+        updateRecommendation('trending', trendingFromFeed);
+      }
+
+      if (isAuthenticated) {
+        // Only fetch personalized if authenticated and not enough from feed
+        if (personalizedFromFeed.length < 6) {
+          const personalizedResults = await getPersonalizedRecommendations(6, 0, false);
+          updateRecommendation('personalized', personalizedResults);
+        } else {
+          updateRecommendation('personalized', personalizedFromFeed);
+        }
+
+        // Fetch collaborative separately as they're not in the feed
+        try {
+          const collaborativeResults = await getCollaborativeRecommendations(10, 0, false);
+          updateRecommendation('collaborative', collaborativeResults);
+        } catch (error) {
+          logger.error('Failed to fetch collaborative recommendations:', error);
+          updateRecommendation('collaborative', [], error);
+        }
+
+        // Fetch interests separately as they might not be in the feed
+        try {
+          const interestsResults = await getInterestsRecommendations(12, 0, false);
+          updateRecommendation('interests', interestsResults);
+        } catch (error) {
+          logger.error('Failed to fetch interests recommendations:', error);
+          updateRecommendation('interests', [], error);
+        }
+      }
+
+      // Only fetch new products if not enough from feed
+      if (newFromFeed.length < 6) {
+        const newResults = await getNewRecommendations(6, 0, 14, false);
+        updateRecommendation('new', newResults);
+      } else {
+        updateRecommendation('new', newFromFeed);
+      }
+    } catch (error) {
+      logger.error('Failed to fetch feed recommendations:', error);
+      updateRecommendation('feed', [], error);
+
+      // If feed fails, fetch each type individually
+      try {
+        const trendingResults = await getTrendingRecommendations(6, 0, 7, false);
+        updateRecommendation('trending', trendingResults);
+      } catch (error) {
+        logger.error('Failed to fetch trending recommendations:', error);
+        updateRecommendation('trending', [], error);
+      }
+
+      if (isAuthenticated) {
+        try {
+          const personalizedResults = await getPersonalizedRecommendations(6, 0, false);
+          updateRecommendation('personalized', personalizedResults);
+        } catch (error) {
+          logger.error('Failed to fetch personalized recommendations:', error);
+          updateRecommendation('personalized', [], error);
+        }
+
+        try {
+          const collaborativeResults = await getCollaborativeRecommendations(10, 0, false);
+          updateRecommendation('collaborative', collaborativeResults);
+        } catch (error) {
+          logger.error('Failed to fetch collaborative recommendations:', error);
+          updateRecommendation('collaborative', [], error);
+        }
+
+        try {
+          const interestsResults = await getInterestsRecommendations(12, 0, false);
+          updateRecommendation('interests', interestsResults);
+        } catch (error) {
+          logger.error('Failed to fetch interests recommendations:', error);
+          updateRecommendation('interests', [], error);
+        }
+      }
+
+      try {
+        const newResults = await getNewRecommendations(6, 0, 14, false);
+        updateRecommendation('new', newResults);
+      } catch (error) {
+        logger.error('Failed to fetch new recommendations:', error);
+        updateRecommendation('new', [], error);
+      }
+    }
+  }, [
+    isAuthenticated,
+    getFeedRecommendations,
+    getTrendingRecommendations,
+    getPersonalizedRecommendations,
+    getNewRecommendations,
+    getCollaborativeRecommendations,
+    getInterestsRecommendations
+    // Removed pageLoaded to prevent unnecessary re-renders
+  ]);
+
+  // Set page loaded state, fetch data, and check for rate limiting
+  useEffect(() => {
+    // Fetch all recommendations when component mounts - only once
+    // Using a ref to ensure we only fetch once per component lifecycle
+    if (!pageLoaded && !hasInitiallyFetched.current) {
+      hasInitiallyFetched.current = true;
+      fetchAllRecommendations();
+    }
 
     const checkRateLimiting = () => {
       try {
@@ -167,7 +337,7 @@ export default function Home() {
     const interval = setInterval(checkRateLimiting, 10000);
 
     return () => clearInterval(interval);
-  }, [showToast]);
+  }, [showToast, fetchAllRecommendations]);
 
   // Handle search from hero section
   const handleSearch = useCallback((query) => {
@@ -183,7 +353,11 @@ export default function Home() {
         {/* Trending Section - Always first for maximum visibility */}
         <SectionWrapper>
           <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
-            <TrendingProductsSection />
+            <TrendingProductsSection
+              products={recommendations.trending.data}
+              isLoading={recommendations.trending.loading}
+              error={recommendations.trending.error}
+            />
           </div>
         </SectionWrapper>
 
@@ -191,7 +365,12 @@ export default function Home() {
         {isAuthenticated && (
           <SectionWrapper delay={0.1}>
             <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
-              <PersonalizedSection componentName="home" />
+              <PersonalizedSection
+                componentName="home"
+                products={recommendations.personalized.data}
+                isLoading={recommendations.personalized.loading}
+                error={recommendations.personalized.error}
+              />
             </div>
           </SectionWrapper>
         )}
@@ -212,7 +391,11 @@ export default function Home() {
                 Recently launched products
               </p>
             </div>
-            <NewProductsSection />
+            <NewProductsSection
+              products={recommendations.new.data}
+              isLoading={recommendations.new.loading}
+              error={recommendations.new.error}
+            />
           </div>
         </SectionWrapper>
 
@@ -220,7 +403,12 @@ export default function Home() {
         {isAuthenticated && (
           <SectionWrapper delay={0.3}>
             <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
-              <CommunityPicksSection componentName="home" />
+              <CommunityPicksSection
+                componentName="home"
+                products={recommendations.collaborative.data}
+                isLoading={recommendations.collaborative.loading}
+                error={recommendations.collaborative.error}
+              />
             </div>
           </SectionWrapper>
         )}
@@ -228,7 +416,12 @@ export default function Home() {
         {/* Hybrid Feed Section - Diverse content for all users */}
         <SectionWrapper delay={isAuthenticated ? 0.3 : 0.2}>
           <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
-            <HybridFeedSection componentName="home" />
+            <HybridFeedSection
+              componentName="home"
+              products={recommendations.feed.data}
+              isLoading={recommendations.feed.loading}
+              error={recommendations.feed.error}
+            />
           </div>
         </SectionWrapper>
 
@@ -236,7 +429,12 @@ export default function Home() {
         {isAuthenticated && (
           <SectionWrapper delay={0.4}>
             <div className="bg-white rounded-xl overflow-hidden border border-gray-100">
-              <InterestBasedSection componentName="home" />
+              <InterestBasedSection
+                componentName="home"
+                products={recommendations.interests.data}
+                isLoading={recommendations.interests.loading}
+                error={recommendations.interests.error}
+              />
             </div>
           </SectionWrapper>
         )}
@@ -344,7 +542,7 @@ export default function Home() {
           <HeroSection onSearch={handleSearch} />
         </SectionWrapper>
 
-        <div className="my-8 border-t border-gray-100"></div>
+        <BorderDivider />
 
         {/* Floating action button for mobile with minimalistic design */}
         <div className="lg:hidden fixed bottom-20 right-4 z-40">

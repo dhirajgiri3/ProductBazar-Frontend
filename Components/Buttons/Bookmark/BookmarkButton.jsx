@@ -1,15 +1,55 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useProduct } from "../../../Contexts/Product/ProductContext"; // Adjust path as needed
-import { useAuth } from "../../../Contexts/Auth/AuthContext";         // Adjust path as needed
-import { useToast } from "../../../Contexts/Toast/ToastContext";     // Adjust path as needed
-import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext"; // Adjust path as needed
-import { addProductToMapping } from "../../../Utils/productMappingUtils"; // Adjust path as needed
-import eventBus, { EVENT_TYPES } from "../../../Utils/eventBus";       // Adjust path as needed
-import logger from "../../../Utils/logger";                           // Adjust path as needed
-import AnimatedBookmarkIcon from "./AnimatedBookmarkIcon";           // Import our custom animated icon
+import { useProduct } from "../../../Contexts/Product/ProductContext";
+import { useAuth } from "../../../Contexts/Auth/AuthContext";
+import { useToast } from "../../../Contexts/Toast/ToastContext";
+import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext";
+import { addProductToMapping } from "../../../Utils/productMappingUtils";
+import eventBus, { EVENT_TYPES } from "../../../Utils/eventBus";
+import logger from "../../../Utils/logger";
 
+/**
+ * A bookmark icon component.
+ * Changes appearance based on the bookmarked state.
+ */
+const BookmarkIcon = ({ isBookmarked, size = "md", className = "" }) => {
+  // Size definitions
+  const sizeMap = {
+    sm: { width: 16, height: 16, strokeWidth: 1.5 },
+    md: { width: 20, height: 20, strokeWidth: 1.5 },
+    lg: { width: 24, height: 24, strokeWidth: 1.5 },
+  };
+
+  const { width, height, strokeWidth } = sizeMap[size] || sizeMap.md;
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={width}
+      height={height}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`${className} transition-all duration-200`}
+      aria-hidden="true"
+    >
+      <path
+        d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
+        fill={isBookmarked ? "currentColor" : "none"}
+      />
+    </svg>
+  );
+};
+
+/**
+ * A button component for bookmarking a product.
+ * Features optimistic UI, loading/disabled states, auth checks,
+ * owner restrictions, real-time updates, and interaction recording.
+ */
 const BookmarkButton = ({
   product, // The full product object is preferred
   slug, // Can be provided as an alternative if product object is minimal
@@ -113,39 +153,149 @@ const BookmarkButton = ({
     };
   }, []);
 
-  // Effect to listen for global bookmark events from EventBus
+  // Effect to listen for global bookmark events from EventBus and Socket
   useEffect(() => {
-    if (!productSlug && !productId) return;
+    if (!productSlug && !productId) {
+      return;
+    }
 
-    const handleGlobalUpdate = (data) => {
-      if ((productSlug && data.slug === productSlug) || (productId && data.productId === productId)) {
-        if (isMounted.current) {
-          logger.debug(`BookmarkButton: Global event received for ${productSlug || productId}`, data);
-          // Update count
-          if (data.count !== undefined && data.count !== count) {
-             setCount(data.count);
+    // Get the socket instance
+    const socket = window.socket;
+
+    // Create stable references to current state values
+    // This prevents the effect from re-running when these values change
+    const currentProductId = productId;
+    const currentProductSlug = productSlug;
+    const currentUserId = user?._id;
+
+    const handleBookmarkUpdate = (data) => {
+      // Check if this event is for our product
+      const isForThisProduct =
+        (currentProductSlug && data.slug === currentProductSlug) ||
+        (currentProductId && data.productId === currentProductId);
+
+      if (!isForThisProduct || !isMounted.current) return;
+
+      // Update count if it changed
+      if (data.count !== undefined) {
+        setCount(prevCount => {
+          if (data.count !== prevCount) {
+            return data.count;
           }
+          return prevCount;
+        });
+      }
 
-          // Update bookmarked status
-          let currentUserId = user?._id || localStorage.getItem('userId');
-          const isCurrentUserAction = data.userId === currentUserId;
+      // Get current user ID from user object or localStorage
+      const userId = currentUserId || localStorage.getItem('userId');
+      const isCurrentUserAction = data.userId === userId;
 
-          if (data.bookmarked !== undefined && data.bookmarked !== isBookmarked) {
-             setIsBookmarked(data.bookmarked);
-          } else if (isCurrentUserAction && data.action) {
-             const newBookmarkedState = data.action === 'add';
-             if (newBookmarkedState !== isBookmarked) {
-                setIsBookmarked(newBookmarkedState);
-             }
+      // Determine if we should update the bookmarked state
+      // Case 1: Direct bookmarked state is provided
+      if (data.bookmarked !== undefined) {
+        setIsBookmarked(prevState => {
+          if (data.bookmarked !== prevState) {
+            return data.bookmarked;
           }
-        }
+          return prevState;
+        });
+      }
+      // Case 2: Current user's action is provided
+      else if (isCurrentUserAction && data.action) {
+        const newBookmarkedState = data.action === 'add';
+        setIsBookmarked(prevState => {
+          if (newBookmarkedState !== prevState) {
+            return newBookmarkedState;
+          }
+          return prevState;
+        });
       }
     };
 
-    const unsubscribe = eventBus.subscribe(EVENT_TYPES.BOOKMARK_UPDATED, handleGlobalUpdate);
-    return () => unsubscribe();
+    const handleProductUpdate = (data) => {
+      // Check if this event is for our product
+      const isForThisProduct =
+        (currentProductSlug && data.slug === currentProductSlug) ||
+        (currentProductId && data.productId === currentProductId);
 
-  }, [productSlug, productId, user?._id, count, isBookmarked]);
+      if (!isForThisProduct || !data.updates || !isMounted.current) return;
+
+      const updates = data.updates;
+
+      // Update count if it changed
+      if (updates.bookmarkCount !== undefined) {
+        setCount(prevCount => {
+          if (updates.bookmarkCount !== prevCount) {
+            return updates.bookmarkCount;
+          }
+          return prevCount;
+        });
+      }
+
+      // Update bookmarked state if it changed
+      if (updates.bookmarked !== undefined) {
+        setIsBookmarked(prevState => {
+          if (updates.bookmarked !== prevState) {
+            return updates.bookmarked;
+          }
+          return prevState;
+        });
+      }
+    };
+
+    // Handle direct socket bookmark events
+    const handleSocketBookmarkEvent = (data) => {
+      // Check if this event is for our product
+      const isForThisProduct = (currentProductId && data.productId === currentProductId);
+
+      if (!isForThisProduct || !isMounted.current) return;
+
+      // Update count if it changed
+      if (data.count !== undefined) {
+        setCount(prevCount => {
+          if (data.count !== prevCount) {
+            return data.count;
+          }
+          return prevCount;
+        });
+      }
+
+      // Get current user ID from user object or localStorage
+      const userId = currentUserId || localStorage.getItem('userId');
+      const isCurrentUserAction = data.userId === userId;
+
+      // Update bookmarked state if this is the current user's action
+      if (isCurrentUserAction && data.action) {
+        const newBookmarkedState = data.action === 'add';
+        setIsBookmarked(prevState => {
+          if (newBookmarkedState !== prevState) {
+            return newBookmarkedState;
+          }
+          return prevState;
+        });
+      }
+    };
+
+    // Subscribe to events
+    const unsubscribeBookmark = eventBus.subscribe(EVENT_TYPES.BOOKMARK_UPDATED, handleBookmarkUpdate);
+    const unsubscribeProduct = eventBus.subscribe(EVENT_TYPES.PRODUCT_UPDATED, handleProductUpdate);
+
+    // Subscribe to socket events if socket is available
+    if (socket && socket.on) {
+      socket.on('product:bookmark', handleSocketBookmarkEvent);
+    }
+
+    return () => {
+      unsubscribeBookmark();
+      unsubscribeProduct();
+
+      // Unsubscribe from socket events if socket is available
+      if (socket && socket.off) {
+        socket.off('product:bookmark', handleSocketBookmarkEvent);
+      }
+    };
+
+  }, [productSlug, productId, user?._id]); // Removed count and isBookmarked from dependencies
 
   // Effect to check for updates in the global product cache
   useEffect(() => {
@@ -270,76 +420,98 @@ const BookmarkButton = ({
     }
   };
 
-  // Dynamic class generation
-  const sizeClasses = {
-    sm: "p-1.5 rounded-md text-xs",
-    md: "p-2 rounded-lg text-sm",
-    lg: "p-2.5 rounded-lg text-base",
+  // --- Dynamic Styling ---
+  // Size-specific classes for the button
+  const buttonSizeClasses = {
+    sm: "h-8 w-8",
+    md: "h-10 w-10",
+    lg: "h-12 w-12",
   };
-  const iconSizeClasses = {
-    sm: "w-3.5 h-3.5",
-    md: "w-4 h-4",
-    lg: "w-5 h-5",
-  };
-   const countSizeClasses = {
+
+  // Button state styling
+  const buttonStateClasses = isBookmarked
+    ? "bg-violet-100 text-violet-700 border-violet-300 hover:bg-violet-200 hover:border-violet-400 shadow-sm"
+    : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50 hover:text-gray-800 hover:border-gray-400";
+
+  // Classes for disabled/loading states
+  const isDisabled = disabled || isLoading || isOwner || isProcessing || !productSlug;
+  const disabledClasses = isDisabled ? "opacity-60 cursor-not-allowed" : "";
+  const loadingClasses = isLoading ? "opacity-80 cursor-wait" : "";
+
+  // Classes for the count display
+  const countSizeClasses = {
     sm: "text-xs",
     md: "text-sm",
-    lg: "text-sm",
+    lg: "text-base",
   };
-   const textClasses = {
+  const countColorClasses = isBookmarked ? "text-violet-800" : "text-gray-700";
+
+  // Text classes for when showText is true
+  const textClasses = {
     sm: "text-xs ml-1",
     md: "text-sm ml-1.5",
     lg: "text-sm ml-1.5",
   };
 
-  const buttonBaseClasses = "transition-all duration-200 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-1";
-  const bookmarkedClasses = "bg-violet-100 text-violet-700 hover:bg-violet-200";
-  const notBookmarkedClasses = "bg-gray-100 text-gray-500 hover:bg-violet-50 hover:text-violet-600";
-  const disabledClasses = "opacity-60 cursor-not-allowed";
-  const processingClasses = "cursor-wait";
+  // Tooltip text based on state
+  const buttonTitle = isOwner
+    ? "You cannot bookmark your own product"
+    : isDisabled && !isOwner
+    ? "Bookmark button is disabled"
+    : isBookmarked
+    ? "Remove from saved"
+    : "Save for later";
+
+  // Animation classes for the button
+  const animationClasses = "transform transition-transform duration-150 active:scale-95";
 
   return (
-    <div className={`flex items-center ${showCount ? 'gap-1.5' : ''} ${className}`}>
+    <div className={`flex items-center gap-3 ${className}`}>
       <button
         type="button"
         onClick={handleBookmark}
-        disabled={disabled || isLoading || isOwner || isProcessing}
-        className={`${buttonBaseClasses} ${sizeClasses[size] || sizeClasses.md} ${
-          isBookmarked ? bookmarkedClasses : notBookmarkedClasses
-        } ${isOwner || disabled ? disabledClasses : ""} ${
-          isProcessing ? processingClasses : ""
-        } ${showText ? 'px-3' : ''}`} // Add padding if text is shown
-         title={
-          isOwner ? "Cannot bookmark your own product"
-          : isBookmarked ? "Remove from saved"
-          : "Save for later"
-        }
+        disabled={isDisabled}
+        className={`
+          rounded-full
+          flex items-center justify-center
+          border
+          ${buttonSizeClasses[size] || buttonSizeClasses.md}
+          ${buttonStateClasses}
+          ${disabledClasses}
+          ${loadingClasses}
+          ${animationClasses}
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-violet-400
+          transition-all duration-200 ease-in-out
+          ${showText ? 'px-3 rounded-lg w-auto' : ''}
+        `}
+        title={buttonTitle}
         aria-pressed={isBookmarked}
         aria-label={
-            isOwner ? "Cannot bookmark own product"
-            : isBookmarked ? "Remove bookmark"
-            : `Bookmark ${product?.name || 'product'}`
+          isOwner
+            ? "Cannot bookmark own product"
+            : isBookmarked
+            ? `Remove bookmark for ${product?.name || "product"}`
+            : `Bookmark ${product?.name || "product"}`
         }
       >
-        <AnimatedBookmarkIcon
+        <BookmarkIcon
           isBookmarked={isBookmarked}
-          isLoading={isLoading}
           size={size}
-          className={iconSizeClasses[size] || iconSizeClasses.md}
         />
         {showText && (
-            <span className={textClasses[size] || textClasses.md}>
-                {isBookmarked ? 'Saved' : 'Save'}
-            </span>
+          <span className={textClasses[size] || textClasses.md}>
+            {isBookmarked ? 'Saved' : 'Save'}
+          </span>
         )}
       </button>
 
-      {showCount && !showText && ( // Only show count if text is not shown
+      {showCount && (
         <span
-          className={`font-medium text-gray-700 tabular-nums ${countSizeClasses[size] || countSizeClasses.md}`}
+          className={`font-semibold tabular-nums ${countColorClasses} ${countSizeClasses[size] || countSizeClasses.md}`}
           aria-live="polite"
+          aria-atomic="true"
         >
-          {count}
+          {count >= 1000 ? `${(count / 1000).toFixed(1)}k` : count}
         </span>
       )}
     </div>

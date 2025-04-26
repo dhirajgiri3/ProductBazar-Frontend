@@ -21,15 +21,31 @@ const SectionWrapper = ({ children, delay = 0, className = "" }) => (
   </motion.div>
 );
 
-const HybridFeedSection = ({ componentName = 'home' }) => {
+const HybridFeedSection = ({ componentName = 'home', products = [], isLoading: externalLoading = false, error: externalError = null }) => {
   const { getFeedRecommendations } = useRecommendation();
-  const [isLoading, setIsLoading] = useState(true);
-  const [hybridProducts, setHybridProducts] = useState([]);
-  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(externalLoading);
+  const [hybridProducts, setHybridProducts] = useState(products);
+  const [error, setError] = useState(externalError);
+
+  // Update local state when props change
+  useEffect(() => {
+    if (products.length > 0) {
+      setHybridProducts(products);
+      setIsLoading(false);
+    }
+    if (externalError) {
+      setError(externalError);
+    }
+  }, [products, externalError]);
 
   useEffect(() => {
     let isMounted = true;
     let abortController = new AbortController();
+
+    // Skip fetching if we already have products from props
+    if (products.length > 0) {
+      return;
+    }
 
     const fetchHybridFeed = async () => {
       // Only show loading state if we don't have any data yet
@@ -134,7 +150,7 @@ const HybridFeedSection = ({ componentName = 'home' }) => {
       isMounted = false;
       abortController.abort();
     };
-  }, [getFeedRecommendations, hybridProducts.length, componentName]);
+  }, [getFeedRecommendations, hybridProducts.length, componentName, products.length]);
 
   // Don't render if we have no data and no error
   if (!isLoading && hybridProducts.length === 0 && !error) return null;

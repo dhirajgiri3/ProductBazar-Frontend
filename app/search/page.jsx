@@ -1014,7 +1014,7 @@ const JobResultItem = ({ job, query }) => {
       variants={itemVariants}
       className="bg-white rounded-xl border border-gray-200 overflow-hidden transition-shadow relative"
     >
-      <Link href={`/job/${job._id}`} className="block p-6">
+      <Link href={`/jobs/${job._id}`} className="block p-6">
         <div className="flex items-start">
           <div className="flex-shrink-0 mr-4">
             {job.companyDetails?.[0]?.profilePicture ? (

@@ -21,15 +21,32 @@ const SectionWrapper = ({ children, delay = 0, className = "" }) => (
   </motion.div>
 );
 
-const InterestBasedSection = () => {
+const InterestBasedSection = ({ componentName = 'home', products = [], isLoading: externalLoading = false, error: externalError = null }) => {
   const { isAuthenticated } = useAuth();
   const { getInterestsRecommendations } = useRecommendation();
-  const [isLoading, setIsLoading] = useState(true);
-  const [interestProducts, setInterestProducts] = useState([]);
-  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(externalLoading);
+  const [interestProducts, setInterestProducts] = useState(products);
+  const [error, setError] = useState(externalError);
+
+  // Update local state when props change
+  useEffect(() => {
+    if (products.length > 0) {
+      setInterestProducts(products);
+      setIsLoading(false);
+    }
+    if (externalError) {
+      setError(externalError);
+    }
+  }, [products, externalError]);
 
   useEffect(() => {
     let isMounted = true;
+
+    // Skip fetching if we already have products from props
+    if (products.length > 0) {
+      return;
+    }
+
     const fetchRecommendations = async () => {
       // Only show loading state if we don't have any data yet
       if (interestProducts.length === 0) {
@@ -87,7 +104,7 @@ const InterestBasedSection = () => {
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated, getInterestsRecommendations]);
+  }, [isAuthenticated, getInterestsRecommendations, products.length, interestProducts.length]);
 
   if (!isAuthenticated) return null;
 

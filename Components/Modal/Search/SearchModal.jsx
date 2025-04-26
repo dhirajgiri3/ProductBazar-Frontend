@@ -639,14 +639,14 @@ const ProjectResultItem = ({ project, onClose }) => {
 const UserResultItem = ({ user, onClose }) => {
   return (
     <Link
-      href={`/profile/${user.username}`}
+      href={`/user/${user.username}`}
       className="flex items-start p-3 hover:bg-gray-50 rounded-lg transition-colors"
       onClick={onClose}
     >
       <div className="flex-shrink-0 mr-3">
-        {user.profilePicture ? (
+        {user.profilePicture && user.profilePicture.url ? (
           <img
-            src={user.profilePicture}
+            src={user.profilePicture.url}
             alt={user.name}
             className="w-12 h-12 rounded-full object-cover border border-gray-200"
           />

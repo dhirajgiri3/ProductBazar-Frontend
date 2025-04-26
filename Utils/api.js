@@ -113,9 +113,14 @@ api.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
 
-      // Prevent browser caching for GET requests
-      if (config.method === 'get') {
-        config.params = { ...config.params, _t: Date.now() };
+      // Only add timestamp for GET requests if not already present
+      // This helps reduce unnecessary cache busting
+      if (config.method === 'get' && !config.params?._t) {
+        // Use a more stable timestamp that changes less frequently
+        // This helps with caching while still preventing stale data
+        // Changes every 10 seconds instead of every millisecond
+        const stableTimestamp = Math.floor(Date.now() / 10000) * 10000;
+        config.params = { ...config.params, _t: stableTimestamp };
       }
 
       // Check if this is a high priority request that shouldn't be canceled
@@ -390,24 +395,53 @@ export const debounce = (func, wait) => {
 
 // Utility function to make a request with priority
 export const makePriorityRequest = async (method, url, options = {}) => {
-  const { params, data, headers = {}, isFormData = false, timeout, signal, retryCount = 0 } = options;
+  const { params, data, headers = {}, isFormData = false, timeout, signal, retryCount = 0, delay = 0 } = options;
+
+  // Generate a unique request ID for tracking
+  const requestId = `req-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+  // Apply delay if specified to stagger requests
+  if (delay > 0) {
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
 
   // Use query parameter instead of header for priority
   // This avoids CORS preflight issues
   const requestParams = {
     ...params,
-    _t: Date.now(),
-    _priority: 'high' // Use query param instead of header
+    // Only add timestamp if not already present to avoid cache busting on every request
+    _t: params?._t || Date.now(),
+    _priority: 'high', // Use query param instead of header
+    _reqId: requestId // Add request ID for tracking
   };
+
+  // Create a new AbortController if one wasn't provided
+  let localAbortController;
+  let compositeSignal = signal;
+
+  if (!signal) {
+    localAbortController = new AbortController();
+    compositeSignal = localAbortController.signal;
+  }
+
+  // Set up request timeout
+  const requestTimeout = timeout || 15000; // Default to 15 seconds
+  const timeoutId = setTimeout(() => {
+    if (localAbortController) {
+      console.warn(`Request timeout (${requestId}): ${method.toUpperCase()} ${url}`);
+      localAbortController.abort('Request timeout');
+    }
+  }, requestTimeout);
 
   // Set up request config
   const config = {
     params: requestParams,
     headers: { ...headers },
-    timeout: timeout || 15000, // Use provided timeout or default to 15 seconds
-    signal, // Pass through any AbortSignal
+    timeout: requestTimeout,
+    signal: compositeSignal, // Use our composite signal
     skipDuplicateCheck: true, // Skip the duplicate check for priority requests
-    skipRateLimit: true // Skip rate limit checks for priority requests
+    skipRateLimit: true, // Skip rate limit checks for priority requests
+    metadata: { requestId } // Add metadata for tracking
   };
 
   // Handle FormData correctly
@@ -419,6 +453,11 @@ export const makePriorityRequest = async (method, url, options = {}) => {
   if (retryCount > 0) {
     const backoffTime = Math.min(Math.pow(2, retryCount) * 100, 10000); // Max 10 seconds
     await new Promise(resolve => setTimeout(resolve, backoffTime));
+  }
+
+  // Log the request (only in development and not for common endpoints)
+  if (process.env.NODE_ENV === 'development' && !url.includes('/products/') && !url.includes('/comments')) {
+    console.log(`Priority request (${requestId}): ${method.toUpperCase()} ${url}`);
   }
 
   try {
@@ -438,21 +477,59 @@ export const makePriorityRequest = async (method, url, options = {}) => {
       throw new Error(`Unsupported method: ${method}`);
     }
 
+    // Clear the timeout since we got a response
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+
+    // Log successful response (only in development and not for common endpoints)
+    if (process.env.NODE_ENV === 'development' && !url.includes('/products/') && !url.includes('/comments')) {
+      console.log(`Priority request successful (${requestId}): ${method.toUpperCase()} ${url}`);
+    }
+
     return response;
   } catch (error) {
+    // Always clear the timeout to prevent memory leaks
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+
+    // Add request ID to the error for better debugging
+    error.requestId = requestId;
+
     // Handle canceled requests gracefully
-    if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
-      // Only log in development mode and for non-common requests
-      if (process.env.NODE_ENV === 'development' && !url.includes('/products/') && !url.includes('/comments')) {
-        console.debug('Priority request was canceled:', url);
+    if (error.name === 'AbortError' || error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+      // Check if it was our timeout that caused the abort
+      const isTimeout = error.message?.includes('timeout') || error.message?.includes('Request timeout');
+
+      if (isTimeout) {
+        console.warn(`Request timeout (${requestId}): ${method.toUpperCase()} ${url}`);
+        error.isTimeout = true;
+        error.message = `Request timeout after ${requestTimeout}ms: ${method.toUpperCase()} ${url}`;
+      } else {
+        // Only log in development mode and for non-common requests
+        if (process.env.NODE_ENV === 'development' && !url.includes('/products/') && !url.includes('/comments')) {
+          console.debug(`Priority request was canceled (${requestId}):`, url);
+        }
       }
     } else if (error.response?.status === 429 && retryCount < 3) {
       // Rate limited - retry with exponential backoff
-      console.warn(`Rate limited on ${url}, retrying (attempt ${retryCount + 1}/3)`);
+      console.warn(`Rate limited on ${url} (${requestId}), retrying (attempt ${retryCount + 1}/3)`);
 
       // Get retry-after header if available
       const retryAfter = error.response.headers['retry-after'];
-      const retryMs = retryAfter ? parseInt(retryAfter) * 1000 : Math.min(Math.pow(2, retryCount + 1) * 1000, 10000);
+
+      // Calculate retry delay with exponential backoff and jitter
+      // Base delay increases exponentially with each retry
+      const baseDelay = retryAfter ?
+        parseInt(retryAfter) * 1000 :
+        Math.min(Math.pow(2, retryCount + 1) * 1000, 10000);
+
+      // Add random jitter to prevent thundering herd problem
+      const jitter = Math.random() * 1000;
+      const retryMs = baseDelay + jitter;
+
+      console.info(`Will retry in ${Math.round(retryMs/1000)} seconds`);
 
       // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, retryMs));

@@ -2,17 +2,25 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { FiPackage, FiPlus, FiLayers, FiCheckCircle, FiEdit, FiArchive } from "react-icons/fi"; // Icons for UI elements
+import {
+  FiPackage,
+  FiPlus,
+  FiLayers,
+  FiCheckCircle,
+  FiEdit,
+  FiArchive,
+  FiBarChart2,
+} from "react-icons/fi";
 import { useAuth } from "../../../../../Contexts/Auth/AuthContext";
 import EditProductModal from "../../../../../Components/Modal/Product/EditProductModal";
 import DeleteConfirmModal from "../../../../../Components/Modal/Product/DeleteConfirmModal";
-import ProfileProductCard from "../../../../../Components/Product/ProfileProductCard"; // Use the updated card
+import ProfileProductCard from "../../../../../Components/Product/ProfileProductCard";
 import Pagination from "../../../../../Components/common/Pagination";
 import Tabs from "../../../../../Components/common/Tabs";
 import LoaderComponent from "../../../../../Components/UI/LoaderComponent";
 
 export default function ProductsTab({
-  products = [], // Default to empty array
+  products = [],
   isLoading,
   currentPage = 1,
   totalPages = 1,
@@ -34,24 +42,29 @@ export default function ProductsTab({
 
   const handleModalClose = useCallback(
     (result = null) => {
-      // Close all modals
       setIsEditModalOpen(false);
       setIsDeleteModalOpen(false);
 
-      // Store the selected product before clearing it (for logging)
       const productBeingProcessed = selectedProduct;
       setSelectedProduct(null);
 
-      // Check if we received a product object (from edit or delete)
-      if (result && typeof result === 'object' && onProductUpdated) {
-        // If we have a product object, it means a product was updated or deleted
-        // Call onProductUpdated to refresh the products list
-        console.log(`ProductsTab: Handling ${isDeleteModalOpen ? 'deletion' : 'update'} of product: ${result.slug || result._id}`);
+      if (result && typeof result === "object" && onProductUpdated) {
+        console.log(
+          `ProductsTab: Handling ${
+            isDeleteModalOpen ? "deletion" : "update"
+          } of product: ${result.slug || result._id}`
+        );
         onProductUpdated();
-      } else if (isDeleteModalOpen && productBeingProcessed && onProductUpdated) {
-        // Special case: If we were in delete modal but didn't get a result object,
-        // still trigger a refresh to ensure UI is up-to-date
-        console.log(`ProductsTab: Handling potential deletion of product: ${productBeingProcessed.slug || productBeingProcessed._id}`);
+      } else if (
+        isDeleteModalOpen &&
+        productBeingProcessed &&
+        onProductUpdated
+      ) {
+        console.log(
+          `ProductsTab: Handling potential deletion of product: ${
+            productBeingProcessed.slug || productBeingProcessed._id
+          }`
+        );
         onProductUpdated();
       }
     },
@@ -69,39 +82,37 @@ export default function ProductsTab({
   }, []);
 
   const handleAddClick = useCallback(() => {
-    router.push('/product/new');
+    router.push("/product/new");
   }, [router]);
 
-  // Tab configuration with icons and counts
   const safeCount = (count) => (Number.isFinite(count) ? count : 0);
   const tabConfig = [
     {
       id: "all",
       label: "All",
       count: safeCount(statusCounts.all),
-      icon: FiLayers
+      icon: FiLayers,
     },
     {
       id: "published",
       label: "Published",
       count: safeCount(statusCounts.published),
-      icon: FiCheckCircle
+      icon: FiCheckCircle,
     },
     {
       id: "draft",
       label: "Drafts",
       count: safeCount(statusCounts.draft),
-      icon: FiEdit
+      icon: FiEdit,
     },
     {
       id: "archived",
       label: "Archived",
       count: safeCount(statusCounts.archived),
-      icon: FiArchive
+      icon: FiArchive,
     },
   ];
 
-  // Motion variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -110,7 +121,6 @@ export default function ProductsTab({
     },
   };
 
-  // Render Loading State
   if (isLoading && !products.length) {
     return (
       <div className="flex justify-center items-center py-16">
@@ -119,7 +129,6 @@ export default function ProductsTab({
     );
   }
 
-  // Render Empty State (No products ever added)
   if (!isLoading && statusCounts.all === 0) {
     return (
       <>
@@ -129,7 +138,6 @@ export default function ProductsTab({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          {/* Decorative elements */}
           <div className="absolute -top-16 -right-16 w-32 h-32 bg-violet-100/50 rounded-full opacity-50 blur-lg"></div>
           <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-indigo-100/50 rounded-full opacity-50 blur-lg"></div>
 
@@ -200,12 +208,10 @@ export default function ProductsTab({
             )}
           </motion.div>
         </motion.div>
-        {/* No modal needed here anymore */}
       </>
     );
   }
 
-  // Render Main Content (with products or empty state for filter)
   return (
     <>
       <motion.div
@@ -217,19 +223,30 @@ export default function ProductsTab({
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <h2 className="text-xl font-semibold text-gray-800">Products</h2>
           {currentUserIsOwner && (
-            <motion.button
-              onClick={handleAddClick}
-              className="px-4 py-1.5 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors flex items-center gap-1.5"
-              whileHover={{ scale: 1.05, y: -1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <FiPlus className="w-4 h-4" />
-              Add Product
-            </motion.button>
+            <div className="flex items-center gap-3">
+              <motion.a
+                href="/product/viewanalytics/dashboard"
+                className="px-4 py-1.5 bg-violet-100 text-violet-700 text-sm font-medium rounded-lg hover:bg-violet-200 transition-colors flex items-center gap-1.5 border border-violet-200"
+                whileHover={{ scale: 1.05, y: -1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <FiBarChart2 className="w-4 h-4" />
+                View Analytics
+              </motion.a>
+              <motion.button
+                onClick={handleAddClick}
+                className="px-4 py-1.5 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors flex items-center gap-1.5"
+                whileHover={{ scale: 1.05, y: -1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <FiPlus className="w-4 h-4" />
+                Add Product
+              </motion.button>
+            </div>
           )}
         </div>
 
-        {/* Filter Tabs for Owner - Enhanced with modern variant */}
+        {/* Filter Tabs for Owner */}
         {currentUserIsOwner && (
           <motion.div
             className="mb-8"
@@ -255,7 +272,7 @@ export default function ProductsTab({
           </div>
         )}
 
-        {/* Product Grid or Filtered Empty State */}
+        {/* Product Grid - Changed to 2 columns on all screen sizes */}
         <AnimatePresence mode="wait">
           {!isLoading && products.length > 0 && (
             <motion.div
@@ -264,10 +281,9 @@ export default function ProductsTab({
               initial="hidden"
               animate="visible"
               exit={{ opacity: 0 }}
-              className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+              className="grid gap-6 grid-cols-1 sm:grid-cols-2"
             >
               {products.map((product) =>
-                // Ensure ProfileProductCard handles potential null/undefined products gracefully
                 product && product._id ? (
                   <ProfileProductCard
                     key={product._id}
@@ -349,7 +365,7 @@ export default function ProductsTab({
         )}
       </motion.div>
 
-      {/* Modals (Render outside the main motion div for proper overlay) */}
+      {/* Modals */}
       {currentUserIsOwner && (
         <>
           <AnimatePresence>

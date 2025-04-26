@@ -61,8 +61,12 @@ export const EVENT_TYPES = {
   PRODUCT_DELETED: 'product:deleted',
   UPVOTE_UPDATED: 'upvote:updated',
   BOOKMARK_UPDATED: 'bookmark:updated',
+  VIEW_UPDATED: 'view:updated',
+  VIEW_DURATION_UPDATED: 'view:duration:updated',
+  VIEW_ANALYTICS_UPDATED: 'view:analytics:updated',
   SOCKET_CONNECTED: 'socket:connected',
   SOCKET_DISCONNECTED: 'socket:disconnected',
+  SWITCH_MODAL_TAB: 'modal:switch_tab',
 };
 
 export default eventBus;
