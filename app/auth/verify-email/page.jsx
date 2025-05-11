@@ -30,7 +30,7 @@ const VerifyEmailPage = () => {
 
     // Check if user is already verified
     if (user?.isEmailVerified) {
-      router.push('/user');
+      router.push(`/user/${user.username}`);
     }
 
     // Cleanup interval on unmount

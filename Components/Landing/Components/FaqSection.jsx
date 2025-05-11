@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
+import SectionLabel from "./Animations/SectionLabel";
 
 export default function FaqSection({ onHover, onLeave }) {
   const ref = useRef(null);
@@ -75,7 +76,7 @@ export default function FaqSection({ onHover, onLeave }) {
   };
 
   return (
-    <section ref={ref} className="py-24 relative" id="faq">
+    <section ref={ref} className="relative py-12 sm:py-16" id="faq">
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           className="text-center mb-16"
@@ -84,16 +85,22 @@ export default function FaqSection({ onHover, onLeave }) {
           transition={{ duration: 0.6 }}
         >
           <motion.div
-            className="inline-block mb-4 px-4 py-1.5 rounded-full bg-violet-900/30 border border-violet-700/50 backdrop-blur-sm"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={
               isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }
             }
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <span className="text-violet-300 font-medium">
-              Common Questions
-            </span>
+            <SectionLabel
+              text="Common Questions"
+              size="medium"
+              alignment="center"
+              animate={true}
+              variant="sunset"
+              glowEffect={true}
+              pulseEffect={true}
+              animationStyle="3d"
+            />
           </motion.div>
 
           <motion.h2
@@ -102,7 +109,10 @@ export default function FaqSection({ onHover, onLeave }) {
             animate={isInView ? { opacity: 1 } : { opacity: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            Frequently Asked <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-500">Questions</span>
+            Frequently Asked{" "}
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-500">
+              Questions
+            </span>
           </motion.h2>
 
           <motion.p
@@ -185,7 +195,7 @@ export default function FaqSection({ onHover, onLeave }) {
           ))}
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="mt-12 text-center"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}

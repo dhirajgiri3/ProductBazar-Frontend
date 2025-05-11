@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, useMotionValue, useSpring } from "framer-motion"; // AnimatePresence removed
 import * as LucideIcons from "lucide-react";
 import clsx from "clsx";
@@ -26,7 +26,6 @@ const GlobalButton = ({
 }) => {
   const buttonRef = useRef(null);
   const [isHovered, setIsHovered] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [isMagneticActive, setIsMagneticActive] = useState(false);
 
@@ -101,33 +100,33 @@ const GlobalButton = ({
   const variants = {
     primary: {
       base: "bg-violet-600 dark:bg-violet-500 text-white border-transparent",
-      hover: "hover:bg-violet-700 dark:hover:bg-violet-600 hover:shadow-lg",
-      focusRing: "focus-visible:ring-indigo-500",
+      hover: "hover:bg-violet-700 dark:hover:bg-violet-600 hover:shadow-lg dark:hover:shadow-violet-500/20",
+      focusRing: "focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-400",
     },
     secondary: {
-      base: "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-transparent",
-      hover: "hover:bg-gray-200 dark:hover:bg-gray-600",
-      focusRing: "focus-visible:ring-gray-400",
+      base: "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-transparent",
+      hover: "hover:bg-gray-200 dark:hover:bg-gray-700 hover:shadow-md dark:hover:shadow-gray-900/20",
+      focusRing: "focus-visible:ring-gray-400 dark:focus-visible:ring-gray-500",
     },
     outline: {
       base: "bg-transparent text-indigo-600 dark:text-indigo-400 border border-indigo-500 dark:border-indigo-400",
-      hover: "hover:bg-indigo-50 dark:hover:bg-indigo-900/20",
-      focusRing: "focus-visible:ring-indigo-500",
+      hover: "hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:shadow-md dark:hover:shadow-indigo-900/10",
+      focusRing: "focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-400",
     },
     ghost: {
       base: "bg-transparent text-gray-700 dark:text-gray-300 border-transparent",
-      hover: "hover:bg-gray-100 dark:hover:bg-gray-800/50",
-      focusRing: "focus-visible:ring-gray-400",
+      hover: "hover:bg-gray-100 dark:hover:bg-gray-800/50 hover:shadow-sm dark:hover:shadow-gray-900/10",
+      focusRing: "focus-visible:ring-gray-400 dark:focus-visible:ring-gray-500",
     },
     danger: {
       base: "bg-red-600 dark:bg-red-500 text-white border-transparent",
-      hover: "hover:bg-red-700 dark:hover:bg-red-600 hover:shadow-lg",
-      focusRing: "focus-visible:ring-red-500",
+      hover: "hover:bg-red-700 dark:hover:bg-red-600 hover:shadow-lg dark:hover:shadow-red-500/20",
+      focusRing: "focus-visible:ring-red-500 dark:focus-visible:ring-red-400",
     },
     success: {
       base: "bg-emerald-600 dark:bg-emerald-500 text-white border-transparent",
-      hover: "hover:bg-emerald-700 dark:hover:bg-emerald-600 hover:shadow-lg",
-      focusRing: "focus-visible:ring-emerald-500",
+      hover: "hover:bg-emerald-700 dark:hover:bg-emerald-600 hover:shadow-lg dark:hover:shadow-emerald-500/20",
+      focusRing: "focus-visible:ring-emerald-500 dark:focus-visible:ring-emerald-400",
     },
   };
 
@@ -162,8 +161,9 @@ const GlobalButton = ({
     onMouseEnter: handleMouseEnter,
     onMouseLeave: handleMouseLeave,
     onMouseMove: enableMagneticEffect ? handleMouseMove : undefined, // Attach mouse move only if magnetic
-    onFocus: () => setIsFocused(true),
-    onBlur: () => setIsFocused(false),
+    // Focus and blur handlers for accessibility
+    onFocus: () => setIsHovered(true), // Use hover state for focus too
+    onBlur: () => setIsHovered(false),
     onClick: handleClick, // Simplified click handler
     disabled: disabled,
     "aria-label":
@@ -192,7 +192,7 @@ const GlobalButton = ({
           transition={{ duration: 0.3 }} // Quick fade transition for shimmer presence
         >
           <motion.div
-            className="absolute -inset-2 bg-gradient-to-r from-transparent via-white/10 dark:via-white/05 to-transparent" // Very subtle gradient
+            className="absolute -inset-2 bg-gradient-to-r from-transparent via-white/15 dark:via-white/10 to-transparent" // Enhanced gradient for better visibility
             style={{ transform: "skewX(-15deg)" }}
             initial={{ x: "-150%" }}
             animate={{ x: "150%" }}
@@ -200,7 +200,7 @@ const GlobalButton = ({
               duration: 2.5, // Slower duration
               ease: "linear", // Keep linear for smooth sweep
               repeat: Infinity,
-              repeatDelay: 4, // Longer delay between repeats
+              repeatDelay: 3, // Slightly reduced delay between repeats
             }}
           />
         </motion.div>

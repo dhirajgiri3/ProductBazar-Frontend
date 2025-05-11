@@ -3,7 +3,7 @@
  * Optimized version with reduced logging and improved performance
  */
 import { io } from 'socket.io-client';
-import { getAccessToken } from './api';
+import { getAuthToken } from './Auth/auth.utils';
 
 let socket;
 
@@ -14,7 +14,6 @@ const productSubscriptions = new Set();
 const subscriptionRefCounts = new Map();
 
 // Debounce socket events to prevent excessive logging and processing
-const debounceTimers = new Map();
 
 // Debug mode flag - set to false in production
 const DEBUG = process.env.NODE_ENV === 'development';
@@ -24,7 +23,7 @@ const DEBUG = process.env.NODE_ENV === 'development';
  * @returns {Object|null} - Socket instance or null if initialization failed
  */
 export const initializeSocket = () => {
-  const token = getAccessToken();
+  const token = getAuthToken();
 
   if (!token) {
     if (DEBUG) console.warn('Cannot initialize socket: No authentication token');

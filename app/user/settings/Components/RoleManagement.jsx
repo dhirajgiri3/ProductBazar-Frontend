@@ -780,7 +780,6 @@ const RoleManagement = () => {
                                 ? 'bg-violet-50 border-l-4 border-violet-500'
                                 : 'hover:bg-gray-50 border-l-4 border-transparent'
                             }`}
-                            whileHover={{ x: 4 }}
                             whileTap={{ scale: 0.98 }}
                           >
                             <div className="flex items-center">

@@ -12,6 +12,8 @@ import { ProjectProvider } from "../Contexts/Project/ProjectContext";
 import { RecommendationProvider } from "../Contexts/Recommendation/RecommendationContext";
 import { SocketProvider } from "../Contexts/Socket/SocketContext";
 import { ViewProvider } from "../Contexts/View/ViewContext";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { ThemeProvider } from "../Contexts/Theme/ThemeContext";
 import Header from "../Components/Header/Header";
 import runAllCleanup from "../Utils/cleanupUtils";
 
@@ -32,29 +34,33 @@ export default function RootLayout({ children }) {
   }
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ToastProvider>
           <StyledComponentsRegistry>
-            <AuthProvider>
-              <ProductProvider>
-                <ProjectProvider>
-                  <CategoryProvider>
-                    <RecommendationProvider>
-                      <SocketProvider>
-                        <ViewProvider>
-                          <GlobalStyle />
-                          <Header />
-                          {children}
-                          <Toaster />
-                          <Footer />
-                        </ViewProvider>
-                      </SocketProvider>
-                    </RecommendationProvider>
-                  </CategoryProvider>
-                </ProjectProvider>
-              </ProductProvider>
-            </AuthProvider>
+            <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
+              <ThemeProvider>
+                <AuthProvider>
+                  <ProductProvider>
+                    <ProjectProvider>
+                      <CategoryProvider>
+                        <RecommendationProvider>
+                          <SocketProvider>
+                            <ViewProvider>
+                              <GlobalStyle />
+                              <Header />
+                              {children}
+                              <Toaster />
+                              <Footer />
+                            </ViewProvider>
+                          </SocketProvider>
+                        </RecommendationProvider>
+                      </CategoryProvider>
+                    </ProjectProvider>
+                  </ProductProvider>
+                </AuthProvider>
+              </ThemeProvider>
+            </NextThemesProvider>
           </StyledComponentsRegistry>
         </ToastProvider>
       </body>

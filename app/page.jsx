@@ -5,7 +5,6 @@ import React, { useEffect } from "react";
 import "./globals.css";
 import { runAllCleanup } from "../Utils/cleanupUtils";
 import Landing from "../Components/Landing/Landing";
-import PBLanding from "../Components/Landings/Components/PBLanding";
 
 
 function page() {

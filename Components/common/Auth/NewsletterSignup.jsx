@@ -146,7 +146,7 @@ const NewsletterSignup = ({ className = '' }) => {
           whileTap="tap"
           aria-label="Subscribe to newsletter"
         >
-          <AnimatePresence mode="wait">
+          <AnimatePresence initial={false}>
             {status === 'loading' ? (
               <motion.div
                 key="loading"

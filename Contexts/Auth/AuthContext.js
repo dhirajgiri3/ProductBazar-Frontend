@@ -329,8 +329,8 @@ export const AuthProvider = ({ children }) => {
           // Check if profile completion was skipped
           const skippedSteps = JSON.parse(localStorage.getItem("skippedSteps") || "[]");
           if (skippedSteps.includes("profile_completion")) {
-            // Skip to home page if profile completion was skipped
-            router.push("/home");
+            // Redirect to user profile page using dynamic route
+            router.push(userData.username ? `/user/${userData.username}` : "/home");
           } else {
             // Ensure user data is fully loaded before redirecting to complete profile
             // This helps prevent the "Authentication Error" when redirecting to complete-profile
@@ -339,7 +339,8 @@ export const AuthProvider = ({ children }) => {
             }, 100); // Small delay to ensure state updates are processed
           }
         } else {
-          router.push("/home");
+          // Redirect to user profile page using dynamic route
+          router.push(userData.username ? `/user/${userData.username}` : "/home");
         }
       }
     },

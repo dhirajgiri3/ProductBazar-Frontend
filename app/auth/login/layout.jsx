@@ -1,9 +1,9 @@
-"use client";
-
-import { Inter } from "next/font/google";
 import { AuthProvider } from "../../../Contexts/Auth/AuthContext.js";
 
-const inter = Inter({ subsets: ["latin"] });
+export const metadata = {
+  title: "Login - Navkar Selection",
+  description: "Login to your Navkar Selection account.",
+};
 
 export default function LoginLayout({ children }) {
   return (

@@ -18,7 +18,9 @@ const guestOnly = (Component) => {
           ? "/complete-profile" 
           : !user.isPhoneVerified 
             ? "/auth/verify-phone" 
-            : "/user";
+            : user.username 
+              ? `/user/${user.username}` 
+              : "/home";
             
         router.push(redirectPath);
       }

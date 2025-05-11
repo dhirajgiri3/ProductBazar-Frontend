@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useProduct } from "../../../Contexts/Product/ProductContext";
-// import { useAuth } from "../../../Contexts/Auth/AuthContext"; // <-- Marked as potentially unused
+import { useAuth } from "../../../Contexts/Auth/AuthContext"; // <-- Marked as potentially unused
 import { useCategories } from "../../../Contexts/Category/CategoryContext";
 import { toast } from "react-hot-toast";
 import eventBus, { EVENT_TYPES } from "../../../Utils/eventBus";

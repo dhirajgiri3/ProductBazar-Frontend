@@ -183,13 +183,13 @@ const LoginLeft = () => {
     visible: {
       opacity: 1,
       transition: {
-        duration: 0.5,
-        staggerChildren: 0.1,
+        duration: 0.6,
+        staggerChildren: 0.12,
       },
     },
     exit: {
       opacity: 0,
-      transition: { duration: 0.3 },
+      transition: { duration: 0.4 },
     },
   };
 
@@ -220,9 +220,9 @@ const LoginLeft = () => {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5 }}
-      className="w-full max-w-md"
+      className="w-full max-w-md mx-auto"
     >
-      <div className="relative h-full max-h-[700px] w-full rounded-2xl bg-white/95 backdrop-blur-md border border-white/20 shadow-xl p-6 sm:p-8 overflow-hidden">
+      <div className="relative h-full w-full rounded-2xl bg-white/95 backdrop-blur-md border border-white/20 shadow-xl p-6 sm:p-8 overflow-hidden">
         {/* Decorative elements with improved blur effect */}
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-violet-100 rounded-full opacity-30 blur-3xl pointer-events-none"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-100 rounded-full opacity-30 blur-3xl pointer-events-none"></div>
@@ -233,12 +233,12 @@ const LoginLeft = () => {
         <div className="relative z-10">
           {/* Header section with pulsing logo effect */}
           <motion.div
-            className="text-center mb-7"
+            className="text-center mb-8"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
           >
-            <motion.div className="flex justify-center mb-3" variants={itemVariants}>
+            <motion.div className="flex justify-center mb-4" variants={itemVariants}>
               <motion.div
                 whileHover={{ scale: 1.05, rotate: 5 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -246,8 +246,8 @@ const LoginLeft = () => {
                 <Image
                   src="/Assets/Image/logo/pb-logo.png"
                   alt="Product Bazar Logo"
-                  width={52}
-                  height={52}
+                  width={56}
+                  height={56}
                   className="object-contain drop-shadow-md"
                   quality={90}
                   priority
@@ -264,7 +264,7 @@ const LoginLeft = () => {
 
             <motion.p
               variants={itemVariants}
-              className="text-gray-600 text-sm mt-2 mb-1"
+              className="text-gray-600 text-sm mt-2.5"
             >
               Sign in to continue to your account
             </motion.p>
@@ -274,10 +274,10 @@ const LoginLeft = () => {
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-3 mt-4 mb-1 text-xs text-red-700 bg-red-50 rounded-xl border border-red-100 flex items-center"
+                className="p-3.5 mt-5 mb-1 text-xs text-red-700 bg-red-50 rounded-xl border border-red-100 flex items-center"
               >
                 <svg
-                  className="w-4 h-4 text-red-500 mr-1.5 flex-shrink-0"
+                  className="w-4 h-4 text-red-500 mr-2 flex-shrink-0"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -293,7 +293,7 @@ const LoginLeft = () => {
                 {error.includes("no password") && (
                   <button 
                     type="button"
-                    className="ml-1 text-violet-600 font-medium underline"
+                    className="ml-2 text-violet-600 font-medium underline"
                     onClick={() => toggleAuthMethod("phone")}
                   >
                     Switch to phone login
@@ -303,9 +303,9 @@ const LoginLeft = () => {
             )}
           </motion.div>
 
-          {/* Improved tab animations */}
-          <motion.div variants={itemVariants} className="mb-7">
-            <div className="flex p-1 bg-gray-100 rounded-xl w-full shadow-sm">
+          {/* Improved tab animations with consistent spacing */}
+          <motion.div variants={itemVariants} className="mb-8">
+            <div className="flex p-1.5 bg-gray-100 rounded-xl w-full shadow-sm">
               <motion.button
                 type="button"
                 role="tab"
@@ -318,7 +318,7 @@ const LoginLeft = () => {
                 animate={authMethod === "email" ? "active" : "inactive"}
                 whileHover={{ scale: authMethod !== "email" ? 1.02 : 1 }}
                 whileTap={{ scale: 0.97 }}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 flex-1"
+                className="flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl text-sm font-medium transition-all duration-300 flex-1"
                 onClick={() => toggleAuthMethod("email")}
               >
                 <HiOutlineMail className="text-lg" aria-hidden="true" />
@@ -336,7 +336,7 @@ const LoginLeft = () => {
                 animate={authMethod === "phone" ? "active" : "inactive"}
                 whileHover={{ scale: authMethod !== "phone" ? 1.02 : 1 }}
                 whileTap={{ scale: 0.97 }}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 flex-1"
+                className="flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl text-sm font-medium transition-all duration-300 flex-1"
                 onClick={() => toggleAuthMethod("phone")}
               >
                 <HiOutlinePhone className="text-lg" />
@@ -345,8 +345,8 @@ const LoginLeft = () => {
             </div>
           </motion.div>
 
-          {/* Form section with enhanced transitions */}
-          <div className="min-h-[320px]">
+          {/* Form section with enhanced transitions and optimized height */}
+          <div className="relative w-full h-full">
             <AnimatePresence mode="wait">
               {authMethod === "email" ? (
                 <motion.div
@@ -373,7 +373,7 @@ const LoginLeft = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20, transition: { duration: 0.2 } }}
                   transition={{ duration: 0.4, ease: "easeOut" }}
-                  className="space-y-5 w-full"
+                  className="space-y-6 w-full"
                   onSubmit={handleRequestOtp}
                   role="tabpanel"
                   id="phone-panel"
@@ -382,7 +382,7 @@ const LoginLeft = () => {
                   <div>
                     <label
                       htmlFor="phone"
-                      className="block text-sm font-medium text-gray-700 mb-1.5"
+                      className="block text-sm font-medium text-gray-700 mb-2"
                     >
                       Phone Number
                     </label>
@@ -392,7 +392,7 @@ const LoginLeft = () => {
                         id="phone"
                         name="phone"
                         placeholder="+1234567890"
-                        className={`w-full px-4 py-3 pl-11 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all duration-300 ${
+                        className={`w-full px-4 py-3.5 pl-12 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all duration-300 ${
                           formErrors.phone
                             ? "border-red-300 ring-red-100 bg-red-50/30"
                             : "border-gray-200 group-hover:border-violet-300 bg-white/60"
@@ -417,7 +417,7 @@ const LoginLeft = () => {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="mt-2 text-xs text-red-500 flex items-center gap-1.5"
+                        className="mt-2.5 text-xs text-red-500 flex items-center gap-1.5"
                       >
                         <span className="w-1 h-1 bg-red-500 rounded-full inline-block"></span>
                         {formErrors.phone}
@@ -426,7 +426,7 @@ const LoginLeft = () => {
                   </div>
 
                   {/* Phone format guidance with improved visual */}
-                  <div className="flex items-center space-x-2 py-1.5 px-3 bg-amber-50/50 rounded-lg border border-amber-100/50">
+                  <div className="flex items-center space-x-2.5 py-2.5 px-4 bg-amber-50/50 rounded-lg border border-amber-100/50">
                     <HiOutlineLightningBolt className="text-amber-500 flex-shrink-0" />
                     <span className="text-xs text-amber-700">
                       Enter number with country code (e.g., +1 for US)
@@ -435,7 +435,7 @@ const LoginLeft = () => {
 
                   <motion.button
                     type="submit"
-                    className="w-full py-3 bg-gradient-to-br from-violet-600 to-violet-700 text-white font-medium rounded-xl hover:from-violet-700 hover:to-violet-800 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-70 disabled:shadow-none disabled:from-violet-400 disabled:to-violet-500 mt-6"
+                    className="w-full py-3.5 bg-gradient-to-br from-violet-600 to-violet-700 text-white font-medium rounded-xl hover:from-violet-700 hover:to-violet-800 transition-all duration-300 shadow-md hover:shadow-xl disabled:opacity-70 disabled:shadow-none disabled:from-violet-400 disabled:to-violet-500 mt-8"
                     disabled={authLoading}
                     whileHover={{ scale: authLoading ? 1 : 1.02 }}
                     whileTap={{ scale: authLoading ? 1 : 0.98 }}
@@ -443,7 +443,7 @@ const LoginLeft = () => {
                     {authLoading ? (
                       <span className="flex items-center justify-center">
                         <svg
-                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          className="animate-spin -ml-1 mr-2.5 h-4 w-4 text-white"
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
                           viewBox="0 0 24 24"
@@ -476,17 +476,17 @@ const LoginLeft = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20, transition: { duration: 0.2 } }}
                   transition={{ duration: 0.4, ease: "easeOut" }}
-                  className="space-y-5 w-full"
+                  className="space-y-6 w-full"
                   onSubmit={handleVerifyOtp}
                 >
                   <motion.button
                     type="button"
                     onClick={() => setIsOtpSent(false)}
-                    className="flex items-center text-sm text-violet-600 hover:text-violet-800 transition-colors mb-2"
-                    whileHover={{ x: -2 }}
+                    className="flex items-center text-sm text-violet-600 hover:text-violet-800 transition-colors mb-3 font-medium"
+                    whileHover={{ x: -3 }}
                     whileTap={{ scale: 0.97 }}
                   >
-                    <HiOutlineArrowLeft className="mr-1" /> Back to phone entry
+                    <HiOutlineArrowLeft className="mr-1.5" /> Back to phone entry
                   </motion.button>
 
                   <div>
@@ -509,7 +509,7 @@ const LoginLeft = () => {
                         id="otp"
                         name="otp"
                         placeholder="••••••"
-                        className={`w-full px-4 py-3.5 border rounded-xl text-sm text-center tracking-widest font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all duration-300 ${
+                        className={`w-full px-5 py-4 border rounded-xl text-base text-center tracking-widest font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all duration-300 ${
                           formErrors.otp
                             ? "border-red-300 ring-red-100 bg-red-50/30"
                             : "border-gray-200 bg-white/60"
@@ -535,7 +535,7 @@ const LoginLeft = () => {
                       />
                     </div>
 
-                    <div className="flex justify-between items-center mt-2">
+                    <div className="flex justify-between items-center mt-3">
                       <div className="text-xs text-gray-500">
                         {otpCountdown > 0 && (
                           <span>
@@ -552,7 +552,7 @@ const LoginLeft = () => {
 
                       <motion.button
                         type="button"
-                        className={`text-xs text-violet-600 font-medium hover:text-violet-800 flex items-center gap-1 transition-all ${
+                        className={`text-xs text-violet-600 font-medium hover:text-violet-800 flex items-center gap-1.5 transition-all ${
                           otpCountdown > 0 || authLoading
                             ? "opacity-50 cursor-not-allowed"
                             : ""
@@ -573,7 +573,7 @@ const LoginLeft = () => {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="mt-1.5 text-xs text-red-500 flex items-center gap-1.5"
+                        className="mt-2 text-xs text-red-500 flex items-center gap-1.5"
                       >
                         <span className="w-1 h-1 bg-red-500 rounded-full inline-block"></span>
                         {formErrors.otp}
@@ -583,7 +583,7 @@ const LoginLeft = () => {
 
                   <motion.button
                     type="submit"
-                    className="w-full py-3 bg-gradient-to-br from-violet-600 to-violet-700 text-white font-medium rounded-xl hover:from-violet-700 hover:to-violet-800 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-70 disabled:shadow-none disabled:from-violet-400 disabled:to-violet-500 mt-3"
+                    className="w-full py-3.5 bg-gradient-to-br from-violet-600 to-violet-700 text-white font-medium rounded-xl hover:from-violet-700 hover:to-violet-800 transition-all duration-300 shadow-md hover:shadow-xl disabled:opacity-70 disabled:shadow-none disabled:from-violet-400 disabled:to-violet-500 mt-6"
                     disabled={authLoading}
                     whileHover={{ scale: authLoading ? 1 : 1.02 }}
                     whileTap={{ scale: authLoading ? 1 : 0.98 }}
@@ -591,7 +591,7 @@ const LoginLeft = () => {
                     {authLoading ? (
                       <span className="flex items-center justify-center">
                         <svg
-                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          className="animate-spin -ml-1 mr-2.5 h-4 w-4 text-white"
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
                           viewBox="0 0 24 24"
@@ -621,33 +621,31 @@ const LoginLeft = () => {
             </AnimatePresence>
           </div>
 
-          {/* Footer section with enhanced styling */}
+          {/* Footer section with improved spacing */}
           <motion.div
-            className="mt-8 text-center space-y-3"
+            className="mt-6 text-center space-y-4"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
           >
             <motion.div
               variants={itemVariants}
-              className="text-sm text-gray-600 flex justify-center items-center space-x-1"
+              className="text-sm text-gray-600 flex justify-center items-center space-x-1.5"
             >
               <span>Don't have an account?</span>
               <Link
                 href="/auth/register"
-                className="text-violet-600 hover:text-violet-800 font-medium transition-colors hover:underline"
+                className="text-violet-600 hover:text-violet-800 font-medium transition-colors hover:underline focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 rounded-sm"
               >
                 Register
               </Link>
-            </motion.div>
-
-            <motion.div
+            </motion.div>              <motion.div
               variants={itemVariants}
-              className="flex justify-center mt-2"
+              className="flex justify-center"
             >
               <Link
                 href="/auth/forgot-password"
-                className="text-sm text-violet-600 hover:text-violet-800 transition-colors hover:underline"
+                className="text-sm text-violet-600 hover:text-violet-800 transition-colors hover:underline focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 rounded-sm"
               >
                 Forgot your password?
               </Link>
@@ -660,14 +658,14 @@ const LoginLeft = () => {
               By signing in, you agree to our{" "}
               <Link
                 href="/terms"
-                className="text-violet-600 hover:text-violet-800 transition-colors hover:underline"
+                className="text-violet-600 hover:text-violet-800 transition-colors hover:underline focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 rounded-sm"
               >
                 Terms
               </Link>{" "}
               and{" "}
               <Link
                 href="/privacy"
-                className="text-violet-600 hover:text-violet-800 transition-colors hover:underline"
+                className="text-violet-600 hover:text-violet-800 transition-colors hover:underline focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 rounded-sm"
               >
                 Privacy Policy
               </Link>

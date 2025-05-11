@@ -1,6 +1,6 @@
 // file: frontend/Utils/galleryUtils.js
 
-import { api } from '../api';
+import api from '../api';
 import logger from '../logger';
 
 /**

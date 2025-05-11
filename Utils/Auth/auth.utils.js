@@ -1,13 +1,13 @@
-import jwtDecode from 'jwt-decode';
-import logger from '../logger';
+import { jwtDecode } from "jwt-decode";
+import logger from "../logger";
 
 /**
  * Get the current access token from localStorage
  * @returns {string|null} The access token or null if not found
  */
 export const getAuthToken = () => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('accessToken');
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("accessToken");
 };
 
 /**
@@ -15,16 +15,16 @@ export const getAuthToken = () => {
  * @param {string} token - The access token to store
  */
 export const setAuthToken = (token) => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('accessToken', token);
+  if (typeof window === "undefined") return;
+  localStorage.setItem("accessToken", token);
 };
 
 /**
  * Remove the access token from localStorage
  */
 export const removeAuthToken = () => {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem('accessToken');
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("accessToken");
 };
 
 /**
@@ -32,8 +32,8 @@ export const removeAuthToken = () => {
  * @param {Object} user - The user object to store
  */
 export const setUserData = (user) => {
-    if (typeof window === 'undefined' || !user) return;
-    localStorage.setItem('user', JSON.stringify(user));
+  if (typeof window === "undefined" || !user) return;
+  localStorage.setItem("user", JSON.stringify(user));
 };
 
 /**
@@ -41,23 +41,23 @@ export const setUserData = (user) => {
  * @returns {Object|null} The user object or null if not found
  */
 export const getUserData = () => {
-    if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
 
-    try {
-        const userData = localStorage.getItem('user');
-        return userData ? JSON.parse(userData) : null;
-    } catch (error) {
-        logger.error('Error parsing user data from localStorage', error);
-        return null;
-    }
+  try {
+    const userData = localStorage.getItem("user");
+    return userData ? JSON.parse(userData) : null;
+  } catch (error) {
+    logger.error("Error parsing user data from localStorage", error);
+    return null;
+  }
 };
 
 /**
  * Remove user data from localStorage
  */
 export const removeUserData = () => {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem('user');
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("user");
 };
 
 /**
@@ -65,16 +65,16 @@ export const removeUserData = () => {
  * @returns {boolean} True if token is expired or not found
  */
 export const isTokenExpired = () => {
-    const token = getAuthToken();
-    if (!token) return true;
+  const token = getAuthToken();
+  if (!token) return true;
 
-    try {
-        const decoded = jwtDecode(token);
-        return decoded.exp < Date.now() / 1000;
-    } catch (error) {
-        logger.error('Error decoding token', error);
-        return true;
-    }
+  try {
+    const decoded = jwtDecode(token);
+    return decoded.exp < Date.now() / 1000;
+  } catch (error) {
+    logger.error("Error decoding token", error);
+    return true;
+  }
 };
 
 /**
@@ -82,9 +82,9 @@ export const isTokenExpired = () => {
  * @returns {boolean} True if user is authenticated
  */
 export const isAuthenticated = () => {
-    const token = getAuthToken();
-    const user = getUserData();
-    return !!token && !!user && !isTokenExpired();
+  const token = getAuthToken();
+  const user = getUserData();
+  return !!token && !!user && !isTokenExpired();
 };
 
 /**
@@ -92,8 +92,8 @@ export const isAuthenticated = () => {
  * @returns {boolean} True if user is an admin
  */
 export const isAdmin = () => {
-    const user = getUserData();
-    return user?.role === 'admin';
+  const user = getUserData();
+  return user?.role === "admin";
 };
 
 /**
@@ -101,8 +101,8 @@ export const isAdmin = () => {
  * @returns {boolean} True if email is verified
  */
 export const isEmailVerified = () => {
-    const user = getUserData();
-    return user?.isEmailVerified === true;
+  const user = getUserData();
+  return user?.isEmailVerified === true;
 };
 
 /**
@@ -110,8 +110,8 @@ export const isEmailVerified = () => {
  * @returns {boolean} True if phone is verified
  */
 export const isPhoneVerified = () => {
-    const user = getUserData();
-    return user?.isPhoneVerified === true;
+  const user = getUserData();
+  return user?.isPhoneVerified === true;
 };
 
 /**
@@ -119,19 +119,19 @@ export const isPhoneVerified = () => {
  * @returns {boolean} True if profile is completed
  */
 export const isProfileCompleted = () => {
-    const user = getUserData();
-    return user?.isProfileCompleted === true;
+  const user = getUserData();
+  return user?.isProfileCompleted === true;
 };
 
 /**
  * Clear all authentication data from localStorage
  */
 export const clearAuthData = () => {
-    if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
-    removeAuthToken();
-    removeUserData();
-    localStorage.removeItem('nextStep');
+  removeAuthToken();
+  removeUserData();
+  localStorage.removeItem("nextStep");
 };
 
 /**
@@ -139,15 +139,15 @@ export const clearAuthData = () => {
  * @returns {Object|null} The next step object or null
  */
 export const getNextStep = () => {
-    if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
 
-    try {
-        const nextStep = localStorage.getItem('nextStep');
-        return nextStep ? JSON.parse(nextStep) : null;
-    } catch (error) {
-        logger.error('Error parsing nextStep data from localStorage', error);
-        return null;
-    }
+  try {
+    const nextStep = localStorage.getItem("nextStep");
+    return nextStep ? JSON.parse(nextStep) : null;
+  } catch (error) {
+    logger.error("Error parsing nextStep data from localStorage", error);
+    return null;
+  }
 };
 
 /**
@@ -155,8 +155,8 @@ export const getNextStep = () => {
  * @param {Object} nextStep - The next step object
  */
 export const setNextStep = (nextStep) => {
-    if (typeof window === 'undefined' || !nextStep) return;
-    localStorage.setItem('nextStep', JSON.stringify(nextStep));
+  if (typeof window === "undefined" || !nextStep) return;
+  localStorage.setItem("nextStep", JSON.stringify(nextStep));
 };
 
 /**
@@ -164,16 +164,16 @@ export const setNextStep = (nextStep) => {
  * @returns {Object} Object containing various auth state flags
  */
 export const getAuthState = () => {
-    const user = getUserData();
-    return {
-        isAuthenticated: isAuthenticated(),
-        isEmailVerified: isEmailVerified(),
-        isPhoneVerified: isPhoneVerified(),
-        isProfileCompleted: isProfileCompleted(),
-        isAdmin: isAdmin(),
-        nextStep: getNextStep(),
-        user
-    };
+  const user = getUserData();
+  return {
+    isAuthenticated: isAuthenticated(),
+    isEmailVerified: isEmailVerified(),
+    isPhoneVerified: isPhoneVerified(),
+    isProfileCompleted: isProfileCompleted(),
+    isAdmin: isAdmin(),
+    nextStep: getNextStep(),
+    user,
+  };
 };
 
 /**
@@ -181,11 +181,11 @@ export const getAuthState = () => {
  * @returns {Object} Object with needsEmailVerification and needsPhoneVerification flags
  */
 export const getVerificationNeeds = () => {
-    const user = getUserData();
-    return {
-        needsEmailVerification: user?.email && !user?.isEmailVerified,
-        needsPhoneVerification: user?.phone && !user?.isPhoneVerified
-    };
+  const user = getUserData();
+  return {
+    needsEmailVerification: user?.email && !user?.isEmailVerified,
+    needsPhoneVerification: user?.phone && !user?.isPhoneVerified,
+  };
 };
 
 /**
@@ -194,22 +194,24 @@ export const getVerificationNeeds = () => {
  * @returns {string} The path to redirect to
  */
 export const getAuthRedirectPath = (defaultPath = null) => {
-    const user = getUserData();
-    const { needsEmailVerification, needsPhoneVerification } = getVerificationNeeds();
+  const user = getUserData();
+  const { needsEmailVerification, needsPhoneVerification } =
+    getVerificationNeeds();
 
-    if (!user) return '/auth/login';
-    if (!user.isProfileCompleted) return '/complete-profile';
-    if (needsEmailVerification && needsPhoneVerification) return '/auth/verify-both';
-    if (needsEmailVerification) return '/auth/verify-email';
-    if (needsPhoneVerification) return '/auth/verify-phone';
+  if (!user) return "/auth/login";
+  if (!user.isProfileCompleted) return "/complete-profile";
+  if (needsEmailVerification && needsPhoneVerification)
+    return "/auth/verify-both";
+  if (needsEmailVerification) return "/auth/verify-email";
+  if (needsPhoneVerification) return "/auth/verify-phone";
 
-    // If user has a username, redirect to their profile page
-    if (user.username && !defaultPath) {
-        return `/user/${user.username}`;
-    }
+  // If user has a username, redirect to their profile page
+  if (user.username && !defaultPath) {
+    return `/user/${user.username}`;
+  }
 
-    // If defaultPath is provided, use it, otherwise redirect to home
-    return defaultPath || '/home';
+  // If defaultPath is provided, use it, otherwise redirect to home
+  return defaultPath || "/home";
 };
 
 /**
@@ -218,33 +220,33 @@ export const getAuthRedirectPath = (defaultPath = null) => {
  * @returns {Object|null} Decoded token payload or null
  */
 export const parseToken = (token) => {
-    if (!token) return null;
+  if (!token) return null;
 
-    try {
-        return jwtDecode(token);
-    } catch (error) {
-        logger.error('Error decoding token', error);
-        return null;
-    }
+  try {
+    return jwtDecode(token);
+  } catch (error) {
+    logger.error("Error decoding token", error);
+    return null;
+  }
 };
 
 export default {
-    getAuthToken,
-    setAuthToken,
-    removeAuthToken,
-    getUserData,
-    setUserData,
-    removeUserData,
-    isAuthenticated,
-    isAdmin,
-    isEmailVerified,
-    isPhoneVerified,
-    isProfileCompleted,
-    clearAuthData,
-    getNextStep,
-    setNextStep,
-    getAuthState,
-    getVerificationNeeds,
-    getAuthRedirectPath,
-    parseToken
+  getAuthToken,
+  setAuthToken,
+  removeAuthToken,
+  getUserData,
+  setUserData,
+  removeUserData,
+  isAuthenticated,
+  isAdmin,
+  isEmailVerified,
+  isPhoneVerified,
+  isProfileCompleted,
+  clearAuthData,
+  getNextStep,
+  setNextStep,
+  getAuthState,
+  getVerificationNeeds,
+  getAuthRedirectPath,
+  parseToken,
 };

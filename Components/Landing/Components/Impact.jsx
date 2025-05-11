@@ -36,10 +36,12 @@ import {
   Wallet,
   Compass,
   ExternalLink,
+  Keyboard, // <-- Import Keyboard icon
 } from "lucide-react";
 import GlobalButton from "../../UI/Buttons/GlobalButton";
 import Image from "next/image";
 import { useTheme } from "next-themes";
+import SectionLabel from "./Animations/SectionLabel";
 
 // Lazy loaded components for better performance
 const LazyImage = lazy(() => import("next/image"));
@@ -53,9 +55,10 @@ if (typeof window !== "undefined") {
 const useElementInView = (options = {}) => {
   const ref = useRef(null);
   const inView = useInView(ref, {
+    // Slightly larger margin to trigger a bit earlier/later for smoother appearance
+    margin: options.margin || "-10% 0px -10% 0px",
+    amount: options.amount || 0.1, // Ensure at least 10% is visible
     once: options.once || false,
-    threshold: options.threshold || 0.1,
-    margin: options.margin || undefined,
   });
 
   return [ref, inView];
@@ -77,17 +80,31 @@ const Counter = memo(({ from, to, duration = 2 }) => {
       }
 
       let startValue = from;
-      const increment = (to - from) / (duration * 60);
-      const timer = setInterval(() => {
-        startValue += increment;
-        nodeRef.current.textContent = Math.floor(startValue);
-        if (startValue >= to) {
-          nodeRef.current.textContent = to;
-          clearInterval(timer);
-        }
-      }, 16);
+      const targetValue = to;
+      const durationMs = duration * 1000;
+      let startTime = null;
 
-      return () => clearInterval(timer);
+      const step = (timestamp) => {
+        if (!startTime) startTime = timestamp;
+        const progress = Math.min((timestamp - startTime) / durationMs, 1);
+        const currentVal = Math.floor(from + (targetValue - from) * progress);
+        if (nodeRef.current) {
+          nodeRef.current.textContent = currentVal;
+        }
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          if (nodeRef.current) {
+            nodeRef.current.textContent = targetValue; // Ensure final value is exact
+          }
+        }
+      };
+
+      requestAnimationFrame(step);
+
+      // Cleanup function not strictly needed with requestAnimationFrame like this
+      // but good practice if complex logic were involved
+      return () => {};
     }
   }, [inView, from, to, duration, prefersReducedMotion]);
 
@@ -99,7 +116,6 @@ const Counter = memo(({ from, to, duration = 2 }) => {
     </span>
   );
 });
-
 Counter.displayName = "Counter";
 
 // Optimized progress bar component
@@ -120,7 +136,6 @@ const ProgressBar = memo(({ progress }) => {
     </div>
   );
 });
-
 ProgressBar.displayName = "ProgressBar";
 
 // Memoized icon wrapper for performance
@@ -137,7 +152,6 @@ const AnimatedIcon = memo(({ icon }) => {
     </motion.div>
   );
 });
-
 AnimatedIcon.displayName = "AnimatedIcon";
 
 const gradientBG =
@@ -188,7 +202,7 @@ const ContentBox = memo(({ index, inView }) => {
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: prefersReducedMotion ? 0.1 : 0.6, delay: 0.3 }}
     >
-      <div className="relative overflow-hidden bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-lg group hover:border-violet-500/30 transition-all duration-300 shadow-sm hover:shadow-lg">
+      <div className="relative overflow-hidden bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-lg group hover:border-violet-500/30 transition-all duration-300">
         {/* Top accent */}
         <div className={`h-1 w-full ${gradientBG}`} />
 
@@ -244,14 +258,9 @@ const ContentBox = memo(({ index, inView }) => {
           </motion.button>
         </div>
       </div>
-
-      {/* Decorative pattern behind the box */}
-      <div className="absolute top-12 -right-6 w-20 h-20 border border-dashed border-violet-500/20 rounded-full -z-10 opacity-50" />
-      <div className="absolute -bottom-4 -left-4 w-12 h-12 border border-dashed border-indigo-500/20 rounded-full -z-10 opacity-50" />
     </motion.div>
   );
 });
-
 ContentBox.displayName = "ContentBox";
 
 // New Component: Image display component
@@ -277,7 +286,7 @@ const StepImage = memo(({ index, inView }) => {
       height: 350,
       style: "float",
     },
-    {}, // Placeholder for step 4 (will be content box)
+    {},
   ];
 
   const data = imageData[index];
@@ -319,25 +328,6 @@ const StepImage = memo(({ index, inView }) => {
             <div className="absolute -top-2 -left-2 w-16 h-16 bg-indigo-500/5 rounded-full -z-10" />
           </>
         )}
-
-        {data.style === "shadow" && (
-          <motion.div
-            className="absolute -z-10 inset-0 bg-violet-500/20 blur-xl opacity-30 scale-95"
-            animate={
-              prefersReducedMotion
-                ? {}
-                : {
-                    opacity: [0.2, 0.3, 0.2],
-                    scale: [0.94, 0.96, 0.94],
-                  }
-            }
-            transition={{
-              duration: 5,
-              repeat: Infinity,
-              repeatType: "reverse",
-            }}
-          />
-        )}
       </div>
 
       {/* Caption below image */}
@@ -347,7 +337,6 @@ const StepImage = memo(({ index, inView }) => {
     </motion.div>
   );
 });
-
 StepImage.displayName = "StepImage";
 
 const Impact = () => {
@@ -358,34 +347,23 @@ const Impact = () => {
   const underlineRef = useRef(null);
   const [activeStep, setActiveStep] = useState(0);
   const [hoveredStep, setHoveredStep] = useState(null);
-  const [containerRef1, containerInView] = useElementInView();
+
+  // Hook to track if the main container is in view
+  const [mainContainerRef, mainContainerInView] = useElementInView({
+    // Adjust margin/amount as needed for when the sidebar/tooltip should appear/disappear
+    margin: "-15% 0px -15% 0px",
+    amount: 0.1,
+  });
+
   const prefersReducedMotion = useReducedMotion();
   const [isMobile, setIsMobile] = useState(false);
-  
-  // Ref for tracking section scroll position for tooltip visibility
-  const sectionRef = useRef(null);
-  
-  // Set up scroll tracking for tooltip visibility
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start end", "end start"] 
-  });
-  
-  // Transform scroll progress to tooltip opacity
-  // Will be 0 when out of section, 1 when in section
-  const tooltipOpacity = useTransform(
-    scrollYProgress,
-    [0, 0.1, 0.9, 1], // Input range (scroll positions)
-    [0, 1, 1, 0]      // Output range (opacity values)
-  );
 
   // Check if device is mobile
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth < 1280); // Changed breakpoint to xl for sidebar
     };
 
-    // Initial check
     if (typeof window !== "undefined") {
       checkMobile();
       window.addEventListener("resize", checkMobile);
@@ -455,7 +433,7 @@ const Impact = () => {
     (index) => {
       const section = document.querySelectorAll(".step-section")[index];
       if (section) {
-        const yOffset = -80;
+        const yOffset = -100; // Adjusted offset for better positioning with fixed elements
         const y =
           section.getBoundingClientRect().top + window.pageYOffset + yOffset;
         window.scrollTo({
@@ -467,17 +445,24 @@ const Impact = () => {
     [prefersReducedMotion]
   );
 
-  // Enhanced keyboard navigation
+  // Enhanced keyboard navigation - Only active when container is in view
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Only navigate if the main container is in view and not on mobile
+      if (!mainContainerInView || isMobile) return;
+
+      let newStep = activeStep;
       if (e.key === "ArrowDown" || e.key === "ArrowRight") {
         e.preventDefault();
-        setActiveStep((prev) => Math.min(prev + 1, stepsData.length - 1));
-        scrollToStep(Math.min(activeStep + 1, stepsData.length - 1));
+        newStep = Math.min(activeStep + 1, stepsData.length - 1);
       } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
         e.preventDefault();
-        setActiveStep((prev) => Math.max(prev - 1, 0));
-        scrollToStep(Math.max(activeStep - 1, 0));
+        newStep = Math.max(activeStep - 1, 0);
+      }
+
+      if (newStep !== activeStep) {
+        setActiveStep(newStep);
+        scrollToStep(newStep);
       }
     };
 
@@ -485,7 +470,13 @@ const Impact = () => {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [activeStep, scrollToStep, stepsData.length]);
+  }, [
+    activeStep,
+    scrollToStep,
+    stepsData.length,
+    mainContainerInView,
+    isMobile,
+  ]);
 
   // Setup scroll animations with GSAP
   useEffect(() => {
@@ -500,224 +491,183 @@ const Impact = () => {
       .fill()
       .map((_, i) => timelineMarkersRef.current[i] || createRef());
 
-    // Cleanup function for all created animations
-    const cleanupFns = [];
+    const ctx = gsap.context(() => {
+      // Clear any existing ScrollTriggers to prevent duplicates
+      ScrollTrigger.getAll().forEach((t) => t.kill());
 
-    // Animate title underline
-    if (underline) {
-      const underlineTl = gsap.fromTo(
-        underline,
-        { width: "0%" },
-        {
-          width: "100%",
-          duration: 0.8,
-          ease: "power2.out",
-          scrollTrigger: {
-            trigger: underline,
-            start: "top 85%",
-          },
-        }
-      );
-
-      cleanupFns.push(() => underlineTl.kill());
-    }
-
-    // Reset initial states
-    gsap.set(".step-card", { y: 20, opacity: 0 });
-    gsap.set(".step-marker", { scale: 0.5, opacity: 0 });
-    gsap.set(".stats-container", { opacity: 0, y: 10 });
-    gsap.set(".timeline-marker", { scale: 0.5, opacity: 0 });
-    gsap.set(".alt-content", { y: 30, opacity: 0 });
-
-    // Clear any existing ScrollTriggers to prevent duplicates
-    ScrollTrigger.getAll().forEach((t) => t.kill());
-
-    if (sections.length > 0) {
-      // Create scroll-linked animations for each step
-      sections.forEach((section, i) => {
-        // Step card animation with improved performance
-        const cardTl = gsap.to(section.querySelector(".step-card"), {
-          y: 0,
-          opacity: 1,
-          duration: 0.5,
-          ease: "power2.out",
-          scrollTrigger: {
-            trigger: section,
-            start: "top 75%",
-            toggleActions: "play none none reverse",
-          },
-        });
-
-        cleanupFns.push(() => cardTl.kill());
-
-        // Step marker animation
-        if (section.querySelector(".step-marker")) {
-          const markerTl = gsap.to(section.querySelector(".step-marker"), {
-            scale: 1,
-            opacity: 1,
-            duration: 0.4,
-            delay: 0.1,
-            ease: "back.out(1.7)",
-            scrollTrigger: {
-              trigger: section,
-              start: "top 75%",
-              toggleActions: "play none none reverse",
-            },
-          });
-
-          cleanupFns.push(() => markerTl.kill());
-        }
-
-        // Stats animation with staggered effect
-        const statsItems = section.querySelectorAll(".stat-item");
-        if (statsItems.length) {
-          gsap.to(statsItems, {
-            opacity: 1,
-            y: 0,
-            duration: 0.4,
-            stagger: 0.1,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: section,
-              start: "top 70%",
-              toggleActions: "play none none reverse",
-            },
-          });
-        } else {
-          // Fallback for the container
-          const statsTl = gsap.to(section.querySelector(".stats-container"), {
-            opacity: 1,
-            y: 0,
-            duration: 0.4,
-            delay: 0.2,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: section,
-              start: "top 70%",
-              toggleActions: "play none none reverse",
-            },
-          });
-
-          cleanupFns.push(() => statsTl.kill());
-        }
-
-        // Alternate content animation (image or content box)
-        if (section.querySelector(".alt-content")) {
-          const altContentTl = gsap.to(section.querySelector(".alt-content"), {
-            y: 0,
-            opacity: 1,
-            duration: 0.6,
-            delay: 0.3,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: section,
-              start: "top 70%",
-              toggleActions: "play none none reverse",
-            },
-          });
-
-          cleanupFns.push(() => altContentTl.kill());
-        }
-
-        // Set active step based on scroll position with improved accuracy
-        const stepTrigger = ScrollTrigger.create({
-          trigger: section,
-          start: "top center",
-          end: "bottom center",
-          onEnter: () => setActiveStep(i),
-          onEnterBack: () => setActiveStep(i),
-          onLeave: () =>
-            i === stepsData.length - 1 ? null : setActiveStep(i + 1),
-          onLeaveBack: () => (i === 0 ? null : setActiveStep(i - 1)),
-        });
-
-        cleanupFns.push(() => stepTrigger.kill());
-      });
-
-      // Timeline progress animation - IMPROVED
-      if (timeline) {
-        // Animate the main timeline with better positioning
-        const timelineTl = gsap.fromTo(
-          timeline,
-          { height: "0%" },
+      // Animate title underline
+      if (underline) {
+        gsap.fromTo(
+          underline,
+          { width: "0%" },
           {
-            height: "100%",
-            ease: "none",
+            width: "100%",
+            duration: 0.8,
+            ease: "power2.out",
             scrollTrigger: {
-              trigger: containerRef.current,
-              // Better start and end points for more accurate tracking
-              start: "top 25%",
-              end: "bottom 75%",
-              scrub: 0.6, // Smoother scrubbing effect
+              trigger: underline,
+              start: "top 85%",
             },
           }
         );
+      }
 
-        cleanupFns.push(() => timelineTl.kill());
+      // Reset initial states
+      gsap.set(".step-card", { y: 20, opacity: 0 });
+      gsap.set(".step-marker", { scale: 0.5, opacity: 0 });
+      gsap.set(".stats-container", { opacity: 0, y: 10 });
+      gsap.set(".timeline-marker", { scale: 0.5, opacity: 0 });
+      gsap.set(".alt-content", { y: 30, opacity: 0 });
 
-        // Improved animation for timeline markers
-        document.querySelectorAll(".timeline-marker").forEach((marker, i) => {
-          // Create a more precise trigger for each marker
-          const markerTl = gsap.fromTo(
-            marker,
-            { scale: 0.5, opacity: 0 },
-            {
+      if (sections.length > 0) {
+        // Create scroll-linked animations for each step
+        sections.forEach((section, i) => {
+          // Step card animation
+          gsap.to(section.querySelector(".step-card"), {
+            y: 0,
+            opacity: 1,
+            duration: 0.5,
+            ease: "power2.out",
+            scrollTrigger: {
+              trigger: section,
+              start: "top 75%", // Start animation slightly earlier
+              toggleActions: "play none none reverse",
+            },
+          });
+
+          // Step marker animation
+          if (section.querySelector(".step-marker")) {
+            gsap.to(section.querySelector(".step-marker"), {
               scale: 1,
               opacity: 1,
               duration: 0.4,
-              ease: "back.out(2)",
+              delay: 0.1,
+              ease: "back.out(1.7)",
               scrollTrigger: {
-                // More precise trigger using markerPosition
-                trigger: sections[i],
-                start: "top center",
+                trigger: section,
+                start: "top 75%",
                 toggleActions: "play none none reverse",
-                onEnter: () => {
-                  // Enhance marker appearance when it becomes active
-                  gsap.to(marker, {
-                    scale: 1.2,
-                    backgroundColor: "var(--primary-color)",
-                    duration: 0.3,
-                  });
-                },
-                onLeaveBack: () => {
-                  // Reset when no longer active
-                  gsap.to(marker, {
-                    scale: 1,
-                    backgroundColor: "white",
-                    duration: 0.3,
-                  });
-                },
+              },
+            });
+          }
+
+          // Stats animation
+          const statsItems = section.querySelectorAll(".stat-item");
+          if (statsItems.length) {
+            gsap.to(statsItems, {
+              opacity: 1,
+              y: 0,
+              duration: 0.4,
+              stagger: 0.1,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: section,
+                start: "top 70%",
+                toggleActions: "play none none reverse",
+              },
+            });
+          } else {
+            gsap.to(section.querySelector(".stats-container"), {
+              opacity: 1,
+              y: 0,
+              duration: 0.4,
+              delay: 0.2,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: section,
+                start: "top 70%",
+                toggleActions: "play none none reverse",
+              },
+            });
+          }
+
+          // Alternate content animation
+          if (section.querySelector(".alt-content")) {
+            gsap.to(section.querySelector(".alt-content"), {
+              y: 0,
+              opacity: 1,
+              duration: 0.6,
+              delay: 0.3,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: section,
+                start: "top 70%",
+                toggleActions: "play none none reverse",
+              },
+            });
+          }
+
+          // Set active step based on scroll position
+          ScrollTrigger.create({
+            trigger: section,
+            start: "top center+=50", // Adjust trigger point slightly below center
+            end: "bottom center+=50",
+            // markers: true, // Uncomment for debugging
+            onEnter: () => setActiveStep(i),
+            onEnterBack: () => setActiveStep(i),
+            // Removed onLeave/onLeaveBack to prevent flickering when quickly scrolling
+            // Active state relies solely on enter/enterBack now
+          });
+        });
+
+        // Timeline progress animation
+        if (timeline) {
+          gsap.fromTo(
+            timeline,
+            { height: "0%" },
+            {
+              height: "100%",
+              ease: "none",
+              scrollTrigger: {
+                trigger: containerRef.current,
+                start: "top 25%", // Start when container top hits 25% viewport height
+                end: "bottom 75%", // End when container bottom hits 75% viewport height
+                scrub: 0.5,
               },
             }
           );
 
-          cleanupFns.push(() => markerTl.kill());
-        });
+          // Timeline markers animation
+          document.querySelectorAll(".timeline-marker").forEach((marker, i) => {
+            gsap.fromTo(
+              marker,
+              { scale: 0.5, opacity: 0 },
+              {
+                scale: 1,
+                opacity: 1,
+                duration: 0.4,
+                ease: "back.out(2)",
+                scrollTrigger: {
+                  trigger: sections[i],
+                  start: "top center", // Animate marker when its section hits center
+                  toggleActions: "play none none reverse",
+                  // We use CSS/React state for active marker styling now
+                },
+              }
+            );
+          });
+        }
       }
-    }
+    }, containerRef); // Scope GSAP animations to the container
 
-    // Cleanup function to prevent memory leaks
+    // Cleanup function
     return () => {
-      ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
-      cleanupFns.forEach((fn) => fn());
+      ctx.revert(); // Revert GSAP animations and kill ScrollTriggers
+      ScrollTrigger.getAll().forEach((t) => t.kill());
     };
-  }, [stepsData.length, prefersReducedMotion]);
-
-  // Use transform for better performance
-  const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "5%"]);
+  }, [stepsData.length, prefersReducedMotion]); // Rerun if steps change or motion preference changes
 
   return (
     <div
       ref={(el) => {
         containerRef.current = el;
-        containerRef1.current = el;
-        sectionRef.current = el; // Add this to track section for tooltip visibility
+        mainContainerRef.current = el; // Assign ref for visibility hook
       }}
-      className="relative bg-white dark:bg-gray-900 overflow-hidden py-2"
+      className="relative bg-white dark:bg-gray-900 overflow-hidden py-12 sm:py-16"
       id="impact-section"
     >
       {/* Header section */}
-      <div className="flex flex-col items-center z-10 relative">
+      <div className="flex flex-col items-center z-10 relative mb-16 md:mb-24">
         <motion.div
           className="w-full max-w-4xl flex flex-col items-center px-4"
           initial={{ opacity: 0, y: 20 }}
@@ -727,41 +677,24 @@ const Impact = () => {
             ease: "easeOut",
           }}
         >
-          {/* Badge with sparkle */}
+          {/* Section Label */}
           <motion.div
-            className="inline-flex items-center px-5 py-2 mb-6 rounded-full bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-900/20 dark:to-indigo-900/20 border border-violet-100 dark:border-violet-800/30 relative group"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{
               duration: prefersReducedMotion ? 0.2 : 0.6,
               delay: 0.1,
             }}
-            whileHover={{ scale: prefersReducedMotion ? 1 : 1.05 }}
           >
-            <motion.span
-              className="absolute -right-1 -top-1 text-violet-500 dark:text-violet-300"
-              animate={
-                prefersReducedMotion
-                  ? {}
-                  : {
-                      rotate: [0, 15, -15, 0],
-                      scale: [1, 1.2, 1],
-                    }
-              }
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                repeatDelay: 3,
-              }}
-            >
-              <Sparkles className="w-4 h-4" />
-            </motion.span>
-            <span className="text-violet-700 dark:text-violet-300 font-medium text-sm">
-              Simple • Intuitive • Powerful
-            </span>
+            <SectionLabel
+              text="Simple • Intuitive • Powerful"
+              size="medium"
+              alignment="center"
+              animate={false}
+            />
           </motion.div>
 
-          {/* Heading with improved animation */}
+          {/* Heading */}
           <motion.h2
             className="text-3xl md:text-4xl lg:text-5xl font-bold mb-5 text-gray-900 dark:text-white relative inline-block text-center px-4"
             initial={{ opacity: 0, y: 20 }}
@@ -774,10 +707,10 @@ const Impact = () => {
           >
             <span className="relative">
               Simple Steps to{" "}
-              <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-500 dark:from-violet-400 dark:to-indigo-300">
+              <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-indigo-600 dark:from-violet-300 dark:to-indigo-400">
                 Maximum Impact
                 <motion.svg
-                  className="absolute -bottom-2 left-0 right-0 w-full h-3 text-violet-500/30 dark:text-violet-400/30"
+                  className="absolute -bottom-2 left-0 right-0 w-full h-3 text-primary dark:text-primary-light opacity-60"
                   viewBox="0 0 100 10"
                   initial={{ pathLength: 0, opacity: 0 }}
                   animate={{ pathLength: 1, opacity: 1 }}
@@ -815,16 +748,16 @@ const Impact = () => {
             discovering the next big thing.
           </motion.p>
 
-          {/* Stats counter section using grid */}
+          {/* Stats counter section */}
           <motion.div
-            className="grid grid-cols-1 sm:grid-cols-3 gap-8 w-full max-w-4xl mt-12 px-4"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8 w-full max-w-4xl mt-12 px-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{
               duration: prefersReducedMotion ? 0.2 : 0.8,
               delay: 0.6,
               ease: "easeOut",
-              staggerChildren: 0.1,
+              staggerChildren: 0.15, // Slightly increased stagger
             }}
           >
             {[
@@ -846,172 +779,191 @@ const Impact = () => {
             ].map((stat, idx) => (
               <motion.div
                 key={idx}
-                className={`flex flex-col items-center gap-1 px-6 py-4 relative overflow-hidden
-                  ${
-                    idx !== 2
-                      ? "sm:border-r sm:border-gray-200 sm:dark:border-gray-800"
-                      : ""
-                  }
-                  backdrop-blur-sm bg-white/20 dark:bg-gray-900/20 rounded-lg
+                className={`flex flex-col items-center gap-2 px-6 py-6 relative overflow-hidden
+                  bg-white/50 dark:bg-gray-800/40 rounded-xl border border-gray-200/80 dark:border-gray-700/60
+                  shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out group
+                  ${idx !== 2 ? "sm:border-r-0" : ""} // Removed inter-item borders for a cleaner look with individual cards
                 `}
                 whileHover={{
-                  y: prefersReducedMotion ? 0 : -5,
-                  scale: prefersReducedMotion ? 1 : 1.02,
+                  y: prefersReducedMotion ? 0 : -6,
+                  scale: prefersReducedMotion ? 1 : 1.03,
+                  boxShadow: "0 8px 25px rgba(0,0,0,0.08)",
                 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                transition={{ type: "spring", stiffness: 350, damping: 12 }}
               >
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                  <span className="tabular-nums">
-                    <Counter from={0} to={stat.value} duration={2.5} />
-                  </span>
-                  {stat.label.includes("%") ? "%" : ""}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm flex gap-2">
-                  {stat.icon} {stat.label}
-                </p>
+                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-violet-50 via-transparent to-indigo-50 dark:from-violet-900/10 dark:via-transparent dark:to-indigo-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
+                <div className="relative z-10 flex flex-col items-center">
+                  <h3 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-1">
+                    <span className="tabular-nums">
+                      <Counter from={0} to={stat.value} duration={2.5} />
+                    </span>
+                    {stat.label.includes("%") ? "%" : ""}
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-1.5">
+                    {stat.icon} {stat.label}
+                  </p>
+                </div>
               </motion.div>
             ))}
           </motion.div>
         </motion.div>
       </div>
 
-      {/* Step indicators - side navigation for desktop */}
+      {/* --- Enhanced Desktop Sidebar Navigation --- */}
       <AnimatePresence>
-        {containerInView && (
-          <motion.div
-            className="hidden xl:flex fixed left-8 top-1/3 -translate-y-1/2 flex-col gap-6 z-30"
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.3, staggerChildren: 0.05 }}
-            role="navigation"
-            aria-label="Timeline navigation"
-          >
-            {stepsData.map((step, index) => (
-              <motion.div
-                key={index}
-                className="group relative flex items-center cursor-pointer"
-                initial={{ opacity: 0, x: -5 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.2, delay: index * 0.05 }}
-                onClick={() => scrollToStep(index)}
-                onMouseEnter={() => setHoveredStep(index)}
-                onMouseLeave={() => setHoveredStep(null)}
-                role="button"
-                tabIndex={0}
-                aria-label={`Go to step ${index + 1}: ${step.title}`}
-                aria-current={activeStep === index ? "step" : undefined}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    scrollToStep(index);
-                  }
-                }}
-              >
-                {/* Vertical connecting line between indicators */}
-                {index > 0 && (
-                  <div
-                    className={`absolute left-[19px] -top-6 w-[2px] h-6 transition-colors duration-500 ${
-                      activeStep >= index
-                        ? "bg-gradient-to-r from-violet-500 to-indigo-500"
-                        : "bg-gray-200 dark:bg-gray-700"
-                    }`}
-                  ></div>
-                )}
+        {mainContainerInView &&
+          !isMobile && ( // Conditionally render based on main container visibility and NOT mobile
+            <motion.div
+              className="hidden xl:flex fixed left-8 top-1/2 transform -translate-y-1/2 z-30 p-3 rounded-2xl
+                       bg-white/70 dark:bg-gray-800/70 backdrop-blur-md
+                       border border-gray-200/70 dark:border-gray-700/50"
+              initial={{ opacity: 0, x: -25 }} // Slightly increased x offset
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -25 }}
+              transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }} // Adjusted ease
+              role="navigation"
+              aria-label="Timeline navigation"
+            >
+              <div className="flex flex-col gap-5">
+                {stepsData.map((step, index) => (
+                  <motion.div
+                    key={index}
+                    className="group relative flex items-center cursor-pointer"
+                    onClick={() => scrollToStep(index)}
+                    onMouseEnter={() => setHoveredStep(index)}
+                    onMouseLeave={() => setHoveredStep(null)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Go to step ${index + 1}: ${step.title}`}
+                    aria-current={activeStep === index ? "step" : undefined}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        scrollToStep(index);
+                      }
+                    }}
+                  >
+                    {/* Vertical connecting line - enhanced appearance */}
+                    {index > 0 && (
+                      <div
+                        className={`absolute left-[19px] -top-[23px] w-0.5 h-[24px] transition-all duration-500 ease-in-out origin-bottom // Adjusted height and top
+                                ${activeStep >= index
+                                  ? "scale-y-100 bg-gradient-to-t from-violet-500 to-indigo-500"
+                                  : "scale-y-0 bg-gray-300 dark:bg-gray-600" // Softer inactive line
+                                }`}
+                        style={{
+                          height: "calc(1.25rem + 2px)", // gap-5 is 1.25rem
+                        }}
+                      ></div>
+                    )}
 
-                {/* Step number indicator */}
-                <motion.div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-300 ${
-                    activeStep >= index
-                      ? "border-violet-500 bg-violet-500 text-white shadow-sm"
-                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500"
-                  }`}
-                  whileHover={{ scale: prefersReducedMotion ? 1 : 1.05 }}
-                  animate={
-                    activeStep === index && !prefersReducedMotion
-                      ? { scale: [1, 1.1, 1], transition: { duration: 0.5 } }
-                      : {}
-                  }
-                >
-                  {activeStep > index ? (
+                    {/* Step number indicator - enhanced appearance */}
                     <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 500,
-                        damping: 15,
-                      }}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 relative overflow-hidden
+                                  group-hover:border-violet-400 dark:group-hover:border-violet-500 // Hover effect on parent
+                                  ${activeStep === index
+                                    ? "border-violet-600 bg-violet-600 text-white scale-105" // Enhanced active state
+                                    : activeStep > index
+                                      ? "border-violet-500 bg-violet-500 text-white"
+                                      : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400" // Adjusted default
+                                  }`}
+                      whileHover={{ scale: prefersReducedMotion ? 1 : 1.1 }} // Consistent hover scale
+                      animate={activeStep === index && !prefersReducedMotion ? { scale: [1, 1.15, 1] } : {}}
+                      transition={{ duration: 0.6, ease: "backInOut" }}
                     >
-                      <CheckCircle className="w-4 h-4" />
+                      {/* Animated checkmark for completed steps */}
+                      <AnimatePresence>
+                        {activeStep > index && (
+                          <motion.div
+                            className="absolute inset-0 flex items-center justify-center"
+                            initial={{ scale: 0, rotate: -45 }}
+                            animate={{ scale: 1, rotate: 0 }}
+                            exit={{ scale: 0, rotate: 45 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 15,
+                              duration: 0.3,
+                            }}
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                      {/* Show number only if not completed */}
+                      {activeStep <= index && (
+                        <span className="text-sm font-medium relative z-10">
+                          {" "}
+                          {/* Ensure number is above checkmark anim */}
+                          {step.number}
+                        </span>
+                      )}
                     </motion.div>
-                  ) : (
-                    <span className="text-sm">{step.number}</span>
-                  )}
-                </motion.div>
 
-                {/* Tooltip */}
-                <AnimatePresence>
-                  {(activeStep === index || hoveredStep === index) && (
-                    <motion.div
-                      className="absolute left-14 bg-white dark:bg-gray-900 py-2.5 px-4 rounded-full border border-gray-100 dark:border-gray-800 z-30"
-                      initial={{ opacity: 0, x: -5 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -5 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <span className="text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                        {step.title}
-                      </span>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
+                    {/* Tooltip - slightly refined */}
+                    <AnimatePresence>
+                      {hoveredStep === index && ( // Only show on hover now
+                        <motion.div
+                          className="absolute left-12 ml-2 bg-gray-800 dark:bg-gray-900 py-2 px-3.5 rounded-lg shadow-lg z-30" // Enhanced tooltip style
+                          initial={{ opacity: 0, x: -8, scale: 0.95 }} // Added scale animation
+                          animate={{ opacity: 1, x: 0, scale: 1 }}
+                          exit={{ opacity: 0, x: -8, scale: 0.95 }}
+                          transition={{ duration: 0.25, ease: "easeOut" }} // Smoother transition
+                        >
+                          <span className="text-xs font-semibold text-white dark:text-gray-100 whitespace-nowrap">
+                            {step.title}
+                          </span>
+                           <div className="absolute left-[-3px] top-1/2 -translate-y-1/2 w-2 h-2 bg-gray-800 dark:bg-gray-900 transform rotate-45"></div> {/* Tooltip arrow */}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
       </AnimatePresence>
+      {/* --- End Enhanced Sidebar --- */}
 
       {/* Central timeline */}
       <div
-        className="hidden md:block absolute left-1/2 transform -translate-x-1/2 z-10 timeline-container"
-        style={{ top: "430px", bottom: "430px", width: "2px" }}
+        className="hidden md:block absolute left-1/2 transform -translate-x-1/2 z-0 timeline-container"
+        style={{ top: "450px", bottom: "400px", width: "3px" }} // Slightly thicker line
         aria-hidden="true"
       >
         <div className="relative w-full h-full">
           {/* Background line */}
-          <div className="absolute inset-0 bg-gray-200/70 dark:bg-gray-700/70 rounded-full" />
+          <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700/80 rounded-full" />
 
           {/* Progress line */}
           <div
             ref={timelineRef}
-            className="absolute top-0 left-0 w-full rounded-full bg-gradient-to-b from-violet-500 via-violet-600 to-indigo-500"
-            style={{ height: "0%" }}
+            className="absolute top-0 left-0 w-full rounded-full bg-gradient-to-b from-violet-500 via-purple-500 to-indigo-600" // Adjusted gradient
+            style={{ height: "0%" }} // Driven by GSAP
           />
 
           {/* Timeline markers */}
           {stepsData.map((_, index) => {
-            // Calculate even distribution along the timeline height
             const position =
-              index === 0
-                ? 0
-                : index === stepsData.length - 1
-                ? 100
-                : (100 / (stepsData.length - 1)) * index;
+              index === 0 ? 0 : (100 / (stepsData.length - 1)) * index;
 
             return (
               <div
                 key={index}
-                className="timeline-marker absolute left-1/2 transform -translate-x-1/2 w-4 h-4 rounded-full bg-white dark:bg-gray-900 border-2 border-violet-500 dark:border-violet-400"
+                className={`timeline-marker absolute left-1/2 w-5 h-5 rounded-full border-2 transition-all duration-300 ease-in-out // Increased size
+                           ${activeStep === index
+                             ? "bg-violet-500 border-violet-700 dark:bg-violet-400 dark:border-violet-200 scale-110 shadow-lg" // Enhanced active marker
+                             : "bg-white dark:bg-gray-800 border-violet-400 dark:border-violet-500" // Adjusted inactive marker
+                           }`}
                 style={{
                   top: `${position}%`,
+                  transform: `translate(-50%, -50%)`,
                   opacity: 0,
-                  transform: "translate(-50%, -50%) scale(0.5)",
-                  zIndex: 2,
+                  zIndex: 1,
                 }}
                 ref={(el) => (timelineMarkersRef.current[index] = el)}
               >
-                {/* Pulsing effect for active marker */}
+                {/* Pulsing effect for active marker - moved to CSS */}
                 {activeStep === index && !prefersReducedMotion && (
                   <span className="absolute inset-[-4px] rounded-full bg-violet-500/20 animate-timeline-ping" />
                 )}
@@ -1021,13 +973,14 @@ const Impact = () => {
 
           {/* Decorative dots */}
           {!prefersReducedMotion &&
-            [...Array(8)].map((_, i) => (
+            [...Array(10)].map((_, i) => ( // Increased dot count
               <div
                 key={`dot-${i}`}
-                className="absolute left-1/2 w-1 h-1 rounded-full bg-violet-500/40 dark:bg-violet-400/60 transform -translate-x-1/2"
+                className="absolute left-1/2 w-1.5 h-1.5 rounded-full bg-violet-400/50 dark:bg-violet-500/70 transform -translate-x-1/2" // Slightly larger dots
                 style={{
-                  top: `${12 + i * 12}%`,
-                  opacity: 0.5 + (i % 3) * 0.15,
+                  top: `${10 + i * 9}%`, // Adjusted spacing
+                  opacity: 0.4 + (i % 4) * 0.1, // Adjusted opacity variance
+                  zIndex: 0,
                 }}
               />
             ))}
@@ -1037,16 +990,16 @@ const Impact = () => {
       {/* Steps container */}
       <div className="relative z-10 max-w-6xl mx-auto mt-12">
         {stepsData.map((step, index) => {
-          const [ref, inView] = useElementInView({
-            threshold: 0.2,
-            once: true,
+          const [stepSectionRef, stepSectionInView] = useElementInView({
+            threshold: 0.3, // Trigger animations when 30% visible
+            // once: true, // Keep once: true if you don't want re-animations on scroll back
           });
 
           return (
             <div
               key={index}
-              ref={ref}
-              className="step-section relative mb-24 last:mb-16 px-4"
+              ref={stepSectionRef}
+              className="step-section relative mb-24 md:mb-32 last:mb-16 px-4" // Increased spacing
               id={`step-${index + 1}`}
               role="region"
               aria-labelledby={`step-title-${index + 1}`}
@@ -1070,22 +1023,22 @@ const Impact = () => {
                   </motion.div>
                 </div>
 
-                {/* Content container - now with alternating content in second column */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-                  {/* Step Card Column - always consistent */}
+                {/* Content container */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
+                  {" "}
+                  {/* Added items-center */}
+                  {/* Step Card Column */}
                   <div className={`${index % 2 !== 0 ? "md:order-2" : ""}`}>
                     <div
-                      className="step-card group bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 overflow-hidden transition-all duration-300 hover:border-violet-500/20 dark:hover:border-violet-500/20 hover:shadow-2xl hover:shadow-black/5"
-                      style={{ opacity: 0, transform: "translateY(20px)" }}
+                      className="step-card group bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 overflow-hidden transition-all duration-300 hover:border-violet-500/20 dark:hover:border-violet-500/20 hover:shadow-xl hover:shadow-violet-500/5 dark:hover:shadow-violet-400/5" // Adjusted shadow
+                      style={{ opacity: 0, transform: "translateY(20px)" }} // Initial state for GSAP
                     >
-                      {/* Card header with gradient border top */}
+                      {/* Card header */}
                       <div className={`${gradientBG} h-1`} />
 
                       <div className="p-6 pb-3">
                         <div className="flex items-start gap-4">
-                          {/* Icon */}
                           <AnimatedIcon icon={step.icon} />
-
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
                               <h3
@@ -1100,7 +1053,6 @@ const Impact = () => {
                                 </span>
                               )}
                             </div>
-
                             {/* Progress indicator */}
                             <div className="mt-3">
                               <ProgressBar progress={25 * step.number} />
@@ -1126,7 +1078,7 @@ const Impact = () => {
                         {/* Stats grid */}
                         <div
                           className="stats-container grid grid-cols-2 gap-4 mb-2"
-                          style={{ opacity: 0, transform: "translateY(10px)" }}
+                          style={{ opacity: 0, transform: "translateY(10px)" }} // Initial state for GSAP
                         >
                           {step.stats.map((stat, i) => (
                             <motion.div
@@ -1135,7 +1087,7 @@ const Impact = () => {
                               style={{
                                 opacity: 0,
                                 transform: "translateY(10px)",
-                              }}
+                              }} // Initial state for GSAP
                             >
                               <div className="text-lg font-semibold text-violet-600 dark:text-violet-400 transition-transform">
                                 <Counter
@@ -1148,8 +1100,6 @@ const Impact = () => {
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 {stat.label}
                               </div>
-
-                              {/* Enhanced hover effect */}
                               {!prefersReducedMotion && (
                                 <motion.div
                                   className="absolute inset-0 bg-violet-500/5 rounded-lg opacity-0 z-0"
@@ -1168,20 +1118,21 @@ const Impact = () => {
                         <motion.button
                           className={`px-4 py-2 rounded-md text-sm font-medium flex items-center ${
                             index === stepsData.length - 1
-                              ? "bg-violet-600 dark:bg-violet-500 text-white shadow-sm"
-                              : "text-violet-600 dark:text-violet-300 bg-violet-500/10 hover:bg-violet-500/15"
+                              ? "bg-violet-600 dark:bg-violet-500 text-white shadow-sm hover:bg-violet-700 dark:hover:bg-violet-600"
+                              : "text-violet-600 dark:text-violet-300 bg-violet-500/10 hover:bg-violet-500/20"
                           } transition-all duration-300`}
                           whileHover={{ x: prefersReducedMotion ? 0 : 3 }}
                           whileTap={{ scale: prefersReducedMotion ? 1 : 0.98 }}
-                          onClick={() =>
-                            index < stepsData.length - 1
-                              ? scrollToStep(index + 1)
-                              : null
+                          onClick={
+                            () =>
+                              index < stepsData.length - 1
+                                ? scrollToStep(index + 1)
+                                : null // Or link to signup/dashboard
                           }
                           aria-label={
                             index < stepsData.length - 1
                               ? `Proceed to step ${index + 2}`
-                              : "Get Started"
+                              : "Get Started Now"
                           }
                         >
                           <span>
@@ -1209,52 +1160,59 @@ const Impact = () => {
                         </motion.button>
 
                         {/* Step completion status */}
-                        {activeStep > index ? (
+                        <AnimatePresence mode="wait">
                           <motion.div
-                            className="flex items-center text-green-600 dark:text-green-400"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.3 }}
+                            key={
+                              activeStep > index
+                                ? "completed"
+                                : activeStep === index
+                                ? "inprogress"
+                                : "upcoming"
+                            }
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -5 }}
+                            transition={{ duration: 0.2 }}
+                            className="text-xs"
                           >
-                            <CheckCircle className="w-4 h-4 mr-1.5" />
-                            <span className="text-sm font-medium">
-                              Completed
-                            </span>
-                          </motion.div>
-                        ) : (
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {activeStep === index ? (
-                              <span className="flex items-center">
+                            {activeStep > index ? (
+                              <div className="flex items-center text-green-600 dark:text-green-400">
+                                <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                                <span className="font-medium">Completed</span>
+                              </div>
+                            ) : activeStep === index ? (
+                              <div className="flex items-center text-violet-600 dark:text-violet-400">
                                 <span
-                                  className={`inline-block w-1.5 h-1.5 rounded-full bg-violet-500 dark:bg-violet-400 mr-1.5 ${
+                                  className={`inline-block w-1.5 h-1.5 rounded-full bg-current mr-1.5 ${
                                     !prefersReducedMotion ? "animate-pulse" : ""
                                   }`}
                                 ></span>
-                                In progress
-                              </span>
+                                <span className="font-medium">In progress</span>
+                              </div>
                             ) : (
-                              "Coming up"
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Coming up
+                              </span>
                             )}
-                          </div>
-                        )}
+                          </motion.div>
+                        </AnimatePresence>
                       </div>
                     </div>
                   </div>
-
-                  {/* ALTERNATING SECOND COLUMN - Now showing on mobile too */}
+                  {/* ALTERNATING SECOND COLUMN */}
                   <div
                     className={
                       `${
                         index % 2 !== 0 ? "md:order-1" : ""
-                      } flex items-center justify-center alt-content` /* Removed the 'hidden md:flex' to show on mobile too */
+                      } flex items-center justify-center alt-content min-h-[300px] md:min-h-[400px]` // Added min-height
                     }
-                    style={{ opacity: 0, transform: "translateY(30px)" }}
+                    style={{ opacity: 0, transform: "translateY(30px)" }} // Initial state for GSAP
                   >
                     {/* Show image for steps 1 and 3, content box for steps 2 and 4 */}
                     {index % 2 === 0 ? (
-                      <StepImage index={index} inView={inView} />
+                      <StepImage index={index} inView={stepSectionInView} />
                     ) : (
-                      <ContentBox index={index} inView={inView} />
+                      <ContentBox index={index} inView={stepSectionInView} />
                     )}
                   </div>
                 </div>
@@ -1265,41 +1223,49 @@ const Impact = () => {
       </div>
 
       {/* Call to action */}
-      <div className="flex justify-center w-full z-10 relative">
+      <div className="flex justify-center w-full z-10 relative mt-16 md:mt-24">
         <div className="w-full max-w-3xl mx-auto px-4">
           <motion.div
-            className="rounded-lg overflow-hidden"
+            className="overflow-hidden" // Added background and shadow
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.6 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="p-6 flex flex-col items-center text-center">
-              <div className="mb-4 w-10 h-10 rounded-full bg-violet-500/10 flex items-center justify-center text-violet-600 dark:text-violet-300">
-                <LightbulbIcon className="w-5 h-5" />
+            <div className="p-8 md:p-10 flex flex-col items-center text-center">
+              {" "}
+              {/* Increased padding */}
+              <div className="mb-4 w-12 h-12 rounded-full bg-violet-500/10 flex items-center justify-center text-violet-600 dark:text-violet-300">
+                {" "}
+                {/* Larger icon */}
+                <LightbulbIcon className="w-6 h-6" />
               </div>
-
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+              <h3 className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white mb-3">
+                {" "}
+                {/* Larger text */}
                 Join thousands of successful product makers today
               </h3>
-
-              <p className="text-gray-400 dark:text-gray-400 mb-6 max-w-xl text-sm">
+              <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-xl text-sm md:text-base">
+                {" "}
+                {/* Adjusted text size */}
                 Create your account in minutes and start showcasing your
                 innovation to a community of eager discoverers, investors, and
                 collaborators.
               </p>
-
-              <div className="flex flex-col sm:flex-row justify-center gap-4 w-full">
+              <div className="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-md">
+                {" "}
+                {/* Constrained width */}
                 <GlobalButton
                   variant="primary"
                   size="md"
                   ariaLabel="Submit your product to Product Bazar"
                   href="/product/new"
+                  className="w-full sm:w-auto" // Full width on small screens
                 >
                   <span>Submit Your Product</span>
                   <motion.span
                     className="ml-1.5 inline-block"
-                    animate={{ x: [0, 3, 0] }}
+                    animate={!prefersReducedMotion ? { x: [0, 3, 0] } : {}}
                     transition={{
                       duration: 1,
                       repeat: Infinity,
@@ -1309,12 +1275,12 @@ const Impact = () => {
                     <ArrowRight className="w-4 h-4" />
                   </motion.span>
                 </GlobalButton>
-
                 <GlobalButton
                   variant="outline"
                   size="md"
                   ariaLabel="Learn more about Product Bazar"
                   href="/about"
+                  className="w-full sm:w-auto" // Full width on small screens
                 >
                   Learn More
                 </GlobalButton>
@@ -1324,21 +1290,40 @@ const Impact = () => {
         </div>
       </div>
 
-      {/* Updated keyboard navigation tooltip with scroll-based visibility */}
+      {/* --- Enhanced Keyboard Navigation Tooltip --- */}
       <AnimatePresence>
-        <motion.div
-          className="hidden md:block fixed bottom-4 right-4 z-30"
-          style={{ opacity: tooltipOpacity }}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: tooltipOpacity, y: 0 }}
-          exit={{ opacity: 0, y: 10 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="bg-black rounded-full py-3 px-4 text-xs text-gray-100">
-            Use arrow keys to navigate steps
-          </div>
-        </motion.div>
+        {mainContainerInView &&
+          !isMobile && ( // Conditionally render based on main container visibility and NOT mobile
+            <motion.div
+              className="hidden md:block fixed bottom-6 right-6 z-40" // Keep hidden on small screens, adjusted position/z-index
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 15 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            >
+              <div
+                className="flex items-center gap-2 bg-gray-900/90 dark:bg-gray-800/90 backdrop-blur-sm // Darker background
+                         rounded-lg py-2 px-4 text-xs text-gray-100 dark:text-gray-200
+                         shadow-md border border-gray-700/50
+                         "
+              >
+                <Keyboard className="w-3.5 h-3.5 opacity-80" />
+                <span>
+                  Use{" "}
+                  <kbd className="font-sans font-semibold text-violet-300">
+                    ←
+                  </kbd>{" "}
+                  /{" "}
+                  <kbd className="font-sans font-semibold text-violet-300">
+                    →
+                  </kbd>{" "}
+                  keys to navigate
+                </span>
+              </div>
+            </motion.div>
+          )}
       </AnimatePresence>
+      {/* --- End Enhanced Tooltip --- */}
 
       <style jsx global>{`
         /* CSS variables for theming */
@@ -1346,35 +1331,23 @@ const Impact = () => {
           --primary-color: #8b5cf6; /* Violet-500 */
           --primary-light: #a78bfa; /* Violet-400 */
           --primary-dark: #7c3aed; /* Violet-600 */
-          --primary-rgb: 139, 92, 246;
-          --primary-color-shadow: rgba(139, 92, 246, 0.3);
-
           --secondary-color: #6366f1; /* Indigo-500 */
-          --secondary-light: #818cf8; /* Indigo-400 */
-          --secondary-dark: #4f46e5; /* Indigo-600 */
         }
 
         .dark {
           --primary-color: #a78bfa; /* Violet-400 */
           --primary-light: #c4b5fd; /* Violet-300 */
           --primary-dark: #8b5cf6; /* Violet-500 */
-          --primary-rgb: 167, 139, 250;
-          --primary-color-shadow: rgba(167, 139, 250, 0.3);
-
           --secondary-color: #818cf8; /* Indigo-400 */
-          --secondary-light: #a5b4fc; /* Indigo-300 */
-          --secondary-dark: #6366f1; /* Indigo-500 */
         }
 
         /* Primary color classes */
         .bg-primary {
           background-color: var(--primary-color);
         }
-
         .text-primary {
           color: var(--primary-color);
         }
-
         .border-primary {
           border-color: var(--primary-color);
         }
@@ -1383,20 +1356,18 @@ const Impact = () => {
         @keyframes ping {
           75%,
           100% {
-            transform: scale(1.5);
+            transform: scale(1.6);
             opacity: 0;
           }
         }
-
         .animate-ping {
-          animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+          animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
         }
 
-        /* Special animation for timeline markers */
         @keyframes timeline-ping {
           0% {
             transform: scale(1);
-            opacity: 0.8;
+            opacity: 0.7;
           }
           75%,
           100% {
@@ -1404,13 +1375,8 @@ const Impact = () => {
             opacity: 0;
           }
         }
-
         .animate-timeline-ping {
-          animation: timeline-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
-
-        .animate-pulse {
-          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          animation: timeline-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
         }
 
         @keyframes pulse {
@@ -1419,16 +1385,22 @@ const Impact = () => {
             opacity: 1;
           }
           50% {
-            opacity: 0.3;
+            opacity: 0.4;
           }
+        }
+        .animate-pulse {
+          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
         /* Smooth hover transitions */
-        .step-card {
+        .step-card,
+        .stat-item {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
         .step-card:hover {
+          transform: translateY(-5px);
+        } /* Slightly more lift */
+        .stat-item:hover {
           transform: translateY(-4px);
         }
 
@@ -1442,17 +1414,39 @@ const Impact = () => {
           );
         }
 
-        /* Focus styles for accessibility */
+        /* Focus styles */
         button:focus-visible,
-        a:focus-visible {
+        a:focus-visible,
+        [tabindex="0"]:focus-visible {
           outline: 2px solid var(--primary-color);
-          outline-offset: 2px;
+          outline-offset: 3px;
+          border-radius: 6px; /* Ensure outline follows shape */
         }
 
-        /* Better mobile scrolling */
-        @media (max-width: 768px) {
-          .step-card {
-            transform: scale(0.98);
+        /* KBD styles */
+        kbd {
+          background-color: rgba(110, 110, 110, 0.2);
+          border-radius: 3px;
+          border: 1px solid rgba(150, 150, 150, 0.2);
+          box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+          padding: 1px 4px;
+          margin: 0 2px;
+          font-size: 0.8em;
+          line-height: 1;
+          color: var(--primary-light); /* Use theme color */
+        }
+
+        /* Specific adjustments for timeline container on medium screens */
+        @media (min-width: 768px) {
+          .timeline-container {
+            top: 480px; /* Adjust based on header height */
+            bottom: 350px; /* Adjust based on footer/CTA height */
+          }
+        }
+        @media (min-width: 1024px) {
+          .timeline-container {
+            top: 500px;
+            bottom: 400px;
           }
         }
       `}</style>

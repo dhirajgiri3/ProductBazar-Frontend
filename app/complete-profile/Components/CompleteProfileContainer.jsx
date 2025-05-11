@@ -564,7 +564,7 @@ const CompleteProfileContainer = () => {
             // Redirect after confetti
             setTimeout(() => {
                 setShowConfetti(false);
-                 router.push("/user"); // Use router for navigation
+                 router.push(`/user/${user.username}`); // Use dynamic route for navigation
             }, 2500); // Show confetti longer
 
         } else {
@@ -714,7 +714,7 @@ const CompleteProfileContainer = () => {
               onClick={() => {
                 skipProfileCompletion();
                 toast.success("You can complete your profile later from settings");
-                router.push("/home");
+                router.push(user.username ? `/user/${user.username}` : "/home");
               }}
               className="flex items-center px-3 py-1.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-md transition-colors"
               whileHover={{ scale: 1.02 }}
@@ -834,7 +834,7 @@ const CompleteProfileContainer = () => {
                    // Skip profile completion using the context function
                    skipProfileCompletion();
                    toast.success("You can complete your profile later from settings");
-                   router.push("/home");
+                   router.push(user.username ? `/user/${user.username}` : "/home");
                  }}
                  className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-violet-700 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
                  whileHover={{ scale: 1.02 }}

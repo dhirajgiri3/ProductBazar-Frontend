@@ -12,7 +12,7 @@ function ForgotPasswordPage() {
   // Redirect authenticated users away from forgot password page
   useEffect(() => {
     if (isInitialized && user) {
-      router.push('/user');
+      router.push(`/user/${user.username}`);
     }
   }, [user, isInitialized, router]);
 

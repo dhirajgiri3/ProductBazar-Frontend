@@ -202,7 +202,7 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
 
       <motion.button
         type="submit"
-        className="w-full py-3 mt-6 bg-gradient-to-br from-violet-600 to-violet-700 text-white font-medium rounded-xl hover:from-violet-700 hover:to-violet-800 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-70 disabled:shadow-none disabled:from-violet-400 disabled:to-violet-500"
+        className="w-full py-3.5 mt-5 bg-gradient-to-br from-violet-600 to-violet-700 text-white font-medium rounded-xl hover:from-violet-700 hover:to-violet-800 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-70 disabled:shadow-none disabled:from-violet-400 disabled:to-violet-500"
         disabled={isLoading}
         whileHover={{ scale: isLoading ? 1 : 1.02 }}
         whileTap={{ scale: isLoading ? 1 : 0.98 }}
@@ -232,7 +232,7 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
       <motion.button
         type="button"
         onClick={onToggleMethod}
-        className="w-full py-2 text-sm text-gray-600 hover:text-violet-700 transition-colors text-center mt-3"
+        className="w-full py-2.5 mt-2 text-sm text-gray-600 hover:text-violet-700 transition-colors text-center"
         variants={formControlVariants}
         initial="initial"
         animate="animate"
