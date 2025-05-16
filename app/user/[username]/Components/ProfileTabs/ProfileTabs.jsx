@@ -1,7 +1,7 @@
 // src/components/profile/ProfileTabs.jsx
 import { motion } from 'framer-motion';
 import { FiGrid, FiPackage, FiActivity, FiAward } from 'react-icons/fi';
-import { tabVariants } from '../../../../../Utils/UI/animations';
+import { tabVariants } from '@/lib/utils/ui/animations';
 
 export default function ProfileTabs({ activeTab, setActiveTab }) {
   const tabs = [

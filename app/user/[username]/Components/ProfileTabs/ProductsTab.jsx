@@ -11,7 +11,7 @@ import {
   FiArchive,
   FiBarChart2,
 } from "react-icons/fi";
-import { useAuth } from "../../../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import EditProductModal from "../../../../../Components/Modal/Product/EditProductModal";
 import DeleteConfirmModal from "../../../../../Components/Modal/Product/DeleteConfirmModal";
 import ProfileProductCard from "../../../../../Components/Product/ProfileProductCard";

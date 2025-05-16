@@ -4,12 +4,12 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiUsers, FiSearch, FiEdit, FiChevronLeft, FiChevronRight, FiLoader, FiAlertTriangle } from 'react-icons/fi';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../../Contexts/Auth/AuthContext';
-import AdminRoleManager from '../../../Components/Admin/AdminRoleManager';
-import SecondaryRoles from '../../../Components/User/SecondaryRoles';
-import RoleCapabilities from '../../../Components/User/RoleCapabilities';
-import { makePriorityRequest } from '../../../Utils/api';
-import logger from '../../../Utils/logger';
+import { useAuth } from '@/lib/contexts/auth-context';
+import AdminRoleManager from 'Components/Admin/AdminRoleManager';
+import SecondaryRoles from 'Components/User/SecondaryRoles';
+import RoleCapabilities from 'Components/User/RoleCapabilities';
+import { makePriorityRequest } from '@/lib/api/api';
+import logger from '@/lib/utils/logger';
 
 const AdminUsersPage = () => {
   const { user, authLoading } = useAuth();
@@ -219,7 +219,7 @@ const AdminUsersPage = () => {
                   value={search}
                   onChange={handleSearchInputChange}
                   placeholder="Search users..."
-                  className="flex-grow p-2 border border-gray-300 rounded-md text-sm"
+                  className="flex-grow p-2 border border-gray-300 rounded-md text-sm bg-white text-gray-800"
                 />
                 <button
                   type="submit"
@@ -241,7 +241,7 @@ const AdminUsersPage = () => {
                   setRoleFilter(e.target.value);
                   setCurrentPage(1); // Reset to first page on filter change
                 }}
-                className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                className="w-full p-2 border border-gray-300 rounded-md text-sm bg-white text-gray-800"
               >
                 {roles.map(role => (
                   <option key={role.id} value={role.id}>

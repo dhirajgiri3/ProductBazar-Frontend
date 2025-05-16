@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform, useInView, useSpring, AnimatePresence } from "framer-motion";
 import { ArrowUp, MessageSquare, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import { useTheme } from "../../../Contexts/Theme/ThemeContext";
+import { useTheme } from "@/lib/contexts/theme-context";
 import SectionLabel from "./Animations/SectionLabel";
 
 // --- ProductCard Component (Mostly Unchanged - Layout is internal) ---
@@ -290,7 +290,9 @@ const Spotlight = () => {
               text="Spotlight"
               size="small"
               alignment="center"
-              animate={false}
+              variant="modern"
+              glowEffect={true}
+              animationStyle="fade"
             />
           </motion.div>
 

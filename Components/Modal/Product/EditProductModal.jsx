@@ -3,11 +3,10 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useProduct } from "../../../Contexts/Product/ProductContext";
-import { useAuth } from "../../../Contexts/Auth/AuthContext"; // <-- Marked as potentially unused
-import { useCategories } from "../../../Contexts/Category/CategoryContext";
+import { useProduct } from "@/lib/contexts/product-context";
+import { useCategories } from "@/lib/contexts/category-context";
 import { toast } from "react-hot-toast";
-import eventBus, { EVENT_TYPES } from "../../../Utils/eventBus";
+import eventBus, { EVENT_TYPES } from "@/lib/utils/event-bus";
 import {
   X,
   Image as ImageIcon,
@@ -35,8 +34,8 @@ import {
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { Tooltip } from "react-tooltip";
-import { validateImageFile, optimizeImage } from "../../../Utils/Image/imageUtils"; // <-- Import image utils
-import { uploadGalleryImages as uploadGalleryImagesUtil, deleteGalleryImage as deleteGalleryImageUtil } from "../../../Utils/Image/galleryUtils"; // Import gallery utils
+import { validateImageFile, optimizeImage } from "@/lib/utils/image/image-utils"; // <-- Import image utils
+import { uploadGalleryImages as uploadGalleryImagesUtil, deleteGalleryImage as deleteGalleryImageUtil } from "@/lib/utils/image/gallery-utils"; // Import gallery utils
 
 // Dynamically import the rich text editor
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });

@@ -2,7 +2,7 @@
 
 import React, { useEffect, memo } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 
 /**
  * HOC to protect routes that require a completed profile with proper verification

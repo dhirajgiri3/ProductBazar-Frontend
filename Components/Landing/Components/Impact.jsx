@@ -690,7 +690,9 @@ const Impact = () => {
               text="Simple • Intuitive • Powerful"
               size="medium"
               alignment="center"
-              animate={false}
+              variant="modern"
+              animationStyle="fade"
+              pulseEffect={true}
             />
           </motion.div>
 

@@ -13,19 +13,20 @@ This is the frontend application for Product Bazar, a platform where makers can 
 
 ## Technologies Used
 
+- **Next.js**: React framework with App Router for routing and server components
 - **React.js**: Frontend library for building the user interface
-- **React Router**: For navigation between different components
-- **Redux/Context API**: For state management
+- **Context API**: For state management
 - **Axios**: For API requests to the backend
-- **CSS/SCSS**: For styling components
+- **Tailwind CSS**: For styling components
 - **React Hook Form**: For form handling and validation
+- **Framer Motion**: For animations and transitions
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v14.0.0 or later)
-- npm (v6.0.0 or later)
+- Node.js (v16.0.0 or later)
+- npm (v8.0.0 or later)
 
 ### Installation
 
@@ -40,16 +41,16 @@ This is the frontend application for Product Bazar, a platform where makers can 
     npm install
     ```
 
-3. Create a `.env` file in the frontend directory with the following:
+3. Create a `.env.local` file in the root directory with the following:
     ```
-    REACT_APP_API_URL=http://localhost:5000/api
+    NEXT_PUBLIC_API_URL=http://localhost:5000/api
     ```
 
 ### Running the Application
 
 Start the development server:
 ```bash
-npm start
+npm run dev
 ```
 
 The application will open in your browser at `http://localhost:3000`.
@@ -58,16 +59,29 @@ The application will open in your browser at `http://localhost:3000`.
 
 ```
 frontend/
-├── public/               # Public assets
-├── src/                  # Source files
-│   ├── assets/           # Images, fonts, etc.
-│   ├── components/       # Reusable components
-│   ├── context/          # Context API files
-│   ├── pages/            # Page components
-│   ├── services/         # API service files
-│   ├── utils/            # Utility functions
-│   ├── App.js            # Main App component
-│   └── index.js          # Entry point
+├── app/                  # Next.js App Router routes
+│   ├── (auth)/           # Authentication routes
+│   ├── (dashboard)/      # Dashboard routes
+│   ├── (marketing)/      # Marketing routes
+│   ├── layout.jsx        # Root layout
+│   └── page.jsx          # Root page
+├── components/           # Shared React components
+│   ├── auth/             # Authentication components
+│   ├── common/           # Common UI components
+│   ├── layout/           # Layout components
+│   ├── marketing/        # Marketing components
+│   ├── product/          # Product components
+│   ├── project/          # Project components
+│   └── ui/               # UI components
+├── hooks/                # Custom React hooks
+├── lib/                  # Utility functions, services, and contexts
+│   ├── api/              # API utilities
+│   ├── auth/             # Authentication utilities
+│   ├── contexts/         # Context providers
+│   ├── services/         # Service modules
+│   └── utils/            # Utility functions
+├── public/               # Static assets
+├── styles/               # Global styles
 ├── .env                  # Environment variables
 └── package.json          # Dependencies and scripts
 ```
@@ -79,12 +93,24 @@ To create a production build:
 npm run build
 ```
 
-## Testing
-
-Run tests:
+To start the production server:
 ```bash
-npm test
+npm start
 ```
+
+## Linting
+
+Run linting:
+```bash
+npm run lint
+```
+
+## Naming Conventions
+
+- Components: kebab-case.jsx with PascalCase component names
+- Utilities: kebab-case.js with camelCase function names
+- Hooks: use-kebab-case.js with camelCase hook names
+- Contexts: kebab-case-context.jsx with PascalCase context names
 
 ## Contributing
 

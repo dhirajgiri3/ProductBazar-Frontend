@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useAuth } from "../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 // useRouter is not used for navigation based on original code, keeping import commented
 import { useRouter } from "next/navigation";
 import logger from "../../../Utils/logger";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
-import { optimizeImage } from "../../../Utils/Image/imageUtils";
+import { optimizeImage } from "@/lib/utils/image/image-utils";
 import api, { makePriorityRequest } from "../../../Utils/api";
 import LoaderComponent from "../../../Components/UI/LoaderComponent";
 import SuccessConfetti from "./SuccessConfetti"; // Adjust path
@@ -714,7 +714,7 @@ const CompleteProfileContainer = () => {
               onClick={() => {
                 skipProfileCompletion();
                 toast.success("You can complete your profile later from settings");
-                router.push(user.username ? `/user/${user.username}` : "/home");
+                router.push(user.username ? `/user/${user.username}` : "/app");
               }}
               className="flex items-center px-3 py-1.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-md transition-colors"
               whileHover={{ scale: 1.02 }}
@@ -834,7 +834,7 @@ const CompleteProfileContainer = () => {
                    // Skip profile completion using the context function
                    skipProfileCompletion();
                    toast.success("You can complete your profile later from settings");
-                   router.push(user.username ? `/user/${user.username}` : "/home");
+                   router.push(user.username ? `/user/${user.username}` : "/app");
                  }}
                  className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-violet-700 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
                  whileHover={{ scale: 1.02 }}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, memo } from "react";
-import { useAuth } from "../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import LoaderComponent from "../../../Components/UI/LoaderComponent";
 
@@ -12,7 +12,7 @@ const withAuth = (Component, { requireLoader = true } = {}) => {
 
     useEffect(() => {
       if (authLoading) return;
-      
+
       if (!user) {
         router.push("/auth/login");
       }
@@ -24,7 +24,7 @@ const withAuth = (Component, { requireLoader = true } = {}) => {
         <LoaderComponent text="Loading" size="small" />
       </div>;
     }
-    
+
     // Don't render the component if not authenticated
     if (!authLoading && !user) return null;
 

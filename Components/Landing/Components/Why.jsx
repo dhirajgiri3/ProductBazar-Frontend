@@ -12,7 +12,7 @@ import {
 } from "framer-motion";
 import { useRef, useState, memo, useMemo } from "react";
 // Make sure this path is correct for your project structure
-import { useTheme } from "../../../Contexts/Theme/ThemeContext";
+import { useTheme } from "@/lib/contexts/theme-context";
 // Import specific icons instead of the entire library
 import {
   Target,
@@ -626,14 +626,13 @@ const SectionHeader = memo(
         >
           <SectionLabel
             text="Why Choose Us"
-            size="large"
+            size="medium"
             alignment="center"
             animate={true}
             variant="neon"
             glowEffect={true}
             gradientText={true}
             animationStyle="typewriter"
-            magneticEffect={true}
           />
         </motion.div>
 

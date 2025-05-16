@@ -1,3 +1,5 @@
+"use client";
+
 // React is automatically imported in Next.js
 import HeroSection from "./Components/HeroSection";
 import DashboardPreview from "./Components/DashboardPreview";
@@ -9,11 +11,11 @@ import { ProductBazarEcosystemConnector } from "./Components/ProductBazarEcosyst
 import FeaturesSection from "./Components/FeaturesSection";
 import TestimonialsSection from "./Components/TestimonialsSection";
 import FaqSection from "./Components/FaqSection";
-import { useTheme } from "../../Contexts/Theme/ThemeContext";
+import { useTheme } from "@/lib/contexts/theme-context";
 
 // Section spacing component for consistent vertical rhythm
 const SectionSpacing = ({ children, className = "", isFirst = false, isLast = false }) => (
-  <div>
+  <div className={className}>
     {children}
   </div>
 );

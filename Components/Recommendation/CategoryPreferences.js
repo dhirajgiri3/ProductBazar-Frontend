@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useRecommendation } from '../../Contexts/Recommendation/RecommendationContext';
+import { useRecommendation } from "@/lib/contexts/recommendation-context";
 import { Slider, Chip } from '@mui/material';
 
 const CategoryPreferences = () => {

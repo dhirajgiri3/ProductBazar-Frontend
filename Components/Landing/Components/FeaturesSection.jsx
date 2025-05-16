@@ -6,7 +6,7 @@ import {
   useReducedMotion,
 } from "framer-motion";
 import GlobalButton from "../../UI/Buttons/GlobalButton";
-import { useTheme } from "../../../Contexts/Theme/ThemeContext";
+import { useTheme } from "@/lib/contexts/theme-context";
 import SectionLabel from "./Animations/SectionLabel";
 
 export default function FeaturesSection({ onHover, onLeave }) {
@@ -365,7 +365,6 @@ export default function FeaturesSection({ onHover, onLeave }) {
           glowEffect={true}
           gradientText={true}
           animationStyle="bounce"
-          particleEffect={true}
         />
 
         <motion.div

@@ -4,8 +4,8 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { FolderKanban, Search, Filter, Plus, RefreshCw, AlertTriangle, Users, Calendar, ChevronLeft, ChevronRight, ArrowDownUp } from "lucide-react";
-import { useProject } from "../../Contexts/Project/ProjectContext";
-import { useAuth } from "../../Contexts/Auth/AuthContext";
+import { useProject } from "@/lib/contexts/project-context";
+import { useAuth } from "@/lib/contexts/auth-context";
 import ProjectCard from "./ProjectCard";
 import LoaderComponent from "../UI/LoaderComponent";
 

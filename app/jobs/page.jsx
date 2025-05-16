@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from 'framer-motion';
 import axios from "axios";
 import {
   Briefcase,
@@ -20,10 +20,10 @@ import {
   RefreshCw,
   XCircle,
 } from "lucide-react";
-import { useAuth } from "../../Contexts/Auth/AuthContext";
-import logger from "../../Utils/logger";
-import LoaderComponent from "../../Components/UI/LoaderComponent";
-import { makePriorityRequest } from "../../Utils/api";
+import { useAuth } from "@/lib/contexts/auth-context";
+import logger from "@/lib/utils/logger";
+import LoaderComponent from "Components/UI/LoaderComponent";
+import { makePriorityRequest } from "@/lib/api/api";
 
 // Debounce utility function
 const debounce = (func, wait) => {
@@ -621,7 +621,7 @@ export default function JobsPage() {
                       setTimeout(() => setShowSuggestions(false), 200);
                     }}
                     placeholder="Search jobs by title, company, or keywords"
-                    className="w-full pl-4 pr-36 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600 transition-all"
+                    className="w-full bg-white pl-4 pr-36 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600 transition-all"
                   />
 
                   {/* Search suggestions dropdown */}

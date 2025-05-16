@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { motion } from "framer-motion";
-import { useAuth } from "../../../../Contexts/Auth/AuthContext";
-import { useProject } from "../../../../Contexts/Project/ProjectContext";
-import ProjectForm from "../../add/ProjectForm";
-import LoaderComponent from "../../../../Components/UI/LoaderComponent";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useProject } from "@/lib/contexts/project-context";
+import ProjectForm from "../add/ProjectForm";
+import LoaderComponent from "Components/UI/LoaderComponent";
 
 export default function EditProjectPage() {
   const { slug } = useParams();

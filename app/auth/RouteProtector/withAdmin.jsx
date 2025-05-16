@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, memo } from "react";
-import { useAuth } from "../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import { useRouter } from "next/navigation";
 
 const withAdmin = (Component) => {

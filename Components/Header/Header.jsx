@@ -27,14 +27,14 @@ import {
   Clock,
   ArrowRight,
 } from "lucide-react";
-import { useAuth } from "../../Contexts/Auth/AuthContext";
-import { useProduct } from "../../Contexts/Product/ProductContext"; // Keep for future use
-import { useCategories } from "../../Contexts/Category/CategoryContext";
-import { useOnClickOutside } from "../../Hooks/useOnClickOutside";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useProduct } from "@/lib/contexts/product-context"; // Keep for future use
+import { useCategories } from "@/lib/contexts/category-context";
+import { useOnClickOutside } from "@/lib/hooks/useOnClickOutside";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import OnboardingBanner from "./OnboardingBanner";
-import SearchModal from "../Modal/Search/SearchModal";
+import OnboardingBanner from "./OnboardingBanner.jsx";
+import SearchModal from "../Modal/Search/SearchModal.jsx";
 import CategoryIcon from "../UI/CategoryIcon"; // Assumed to be theme-aware
 import ThemeToggle from "../UI/ThemeToggle/ThemeToggle"; // Assumed to be theme-aware
 
@@ -43,7 +43,7 @@ const NavItem = ({ label, isActive, href, onClick }) => (
     initial={{ opacity: 0, y: -3 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.3 }}
-    whileHover={{ y: -2 }}
+    whileHover={{ y: -1 }}
     whileTap={{ y: 0 }}
     className="relative"
   >
@@ -53,13 +53,13 @@ const NavItem = ({ label, isActive, href, onClick }) => (
       className={`px-3 py-2 text-sm font-medium transition-all flex items-center ${
         isActive
           ? "text-violet-600 dark:text-violet-400"
-          : "text-gray-700 dark:text-gray-200 hover:text-violet-600 dark:hover:text-violet-300"
+          : "text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-300"
       }`}
     >
       <span>{label}</span>
       {isActive && (
         <motion.div
-          className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-600 dark:bg-violet-400 rounded-full shadow-sm dark:shadow-violet-500/30"
+          className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-indigo-500 dark:from-violet-400 dark:to-indigo-400 rounded-full shadow-sm dark:shadow-violet-500/20"
           layoutId="navIndicator"
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
         />
@@ -69,7 +69,7 @@ const NavItem = ({ label, isActive, href, onClick }) => (
 );
 
 const NewBadge = () => (
-  <span className="ml-2 px-1.5 py-0.5 text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-700/20 dark:text-green-300 rounded-full ring-1 ring-inset ring-green-600/20 dark:ring-green-500/30">
+  <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 text-green-600 dark:text-green-400 rounded-full ring-1 ring-inset ring-green-500/20 dark:ring-green-500/30 shadow-sm">
     New
   </span>
 );
@@ -85,6 +85,7 @@ const Header = () => {
     isInitialized,
     skipProfileCompletion,
     refreshNextStep,
+    refreshUserData,
   } = useAuth();
   const {} = useProduct(); // Keep the context for future use
   const { categories = [] } = useCategories();
@@ -171,6 +172,26 @@ const Header = () => {
     return items;
   }, [user, pathname]);
 
+  // Listen for auth:login-success event to update header state immediately after login
+  useEffect(() => {
+    const handleLoginSuccess = () => {
+      // Force refresh user data from context to ensure the Header has the latest user data
+      if (typeof refreshUserData === 'function') {
+        refreshUserData().catch(err => {
+          console.error("Error refreshing user data:", err);
+        });
+      }
+    };
+
+    // Add event listener for login success
+    window.addEventListener("auth:login-success", handleLoginSuccess);
+
+    // Clean up event listener
+    return () => {
+      window.removeEventListener("auth:login-success", handleLoginSuccess);
+    };
+  }, [refreshUserData]);
+
   useEffect(() => {
     if (!isAuthenticated() || !user) {
       setShowOnboardingBanner(false);
@@ -206,7 +227,6 @@ const Header = () => {
       toast.success("Logged out successfully");
       router.push("/auth/login");
     } catch (error) {
-      console.error("Logout error:", error);
       toast.error("Failed to log out");
     }
   };
@@ -289,37 +309,41 @@ const Header = () => {
         ) : null}
       </AnimatePresence>
 
-      <header className="bg-white dark:bg-gray-900/95 sticky top-0 z-40 border-b border-gray-200 dark:border-gray-800 backdrop-blur-sm">
+      <header className="bg-white/90 dark:bg-gray-900/90 sticky top-0 z-40 border-b border-gray-200/80 dark:border-gray-800/80 backdrop-blur-lg shadow-sm dark:shadow-gray-950/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
           <div className="flex items-center">
             <motion.div
               className="relative"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.5 }}
             >
-              <Link href="/home" aria-label="Go to Home">
+              <Link href="/app" aria-label="Go to Home">
                 <motion.div
-                  className="w-10 h-10 bg-gradient-to-br from-violet-500 via-violet-700 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold relative overflow-hidden group"
-                  whileHover={{ scale: 1.08 }}
-                  whileTap={{ scale: 0.92 }}
-                  initial={{ opacity: 0, rotate: -15, y: 10 }}
+                  className="w-10 h-10 bg-gradient-to-br from-violet-500 via-violet-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold relative overflow-hidden group shadow-md shadow-violet-500/20 dark:shadow-violet-500/10"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  initial={{ opacity: 0, rotate: -10, y: 5 }}
                   animate={{ opacity: 1, rotate: 0, y: 0 }}
                   transition={{
                     type: "spring",
                     stiffness: 400,
-                    damping: 15,
+                    damping: 20,
                     delay: 0.1,
                   }}
                   onHoverStart={() => setIsHoveredLogo(true)}
                   onHoverEnd={() => setIsHoveredLogo(false)}
                 >
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-br from-violet-400/20 to-indigo-400/20 opacity-0 group-hover:opacity-100"
+                    transition={{ duration: 0.3 }}
+                  />
                   <div className="relative w-full h-full flex items-center justify-center">
                     <motion.span
                       className="absolute text-md font-bold tracking-wider"
                       initial={{ y: 0 }}
                       animate={{ y: isHoveredLogo ? -30 : 0 }}
-                      transition={{ duration: 0.4, ease: "easeInOut" }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
                     >
                       PB
                     </motion.span>
@@ -327,7 +351,7 @@ const Header = () => {
                       className="absolute text-white"
                       initial={{ y: 30 }}
                       animate={{ y: isHoveredLogo ? 0 : 30 }}
-                      transition={{ duration: 0.4, ease: "easeInOut" }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
                     >
                       <Home size={20} strokeWidth={2.5} />
                     </motion.div>
@@ -338,26 +362,26 @@ const Header = () => {
 
             <div className="relative hidden sm:block ml-4">
               <motion.button
-                className="flex items-center relative rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 w-64 md:w-80 transition-all hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-md dark:hover:shadow-violet-700/20 group"
+                className="flex items-center relative rounded-full border border-gray-200/80 dark:border-gray-700/80 px-3.5 py-2 w-64 md:w-80 transition-all hover:border-violet-300 dark:hover:border-violet-700 group dark:shadow-gray-950/10"
                 onClick={() => setIsSearchModalOpen(true)}
-                whileHover={{ scale: 1.02, y: -1 }}
-                whileTap={{ scale: 0.98 }}
-                initial={{ opacity: 0, x: -10 }}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                initial={{ opacity: 0, x: -5 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{
                   duration: 0.3,
                   type: "spring",
-                  stiffness: 500,
-                  damping: 25,
+                  stiffness: 400,
+                  damping: 30,
                 }}
               >
                 <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-900/30 dark:to-indigo-900/30 opacity-0 rounded-md group-hover:opacity-100"
+                  className="absolute inset-0 bg-gradient-to-r from-violet-50/50 to-indigo-50/50 dark:from-violet-900/10 dark:to-indigo-900/10 opacity-0 rounded-full group-hover:opacity-100"
                   transition={{ duration: 0.2 }}
                 />
                 <motion.div
                   className="text-gray-400 dark:text-gray-500 mr-2 relative group-hover:text-violet-500 dark:group-hover:text-violet-400 transition-colors"
-                  whileHover={{ scale: 1.1, rotate: 10 }}
+                  whileHover={{ scale: 1.1, rotate: 5 }}
                   transition={{ duration: 0.2 }}
                 >
                   <Search size={16} />
@@ -366,7 +390,7 @@ const Header = () => {
                   Search products, startups, etc...
                 </span>
                 <motion.div
-                  className="hidden md:flex items-center border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 text-xs text-gray-500 dark:text-gray-400 relative z-10 bg-gray-50 dark:bg-gray-700/50 backdrop-blur-sm group-hover:border-violet-400 dark:group-hover:border-violet-500 group-hover:text-violet-600 dark:group-hover:text-violet-300 group-hover:bg-violet-100 dark:group-hover:bg-violet-700/30"
+                  className="hidden md:flex items-center border border-gray-200 dark:border-gray-700 rounded-md px-1.5 py-0.5 text-xs text-gray-500 dark:text-gray-500 relative z-10 bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-sm group-hover:border-violet-300 dark:group-hover:border-violet-700 group-hover:text-violet-600 dark:group-hover:text-violet-400 group-hover:bg-violet-50 dark:group-hover:bg-violet-900/20"
                   transition={{ duration: 0.2 }}
                 >
                   ⌘K
@@ -378,15 +402,8 @@ const Header = () => {
           <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
             <NavItem
               label="Home"
-              isActive={pathname === "/" || pathname === "/home"}
-              href="/home"
-            />
-            <NavItem
-              label="Products"
-              isActive={
-                pathname === "/products" || pathname.startsWith("/products/")
-              }
-              href="/products"
+              isActive={pathname === "/" || pathname === "/app"}
+              href="/app"
             />
 
             <div className="relative" ref={categoryMenuRef}>
@@ -395,9 +412,9 @@ const Header = () => {
                 className={`px-3 py-2 text-sm font-medium transition-colors flex items-center relative ${
                   pathname.startsWith("/category")
                     ? "text-violet-600 dark:text-violet-400"
-                    : "text-gray-700 dark:text-gray-200 hover:text-violet-600 dark:hover:text-violet-300"
+                    : "text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-300"
                 }`}
-                whileHover={{ y: -2 }}
+                whileHover={{ y: -1 }}
                 whileTap={{ y: 0 }}
                 initial={{ opacity: 0, y: -3 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -406,14 +423,14 @@ const Header = () => {
                 <span>Categories</span>
                 <motion.div
                   animate={{ rotate: showCategoryMenu ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
                   className="ml-1"
                 >
-                  <ChevronDown size={16} />
+                  <ChevronDown size={15} className="opacity-70" />
                 </motion.div>
                 {pathname.startsWith("/category") && (
                   <motion.div
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-600 dark:bg-violet-400 rounded-full"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-indigo-500 dark:from-violet-400 dark:to-indigo-400 rounded-full shadow-sm dark:shadow-violet-500/20"
                     layoutId="navIndicator"
                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                   />
@@ -422,24 +439,24 @@ const Header = () => {
               <AnimatePresence>
                 {showCategoryMenu && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    initial={{ opacity: 0, y: 5, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    exit={{ opacity: 0, y: 5, scale: 0.98 }}
                     transition={{
-                      duration: 0.2,
+                      duration: 0.15,
                       type: "spring",
                       stiffness: 500,
                       damping: 30,
                     }}
-                    className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800/95 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl dark:shadow-black/30 overflow-hidden z-20 backdrop-blur-md"
+                    className="absolute right-0 mt-2 w-64 bg-white/95 dark:bg-gray-800/95 border border-gray-200/80 dark:border-gray-700/80 rounded-xl shadow-lg dark:shadow-black/20 overflow-hidden z-20 backdrop-blur-xl"
                   >
-                    <motion.div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-500 to-indigo-500" />
-                    <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                    <motion.div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-indigo-500" />
+                    <div className="p-3.5 border-b border-gray-200/80 dark:border-gray-700/80">
                       <div className="flex items-center">
-                        <div className="mr-3 flex-shrink-0 p-2 rounded-full bg-violet-100 dark:bg-violet-500/20">
+                        <div className="mr-3 flex-shrink-0 p-2 rounded-full bg-violet-50 dark:bg-violet-500/10 shadow-sm">
                           <Grid
-                            size={20}
-                            className="text-violet-600 dark:text-violet-300"
+                            size={18}
+                            className="text-violet-600 dark:text-violet-400"
                           />
                         </div>
                         <div>
@@ -457,37 +474,44 @@ const Header = () => {
                         {categories.slice(0, 8).map((category, index) => (
                           <motion.div
                             key={category._id || index}
-                            initial={{ opacity: 0, x: -10 }}
+                            initial={{ opacity: 0, x: -5 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.05 }}
+                            transition={{ delay: index * 0.03 }}
                           >
                             <Link
                               href={`/category/${
                                 category.slug ||
                                 category.name.toLowerCase().replace(/\s+/g, "-")
                               }`}
-                              className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-violet-50 dark:hover:bg-violet-800/60 hover:text-violet-700 dark:hover:text-violet-300 transition-colors duration-150"
+                              className="flex items-center px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-violet-50/70 dark:hover:bg-violet-800/30 hover:text-violet-700 dark:hover:text-violet-300 transition-all duration-150 rounded-md mx-1 my-0.5"
                               onClick={() => setShowCategoryMenu(false)}
                             >
-                              <span className="mr-3 text-violet-500 dark:text-violet-400">
+                              <span className="mr-3 text-violet-500 dark:text-violet-400 opacity-80">
                                 <CategoryIcon
                                   icon={category.icon}
                                   name={category.name}
-                                  size={18}
+                                  size={16}
                                 />
                               </span>
                               <span>{category.name}</span>
                             </Link>
                           </motion.div>
                         ))}
-                        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+                        <div className="px-4 py-3 border-t border-gray-200/80 dark:border-gray-700/80 bg-gray-50/50 dark:bg-gray-800/30">
                           <Link
                             href="/categories"
-                            className="text-sm text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 font-medium flex items-center justify-center transition-colors"
+                            className="text-sm text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 font-medium flex items-center justify-center transition-colors group"
                             onClick={() => setShowCategoryMenu(false)}
                           >
                             View All Categories{" "}
-                            <ArrowRight size={14} className="ml-1" />
+                            <motion.div
+                              className="ml-1"
+                              initial={{ x: 0 }}
+                              whileHover={{ x: 3 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <ArrowRight size={14} />
+                            </motion.div>
                           </Link>
                         </div>
                       </div>
@@ -514,9 +538,9 @@ const Header = () => {
                     className={`px-3 py-2 text-sm font-medium transition-colors flex items-center relative ${
                       getRoleBasedNavItems().some((item) => item.isActive)
                         ? "text-violet-600 dark:text-violet-400"
-                        : "text-gray-700 dark:text-gray-200 hover:text-violet-600 dark:hover:text-violet-300"
+                        : "text-gray-600 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-300"
                     }`}
-                    whileHover={{ y: -2 }}
+                    whileHover={{ y: -1 }}
                     whileTap={{ y: 0 }}
                     initial={{ opacity: 0, y: -3 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -525,14 +549,14 @@ const Header = () => {
                     <span>Features</span>
                     <motion.div
                       animate={{ rotate: showRoleMenu ? 180 : 0 }}
-                      transition={{ duration: 0.2 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
                       className="ml-1"
                     >
-                      <ChevronDown size={16} />
+                      <ChevronDown size={15} className="opacity-70" />
                     </motion.div>
                     {getRoleBasedNavItems().some((item) => item.isActive) && (
                       <motion.div
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-600 dark:bg-violet-400 rounded-full"
+                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-indigo-500 dark:from-violet-400 dark:to-indigo-400 rounded-full shadow-sm dark:shadow-violet-500/20"
                         layoutId="navIndicator"
                         transition={{
                           type: "spring",
@@ -545,24 +569,24 @@ const Header = () => {
                   <AnimatePresence>
                     {showRoleMenu && (
                       <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        initial={{ opacity: 0, y: 5, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        exit={{ opacity: 0, y: 5, scale: 0.98 }}
                         transition={{
-                          duration: 0.2,
+                          duration: 0.15,
                           type: "spring",
                           stiffness: 500,
                           damping: 30,
                         }}
-                        className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800/95 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl dark:shadow-black/30 overflow-hidden z-20 backdrop-blur-md"
+                        className="absolute right-0 mt-2 w-64 bg-white/95 dark:bg-gray-800/95 border border-gray-200/80 dark:border-gray-700/80 rounded-xl shadow-lg dark:shadow-black/20 overflow-hidden z-20 backdrop-blur-xl"
                       >
-                        <motion.div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-500 to-indigo-500" />
-                        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                        <motion.div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-indigo-500" />
+                        <div className="p-3.5 border-b border-gray-200/80 dark:border-gray-700/80">
                           <div className="flex items-center">
-                            <div className="mr-3 flex-shrink-0 p-2 rounded-full bg-violet-100 dark:bg-violet-500/20">
+                            <div className="mr-3 flex-shrink-0 p-2 rounded-full bg-violet-50 dark:bg-violet-500/10 shadow-sm">
                               <Folder
-                                size={20}
-                                className="text-violet-600 dark:text-violet-300"
+                                size={18}
+                                className="text-violet-600 dark:text-violet-400"
                               />
                             </div>
                             <div>
@@ -580,20 +604,20 @@ const Header = () => {
                             {getRoleBasedNavItems().map((item, index) => (
                               <motion.div
                                 key={index}
-                                initial={{ opacity: 0, x: -10 }}
+                                initial={{ opacity: 0, x: -5 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.05 }}
+                                transition={{ delay: index * 0.03 }}
                               >
                                 <Link
                                   href={item.href}
-                                  className={`flex items-center px-4 py-2.5 text-sm transition-colors duration-150 ${
+                                  className={`flex items-center px-4 py-2 text-sm transition-all duration-150 rounded-md mx-1 my-0.5 ${
                                     item.isActive
-                                      ? "bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 font-medium"
-                                      : "text-gray-700 dark:text-gray-200 hover:bg-violet-50 dark:hover:bg-violet-800/60 hover:text-violet-700 dark:hover:text-violet-300"
+                                      ? "bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 font-medium"
+                                      : "text-gray-600 dark:text-gray-300 hover:bg-violet-50/70 dark:hover:bg-violet-800/30 hover:text-violet-700 dark:hover:text-violet-300"
                                   }`}
                                   onClick={() => setShowRoleMenu(false)}
                                 >
-                                  <span className="mr-3 text-violet-500 dark:text-violet-400">
+                                  <span className="mr-3 text-violet-500 dark:text-violet-400 opacity-80">
                                     {item.icon}
                                   </span>
                                   <span>{item.label}</span>
@@ -621,16 +645,26 @@ const Header = () => {
               user?.roleCapabilities?.canUploadProducts && (
                 <motion.button
                   onClick={handleProductSubmit}
-                  className="hidden md:flex items-center justify-center bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-full px-5 py-2 text-sm font-medium relative overflow-hidden group shadow-sm hover:shadow-lg transition-shadow"
+                  className="hidden md:flex items-center justify-center bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-full px-5 py-2 text-sm font-medium relative overflow-hidden group shadow-md hover:shadow-lg transition-all"
                   aria-label="Submit a product"
+                  whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.95 }}
-                  initial={{ opacity: 0, y: -10 }}
+                  initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, type: "spring" }}
+                  transition={{ duration: 0.3, type: "spring", stiffness: 400, damping: 25 }}
                 >
-                  <motion.div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-violet-500 opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-pink-500/20 to-violet-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    initial={{ opacity: 0 }}
+                    whileHover={{ opacity: 1 }}
+                  />
                   <motion.div className="relative z-10 flex items-center">
-                    <motion.div className="mr-1.5 group-hover:rotate-90 transition-transform duration-200">
+                    <motion.div
+                      className="mr-1.5"
+                      initial={{ rotate: 0 }}
+                      whileHover={{ rotate: 90 }}
+                      transition={{ duration: 0.2 }}
+                    >
                       <Plus size={16} />
                     </motion.div>
                     <span>Submit Product</span>
@@ -703,13 +737,13 @@ const Header = () => {
                     aria-expanded={isUserMenuOpen}
                     aria-haspopup="true"
                     aria-label="User menu"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                   >
                     <motion.div
-                      className="rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 group-hover:border-violet-300 dark:group-hover:border-violet-500 transition-all duration-300 relative"
-                      whileHover={{ rotate: [0, -3, 3, -3, 0] }}
-                      transition={{ duration: 0.5 }}
+                      className="rounded-full overflow-hidden border-2 border-gray-200/80 dark:border-gray-700/80 group-hover:border-violet-300 dark:group-hover:border-violet-500 transition-all duration-200 relative shadow-sm"
+                      whileHover={{ rotate: [0, -2, 2, 0] }}
+                      transition={{ duration: 0.3 }}
                     >
                       <Image
                         src={
@@ -724,33 +758,33 @@ const Header = () => {
                           e.target.src = `https://ui-avatars.com/api/?name=User&background=random&color=fff`;
                         }}
                       />
-                      <motion.div className="absolute inset-0 bg-gradient-to-tr from-violet-400/10 to-indigo-500/10 dark:from-violet-600/20 dark:to-indigo-700/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <motion.div className="absolute inset-0 bg-gradient-to-tr from-violet-400/5 to-indigo-500/5 dark:from-violet-600/10 dark:to-indigo-700/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                     </motion.div>
                     <motion.div
                       animate={{ rotate: isUserMenuOpen ? 180 : 0 }}
-                      transition={{ duration: 0.2 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
                       className="text-gray-500 dark:text-gray-400 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors"
                     >
-                      <ChevronDown size={16} />
+                      <ChevronDown size={15} className="opacity-70" />
                     </motion.div>
                   </motion.button>
                   <AnimatePresence>
                     {isUserMenuOpen && (
                       <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        initial={{ opacity: 0, y: 5, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        exit={{ opacity: 0, y: 5, scale: 0.98 }}
                         transition={{
-                          duration: 0.2,
+                          duration: 0.15,
                           type: "spring",
                           stiffness: 500,
                           damping: 30,
                         }}
-                        className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800/95 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl dark:shadow-black/30 overflow-hidden z-20 backdrop-blur-md"
+                        className="absolute right-0 mt-2 w-64 bg-white/95 dark:bg-gray-800/95 border border-gray-200/80 dark:border-gray-700/80 rounded-xl shadow-lg dark:shadow-black/20 overflow-hidden z-20 backdrop-blur-xl"
                         role="menu"
                       >
-                        <motion.div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-500 to-indigo-500" />
-                        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                        <motion.div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-indigo-500" />
+                        <div className="p-3.5 border-b border-gray-200/80 dark:border-gray-700/80">
                           <div className="flex items-center">
                             <div className="mr-3 flex-shrink-0">
                               <Image
@@ -761,14 +795,14 @@ const Header = () => {
                                 alt={`${user?.firstName || "User"}'s profile`}
                                 width={40}
                                 height={40}
-                                className="w-10 h-10 object-cover rounded-full border border-gray-200 dark:border-gray-600"
+                                className="w-10 h-10 object-cover rounded-full border border-gray-200/80 dark:border-gray-700/80 shadow-sm"
                               />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="font-medium text-gray-900 dark:text-white flex items-center">
                                 {user?.firstName} {user?.lastName}
                                 {user?.role && (
-                                  <span className="ml-2 px-1.5 py-0.5 text-xs bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 rounded-full">
+                                  <span className="ml-2 px-1.5 py-0.5 text-xs bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 rounded-full ring-1 ring-inset ring-violet-500/20 dark:ring-violet-500/30">
                                     {user.role.charAt(0).toUpperCase() +
                                       user.role.slice(1)}
                                   </span>
@@ -786,19 +820,19 @@ const Header = () => {
                               href: `/user/${user?.username}`,
                               label: "Your Profile",
                               icon: User,
-                              delay: 0.05,
+                              delay: 0.03,
                             },
                             {
-                              href: "/user/products",
+                              href: `/user/${user?.username}/products`,
                               label: "Your Products",
                               icon: Briefcase,
-                              delay: 0.1,
+                              delay: 0.06,
                             },
                             {
                               href: "/user/history",
                               label: "View History",
                               icon: Clock,
-                              delay: 0.15,
+                              delay: 0.09,
                             },
                             ...(user?.roleCapabilities?.canApplyToJobs
                               ? [
@@ -807,7 +841,7 @@ const Header = () => {
                                     label: "My Applications",
                                     icon: FileText,
                                     isNew: true,
-                                    delay: 0.2,
+                                    delay: 0.12,
                                   },
                                 ]
                               : []),
@@ -817,7 +851,7 @@ const Header = () => {
                                     href: "/projects",
                                     label: "My Projects",
                                     icon: Layers,
-                                    delay: 0.25,
+                                    delay: 0.15,
                                   },
                                 ]
                               : []),
@@ -825,24 +859,24 @@ const Header = () => {
                               href: "/user/settings",
                               label: "Settings",
                               icon: Settings,
-                              delay: 0.3,
+                              delay: 0.18,
                             },
                           ].map((item) => (
                             <motion.div
                               key={item.href}
-                              initial={{ opacity: 0, x: -10 }}
+                              initial={{ opacity: 0, x: -5 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: item.delay }}
                             >
                               <Link
                                 href={item.href}
-                                className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-violet-50 dark:hover:bg-violet-800/60 hover:text-violet-700 dark:hover:text-violet-300 transition-colors duration-150"
+                                className="flex items-center px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-violet-50/70 dark:hover:bg-violet-800/30 hover:text-violet-700 dark:hover:text-violet-300 transition-all duration-150 rounded-md mx-1 my-0.5"
                                 onClick={() => setIsUserMenuOpen(false)}
                                 role="menuitem"
                               >
                                 <item.icon
                                   size={16}
-                                  className="mr-3 text-violet-500 dark:text-violet-400"
+                                  className="mr-3 text-violet-500 dark:text-violet-400 opacity-80"
                                 />
                                 {item.label}
                                 {item.isNew && <NewBadge />}
@@ -850,21 +884,21 @@ const Header = () => {
                             </motion.div>
                           ))}
                         </div>
-                        <div className="py-1 border-t border-gray-200 dark:border-gray-700">
+                        <div className="py-1 border-t border-gray-200/80 dark:border-gray-700/80 bg-gray-50/50 dark:bg-gray-800/30">
                           <motion.div
-                            initial={{ opacity: 0, x: -10 }}
+                            initial={{ opacity: 0, x: -5 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.35 }}
+                            transition={{ delay: 0.21 }}
                           >
                             <button
                               onClick={() => {
                                 setIsUserMenuOpen(false);
                                 handleLogout();
                               }}
-                              className="flex w-full items-center px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-700/30 hover:text-red-700 dark:hover:text-red-300 transition-colors duration-150"
+                              className="flex w-full items-center px-4 py-2 text-sm text-red-500 dark:text-red-400 hover:bg-red-50/70 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-300 transition-all duration-150 rounded-md mx-1 my-0.5"
                               role="menuitem"
                             >
-                              <LogOut size={16} className="mr-3" /> Log Out
+                              <LogOut size={16} className="mr-3 opacity-80" /> Log Out
                             </button>
                           </motion.div>
                         </div>
@@ -876,31 +910,35 @@ const Header = () => {
             ) : (
               <div className="flex items-center space-x-2 md:space-x-3">
                 <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  initial={{ opacity: 0, y: -10 }}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
+                  transition={{ duration: 0.3, type: "spring", stiffness: 400, damping: 25 }}
                 >
                   <Link
                     href="/auth/login"
-                    className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 font-medium rounded-md hover:bg-violet-100 dark:hover:bg-violet-700/30 transition-all border border-transparent hover:border-violet-200 dark:hover:border-violet-600"
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-medium rounded-full hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-all border border-gray-200/80 dark:border-gray-700/80 hover:border-violet-300 dark:hover:border-violet-700 shadow-sm"
                   >
                     Log In
                   </Link>
                 </motion.div>
                 <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  initial={{ opacity: 0, y: -10 }}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.1 }}
-                  className="relative overflow-hidden rounded-md shadow-sm hover:shadow-lg transition-shadow"
+                  transition={{ duration: 0.3, delay: 0.1, type: "spring", stiffness: 400, damping: 25 }}
+                  className="relative overflow-hidden rounded-full shadow-md hover:shadow-lg transition-all group"
                 >
-                  <motion.div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-violet-500 opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-pink-500/20 to-violet-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    initial={{ opacity: 0 }}
+                    whileHover={{ opacity: 1 }}
+                  />
                   <Link
                     href="/auth/register"
-                    className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 font-medium rounded-md transition-all relative z-10"
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 font-medium rounded-full transition-all relative z-10 block"
                   >
                     Sign Up
                   </Link>
@@ -910,11 +948,11 @@ const Header = () => {
 
             <motion.button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-700/30 rounded-full md:hidden focus:outline-none transition-all relative"
+              className="p-2 text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-full md:hidden focus:outline-none transition-all relative border border-transparent hover:border-violet-200/50 dark:hover:border-violet-700/50"
               aria-expanded={isMobileMenuOpen}
               aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.2 }}
@@ -923,36 +961,34 @@ const Header = () => {
                 {isMobileMenuOpen ? (
                   <motion.div
                     key="close"
-                    initial={{ rotate: -90, opacity: 0 }}
+                    initial={{ rotate: -45, opacity: 0 }}
                     animate={{ rotate: 0, opacity: 1 }}
-                    exit={{ rotate: 90, opacity: 0 }}
+                    exit={{ rotate: 45, opacity: 0 }}
                     transition={{
-                      duration: 0.2,
+                      duration: 0.15,
                       type: "spring",
                       stiffness: 400,
-                      damping: 20,
+                      damping: 25,
                     }}
                     className="relative z-10"
                   >
-                    {" "}
-                    <X size={22} />{" "}
+                    <X size={20} />
                   </motion.div>
                 ) : (
                   <motion.div
                     key="menu"
-                    initial={{ rotate: 90, opacity: 0 }}
+                    initial={{ rotate: 45, opacity: 0 }}
                     animate={{ rotate: 0, opacity: 1 }}
-                    exit={{ rotate: -90, opacity: 0 }}
+                    exit={{ rotate: -45, opacity: 0 }}
                     transition={{
-                      duration: 0.2,
+                      duration: 0.15,
                       type: "spring",
                       stiffness: 400,
-                      damping: 20,
+                      damping: 25,
                     }}
                     className="relative z-10"
                   >
-                    {" "}
-                    <Menu size={22} />{" "}
+                    <Menu size={20} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -960,20 +996,19 @@ const Header = () => {
           </div>
         </div>
 
-        <div className="px-4 pb-3 sm:hidden border-t border-gray-200 dark:border-gray-800/50">
+        <div className="px-4 pb-3 sm:hidden border-t border-gray-200/80 dark:border-gray-800/80">
           <motion.button
             onClick={() => setIsSearchModalOpen(true)}
-            className="w-full mt-2 relative rounded-md border border-gray-300 dark:border-gray-700 flex items-center py-2.5 px-3 hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-sm transition-all group overflow-hidden bg-white dark:bg-gray-800"
+            className="w-full mt-2 relative rounded-full border border-gray-200/80 dark:border-gray-700/80 flex items-center py-2.5 px-3.5 hover:border-violet-300 dark:hover:border-violet-700 hover:shadow-sm transition-all group overflow-hidden bg-white dark:bg-gray-900 shadow-sm"
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, type: "spring" }}
           >
-            <motion.div className="absolute inset-0 bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-900/30 dark:to-indigo-900/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+            <motion.div className="absolute inset-0 bg-gradient-to-r from-violet-50/50 to-indigo-50/50 dark:from-violet-900/10 dark:to-indigo-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-full" />
             <motion.div className="text-gray-400 dark:text-gray-500 mr-2 relative z-10 group-hover:text-violet-500 dark:group-hover:text-violet-400 transition-colors">
-              {" "}
-              <Search size={16} />{" "}
+              <Search size={16} />
             </motion.div>
             <span className="text-gray-600 dark:text-gray-400 text-sm flex-1 text-left group-hover:text-violet-700 dark:group-hover:text-violet-300 transition-colors relative z-10">
               Search products, startups...
@@ -994,8 +1029,8 @@ const Header = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-30 bg-black/50 dark:bg-black/70 backdrop-blur-sm md:hidden"
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-30 bg-black/40 dark:bg-black/60 backdrop-blur-md md:hidden"
             onClick={() => setIsMobileMenuOpen(false)}
             role="dialog"
             aria-modal="true"
@@ -1004,11 +1039,11 @@ const Header = () => {
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="absolute top-0 right-0 bottom-0 w-4/5 max-w-sm bg-white dark:bg-gray-900 shadow-2xl dark:shadow-black/40 overflow-hidden border-l border-gray-200 dark:border-gray-700 flex flex-col"
+              transition={{ type: "spring", damping: 35, stiffness: 350 }}
+              className="absolute top-0 right-0 bottom-0 w-4/5 max-w-sm bg-white/95 dark:bg-gray-900/95 shadow-xl dark:shadow-black/30 overflow-hidden border-l border-gray-200/80 dark:border-gray-700/80 flex flex-col backdrop-blur-xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <motion.div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-500 to-indigo-500" />
+              <motion.div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-indigo-500" />
               <div className="flex-1 overflow-y-auto p-4 pt-6 hide-scrollbar">
                 <motion.nav
                   className="flex flex-col space-y-1"
@@ -1024,16 +1059,8 @@ const Header = () => {
                       href: "/",
                       label: "Home",
                       icon: Home,
-                      activeCondition: pathname === "/" || pathname === "/home",
-                    },
-                    {
-                      href: "/products",
-                      label: "Products",
-                      icon: Grid,
-                      activeCondition:
-                        pathname === "/products" ||
-                        pathname.startsWith("/products/"),
-                    },
+                      activeCondition: pathname === "/" || pathname === "/app",
+                    }
                   ].map((item) => (
                     <motion.div
                       key={item.href}
@@ -1044,21 +1071,21 @@ const Header = () => {
                     >
                       <Link
                         href={item.href}
-                        className={`flex items-center px-3 py-2.5 rounded-lg text-base transition-colors ${
+                        className={`flex items-center px-3 py-2.5 rounded-lg text-base transition-all ${
                           item.activeCondition
-                            ? "bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 font-semibold"
-                            : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-50"
+                            ? "bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 font-medium shadow-sm"
+                            : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-violet-700 dark:hover:text-violet-300"
                         }`}
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
                         <item.icon
-                          size={20}
+                          size={18}
                           className={`mr-3 ${
                             item.activeCondition
                               ? "text-violet-600 dark:text-violet-400"
-                              : "text-gray-500 dark:text-gray-400"
+                              : "text-gray-500 dark:text-gray-400 opacity-80"
                           }`}
-                        />{" "}
+                        />
                         {item.label}
                       </Link>
                     </motion.div>
@@ -1092,14 +1119,14 @@ const Header = () => {
                                 category.slug ||
                                 category.name.toLowerCase().replace(/\s+/g, "-")
                               }`}
-                              className="flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-violet-50 dark:hover:bg-violet-800/60 hover:text-violet-700 dark:hover:text-violet-300 rounded-lg transition-all duration-150"
+                              className="flex items-center px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-violet-50/70 dark:hover:bg-violet-800/30 hover:text-violet-700 dark:hover:text-violet-300 rounded-lg transition-all duration-150"
                               onClick={() => setIsMobileMenuOpen(false)}
                             >
-                              <div className="mr-3 flex-shrink-0 w-5 h-5 flex items-center justify-center text-violet-500 dark:text-violet-400">
+                              <div className="mr-3 flex-shrink-0 w-5 h-5 flex items-center justify-center text-violet-500 dark:text-violet-400 opacity-80">
                                 <CategoryIcon
                                   icon={category.icon}
                                   name={category.name}
-                                  size={18}
+                                  size={16}
                                 />
                               </div>
                               <span className="text-sm font-medium">
@@ -1117,11 +1144,18 @@ const Header = () => {
                         >
                           <Link
                             href="/categories"
-                            className="text-sm text-violet-600 dark:text-violet-400 hover:underline font-medium flex items-center"
+                            className="text-sm text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-medium flex items-center group transition-colors"
                             onClick={() => setIsMobileMenuOpen(false)}
                           >
                             View All Categories{" "}
-                            <ArrowRight size={14} className="ml-1" />
+                            <motion.div
+                              className="ml-1"
+                              initial={{ x: 0 }}
+                              whileHover={{ x: 3 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <ArrowRight size={14} />
+                            </motion.div>
                           </Link>
                         </motion.div>
                       </div>
@@ -1231,10 +1265,10 @@ const Header = () => {
               </div>
 
               <motion.div
-                className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"
-                initial={{ opacity: 0, y: 20 }}
+                className="p-4 border-t border-gray-200/80 dark:border-gray-700/80 bg-gray-50/80 dark:bg-gray-800/30 backdrop-blur-sm"
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
+                transition={{ delay: 0.2 }}
               >
                 {isAuthenticated() &&
                   user?.roleCapabilities?.canUploadProducts && (
@@ -1243,14 +1277,23 @@ const Header = () => {
                         setIsMobileMenuOpen(false);
                         handleProductSubmit();
                       }}
-                      className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-lg px-4 py-3 text-sm font-medium transition-all flex items-center justify-center relative overflow-hidden group mb-3 shadow-sm hover:shadow-md"
+                      className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-full px-4 py-3 text-sm font-medium transition-all flex items-center justify-center relative overflow-hidden group mb-3 shadow-md hover:shadow-lg"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <motion.div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-violet-500 opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-pink-500/20 to-violet-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        initial={{ opacity: 0 }}
+                        whileHover={{ opacity: 1 }}
+                      />
                       <motion.div className="relative z-10 flex items-center">
-                        <motion.div className="mr-2 group-hover:rotate-90 transition-transform duration-200">
-                          <Plus size={18} />
+                        <motion.div
+                          className="mr-2"
+                          initial={{ rotate: 0 }}
+                          whileHover={{ rotate: 90 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <Plus size={16} />
                         </motion.div>
                         <span>Submit Product</span>
                       </motion.div>
@@ -1262,44 +1305,48 @@ const Header = () => {
                       setIsMobileMenuOpen(false);
                       handleLogout();
                     }}
-                    className="w-full border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700/60 text-gray-700 dark:text-gray-200 rounded-lg px-4 py-3 text-sm font-medium transition-all flex items-center justify-center"
+                    className="w-full border border-gray-200/80 dark:border-gray-700/80 hover:bg-gray-100/80 dark:hover:bg-gray-700/40 text-gray-600 dark:text-gray-300 rounded-full px-4 py-3 text-sm font-medium transition-all flex items-center justify-center shadow-sm"
                     whileHover={{
                       scale: 1.02,
-                      borderColor: "rgba(124, 58, 237, 0.5)",
+                      borderColor: "rgba(124, 58, 237, 0.3)",
                     }}
                     whileTap={{ scale: 0.98 }}
                   >
                     <LogOut
                       size={16}
-                      className="mr-2 text-gray-500 dark:text-gray-400"
-                    />{" "}
+                      className="mr-2 text-gray-500 dark:text-gray-400 opacity-80"
+                    />
                     Log Out
                   </motion.button>
                 ) : (
                   <div className="flex space-x-3">
                     <motion.div
                       className="flex-1"
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                     >
                       <Link
                         href="/auth/login"
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex-1 text-center border border-gray-300 dark:border-gray-600 hover:border-violet-400 dark:hover:border-violet-500 hover:bg-violet-50 dark:hover:bg-violet-700/30 text-gray-700 dark:text-gray-200 hover:text-violet-700 dark:hover:text-violet-300 rounded-lg px-3 py-2.5 text-sm font-medium transition-all flex items-center justify-center w-full"
+                        className="flex-1 text-center border border-gray-200/80 dark:border-gray-700/80 hover:border-violet-300 dark:hover:border-violet-700 hover:bg-violet-50/70 dark:hover:bg-violet-900/20 text-gray-600 dark:text-gray-300 hover:text-violet-700 dark:hover:text-violet-300 rounded-full px-3 py-2.5 text-sm font-medium transition-all flex items-center justify-center w-full shadow-sm"
                       >
                         <User size={16} className="mr-1.5 opacity-70" /> Log In
                       </Link>
                     </motion.div>
                     <motion.div
-                      className="flex-1 relative overflow-hidden rounded-lg shadow-sm hover:shadow-md"
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
+                      className="flex-1 relative overflow-hidden rounded-full shadow-md hover:shadow-lg"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                     >
-                      <motion.div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-violet-500 opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-pink-500/20 to-violet-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        initial={{ opacity: 0 }}
+                        whileHover={{ opacity: 1 }}
+                      />
                       <Link
                         href="/auth/register"
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex-1 text-center bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-lg px-3 py-2.5 text-sm font-medium transition-all flex items-center justify-center w-full relative z-10"
+                        className="flex-1 text-center bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-full px-3 py-2.5 text-sm font-medium transition-all flex items-center justify-center w-full relative z-10"
                       >
                         <Plus size={16} className="mr-1.5" /> Sign Up
                       </Link>

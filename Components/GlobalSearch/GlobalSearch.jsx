@@ -9,7 +9,7 @@ export const GlobalSearch = () => {
   const [selectedType, setSelectedType] = useState('all');
   const [suggestions, setSuggestions] = useState([]);
   const searchRef = useRef(null);
-  
+
   const debouncedQuery = useDebounce(query, 300);
 
   const searchTypes = [
@@ -52,7 +52,7 @@ export const GlobalSearch = () => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search across products, jobs, and more..."
-            className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+            className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-gray-800 bg-white"
           />
           {isSearching && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -64,11 +64,11 @@ export const GlobalSearch = () => {
             </div>
           )}
         </div>
-        
+
         <select
           value={selectedType}
           onChange={(e) => setSelectedType(e.target.value)}
-          className="px-4 py-2 rounded-lg border border-gray-200"
+          className="px-4 py-2 rounded-lg border border-gray-200 text-gray-800 bg-white"
         >
           {searchTypes.map(type => (
             <option key={type.id} value={type.id}>{type.label}</option>
@@ -93,7 +93,7 @@ export const GlobalSearch = () => {
                 ))}
               </div>
             )}
-            
+
             {/* Add similar sections for jobs and other result types */}
           </motion.div>
         )}

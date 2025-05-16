@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AddProductForm from "./AddProductForm/AddProductForm";
-import { useAuth } from "../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { motion } from "framer-motion";

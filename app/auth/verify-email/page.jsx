@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../../../Contexts/Auth/AuthContext';
+import { useAuth } from '@/lib/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -64,7 +64,7 @@ const VerifyEmailPage = () => {
 
     try {
       const { success, message } = await resendEmailVerification(email);
-      
+
       if (success) {
         setSuccess(true);
         startCooldown();
@@ -80,10 +80,10 @@ const VerifyEmailPage = () => {
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       y: 0,
-      transition: { 
+      transition: {
         duration: 0.6,
         ease: "easeOut",
         when: "beforeChildren",
@@ -94,8 +94,8 @@ const VerifyEmailPage = () => {
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       y: 0,
       transition: { duration: 0.4, ease: "easeOut" }
     }
@@ -103,10 +103,10 @@ const VerifyEmailPage = () => {
 
   const successVariants = {
     hidden: { scale: 0.8, opacity: 0 },
-    visible: { 
-      scale: 1, 
+    visible: {
+      scale: 1,
       opacity: 1,
-      transition: { 
+      transition: {
         type: "spring",
         stiffness: 200,
         damping: 10
@@ -122,7 +122,7 @@ const VerifyEmailPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <motion.div 
+      <motion.div
         className="sm:mx-auto sm:w-full sm:max-w-md"
         initial="hidden"
         animate="visible"
@@ -137,7 +137,7 @@ const VerifyEmailPage = () => {
           </p>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="mt-8 bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10 border border-gray-100"
           variants={itemVariants}
         >
@@ -148,17 +148,17 @@ const VerifyEmailPage = () => {
               initial="hidden"
               animate="visible"
             >
-              <motion.div 
+              <motion.div
                 initial={{ rotate: 0 }}
                 animate={{ rotate: 360 }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
                 className="mx-auto w-12 h-12 flex items-center justify-center rounded-full bg-green-100 mb-3"
               >
-                <svg 
-                  className="h-6 w-6 text-green-600" 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
+                <svg
+                  className="h-6 w-6 text-green-600"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
                   stroke="currentColor"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -172,7 +172,7 @@ const VerifyEmailPage = () => {
           )}
 
           {(error || errorMessage) && (
-            <motion.div 
+            <motion.div
               className="mb-6 p-4 rounded-md bg-red-50 border border-red-200"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -199,7 +199,7 @@ const VerifyEmailPage = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isSubmitting || cooldown > 0}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-gray-800 bg-white"
                   placeholder="you@example.com"
                 />
                 {email && (
@@ -258,8 +258,8 @@ const VerifyEmailPage = () => {
             </div>
 
             <div className="mt-6 flex justify-center">
-              <Link 
-                href="/auth/login" 
+              <Link
+                href="/auth/login"
                 className="text-sm font-medium text-primary hover:text-primary-dark transition-colors"
               >
                 Return to login
@@ -268,7 +268,7 @@ const VerifyEmailPage = () => {
           </div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="mt-6 text-center text-xs text-gray-500"
           variants={itemVariants}
         >

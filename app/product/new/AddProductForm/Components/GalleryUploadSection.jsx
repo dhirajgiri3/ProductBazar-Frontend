@@ -18,7 +18,7 @@ import {
   Camera
 } from "lucide-react";
 import { useDropzone } from "react-dropzone";
-import { validateImageFile, optimizeImage } from "../../../../../Utils/Image/imageUtils";
+import { validateImageFile, optimizeImage } from "@/lib/utils/image/image-utils";
 import { toast } from "react-hot-toast";
 
 const GalleryUploadSection = ({

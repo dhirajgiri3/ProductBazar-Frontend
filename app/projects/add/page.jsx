@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { motion } from "framer-motion";
-import { useAuth } from "../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import ProjectForm from "./ProjectForm";
-import LoaderComponent from "../../../Components/UI/LoaderComponent";
+import LoaderComponent from "Components/UI/LoaderComponent";
 
 export default function AddProjectPage() {
   const { user, authLoading, isInitialized } = useAuth();

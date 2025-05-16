@@ -103,9 +103,9 @@ const CommentForm = ({
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
             maxLength={maxLength + 50} // Allow typing over limit slightly but show error
-            className={`w-full p-3 text-sm border rounded-lg focus:outline-none transition duration-200 min-h-[60px] resize-none bg-gray-50 dark:bg-gray-700/50 placeholder-gray-500 dark:placeholder-gray-400 text-gray-800 dark:text-gray-100
-              focus:border-violet-400 dark:focus:border-violet-500 focus:ring-1 focus:ring-violet-300 dark:focus:ring-violet-700
-              ${isOverLimit ? "border-red-400 dark:border-red-500 focus:ring-red-300 dark:focus:ring-red-700" : "border-gray-200 dark:border-gray-600"}
+            className={`w-full p-3 text-sm border rounded-lg focus:outline-none transition duration-200 min-h-[60px] resize-none bg-gray-50 placeholder-gray-500 text-gray-800
+              focus:border-violet-400 focus:ring-1 focus:ring-violet-300
+              ${isOverLimit ? "border-red-400 focus:ring-red-300" : "border-gray-200"}
               ${isSubmitting ? "opacity-70 cursor-not-allowed" : ""}
             `}
             placeholder={placeholder}
@@ -119,7 +119,7 @@ const CommentForm = ({
           {(charCount > maxLength * 0.8 || isOverLimit) && (
              <div
                className={`absolute bottom-1.5 right-1.5 text-[10px] font-mono px-1 rounded ${
-                 isOverLimit ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-gray-400"
+                 isOverLimit ? "text-red-600" : "text-gray-500"
                }`}
              >
                {charCount}/{maxLength}
@@ -130,7 +130,7 @@ const CommentForm = ({
         {/* Buttons and Hints */}
         <div className="flex justify-between items-center gap-2 flex-wrap">
           {/* Markdown hint */}
-          <div className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 tooltip-container">
+          <div className="text-xs text-gray-400 flex items-center gap-1 tooltip-container">
              <FaMarkdown size={12} />
              <span className="hidden sm:inline">Markdown</span>
           </div>
@@ -141,7 +141,7 @@ const CommentForm = ({
               <motion.button
                 type="button"
                 onClick={onCancel}
-                className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
                 disabled={isSubmitting}
               >
                 Cancel
@@ -150,10 +150,10 @@ const CommentForm = ({
 
             <motion.button
               type="submit"
-              className={`px-4 py-1.5 text-xs font-semibold text-white rounded-md transition-all flex items-center justify-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800 focus-visible:ring-violet-500 ${
+              className={`px-4 py-1.5 text-xs font-semibold text-white rounded-md transition-all flex items-center justify-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-violet-500 ${
                 !content.trim() || isOverLimit || isSubmitting
-                  ? 'bg-violet-300 dark:bg-violet-700 cursor-not-allowed'
-                  : 'bg-violet-500 hover:bg-violet-600 dark:bg-violet-600 dark:hover:bg-violet-700 shadow-sm'
+                  ? 'bg-violet-300 cursor-not-allowed'
+                  : 'bg-violet-500 hover:bg-violet-600 shadow-sm'
               }`}
               disabled={isSubmitting || !content.trim() || isOverLimit}
               whileHover={!isSubmitting && content.trim() && !isOverLimit ? { scale: 1.03 } : {}}

@@ -41,8 +41,8 @@ import {
   Download,
   StarIcon
 } from "lucide-react";
-import { useAuth } from "../../../Contexts/Auth/AuthContext";
-import { useProject } from "../../../Contexts/Project/ProjectContext";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useProject } from "@/lib/contexts/project-context";
 import LoaderComponent from "../../../Components/UI/LoaderComponent";
 import { toast } from "react-hot-toast";
 import Image from "next/image";

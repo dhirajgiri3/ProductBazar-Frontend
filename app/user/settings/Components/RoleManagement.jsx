@@ -10,7 +10,7 @@ import {
 } from 'react-icons/fi';
 
 import { makePriorityRequest } from '../../../../Utils/api';
-import { useAuth } from '../../../../Contexts/Auth/AuthContext';
+import { useAuth } from "@/lib/contexts/auth-context";
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 import debounce from 'lodash.debounce';

@@ -3,23 +3,27 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../../../../Contexts/Auth/AuthContext';
-import { useProduct } from '../../../../../Contexts/Product/ProductContext';
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useProduct } from "@/lib/contexts/product-context";
+import { useSearchParams } from 'next/navigation';
 import LoaderComponent from '../../../../../Components/UI/LoaderComponent';
 import ProfileHeader from './ProfileHeader';
 import ProfileStats from './ProfileStats';
 import ProfileTabs from './ProfileTabs';
 import ProfileContent from './ProfileContent';
-import { pageVariants } from '../../../../../Utils/UI/animations';
-import logger from '../../../../../Utils/logger';
-import eventBus, { EVENT_TYPES } from '../../../../../Utils/eventBus';
+import { pageVariants } from '@/lib/utils/ui/animations';
+import logger from '@/lib/utils/logger';
+import eventBus, { EVENT_TYPES } from '@/lib/utils/event-bus';
 
 export default function ProfilePage({ initialUser, initialProducts, initialInteractionCounts, initialStatusCounts, initialTotalPages }) {
   const { user: currentUser, authLoading } = useAuth();
   const { getUserProducts } = useProduct();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isProfileCompletionModalOpen, setIsProfileCompletionModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('Overview');
+  const [activeTab, setActiveTab] = useState(tabParam || 'Overview');
   const [products, setProducts] = useState(initialProducts);
   const [productsLoading, setProductsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);

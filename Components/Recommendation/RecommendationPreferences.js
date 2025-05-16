@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useRecommendation } from '../../Contexts/Recommendation/RecommendationContext';
+import { useRecommendation } from "@/lib/contexts/recommendation-context";
 import { Switch, Chip, Slider } from '@mui/material';
 
 const RecommendationPreferences = () => {

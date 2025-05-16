@@ -62,7 +62,7 @@ export const FormField = ({
   };
 
   const commonClasses =
-    "w-full pl-10 pr-3 py-2.5 rounded-md border border-gray-200 bg-white focus:outline-none transition-all duration-200 text-sm shadow-sm";
+    "w-full pl-10 pr-3 py-2.5 rounded-md border border-gray-200 bg-white text-gray-800 focus:outline-none transition-all duration-200 text-sm shadow-sm";
   const focusClasses =
     "focus:border-violet-300 focus:ring-2 focus:ring-violet-100";
   const hoverClasses = "hover:border-gray-300";
@@ -236,7 +236,7 @@ export const TagInput = ({
                         value={inputValue}
                         onChange={onInputChange}
                         onKeyDown={onInputKeyDown}
-                        className="flex-grow min-w-[150px] outline-none p-1.5 text-sm bg-transparent"
+                        className="flex-grow min-w-[150px] outline-none p-1.5 text-sm bg-transparent text-gray-800"
                         placeholder={placeholder}
                     />
                 </div>

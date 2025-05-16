@@ -17,8 +17,8 @@ import {
   Eye
 } from "lucide-react";
 import { useDropzone } from "react-dropzone";
-import api from "../../../Utils/api";
-import logger from "../../../Utils/logger";
+import api from "@/lib/api/api";
+import logger from "@/lib/utils/logger";
 
 const ProjectForm = ({ user, project = null, isEditing = false }) => {
   const router = useRouter();
@@ -317,7 +317,7 @@ const ProjectForm = ({ user, project = null, isEditing = false }) => {
               </label>
               <input
                 {...register("title", { required: "Project title is required" })}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-violet-500 ${
+                className={`w-full px-4 py-2 border bg-white rounded-lg focus:ring-2 focus:ring-violet-500 ${
                   errors.title ? "border-red-500" : "border-gray-300"
                 }`}
                 placeholder="e.g. E-commerce Website Redesign"

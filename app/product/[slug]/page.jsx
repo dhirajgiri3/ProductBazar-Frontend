@@ -9,39 +9,13 @@ import {
   useTransform,
   useInView,
 } from "framer-motion";
-
-// Error Boundary component for isolating errors
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error("Error caught by ErrorBoundary:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return this.props.fallback || <div>Something went wrong.</div>;
-    }
-
-    return this.props.children;
-  }
-}
-import { useProduct } from "../../../Contexts/Product/ProductContext.js";
-import { useAuth } from "../../../Contexts/Auth/AuthContext.js";
-// Import only the contexts we need
-import { useSocket } from "../../../Contexts/Socket/SocketContext";
-import { useToast } from "../../../Contexts/Toast/ToastContext";
-import LoaderComponent from "../../../Components/UI/LoaderComponent.jsx";
-import EditProductModal from "../../../Components/Modal/Product/EditProductModal.jsx";
-import eventBus, { EVENT_TYPES } from "../../../Utils/eventBus";
-import ViewTracker from "../../../Components/View/ViewTracker.js";
+import { useAuth } from "@/lib/contexts/auth-context.jsx";
+import { useSocket } from "@/lib/contexts/socket-context.jsx";
+import { useToast } from "@/lib/contexts/toast-context.jsx";
+import LoaderComponent from "Components/UI/LoaderComponent.jsx";
+import EditProductModal from "Components/Modal/Product/EditProductModal.jsx";
+import eventBus, { EVENT_TYPES } from "@/lib/utils/event-bus.js";
+import ViewTracker from "Components/View/ViewTracker.js";
 import OptimizedGallery from "./Components/OptimizedGallery.jsx";
 import {
   ArrowLeft,
@@ -67,14 +41,38 @@ import {
   AlertCircle,
   MapPin,
   Plus as PlusIcon,
-  Star
+  Star,
 } from "lucide-react";
-import UpvoteButton from "../../../Components/Buttons/Upvote/UpvoteButton";
-import BookmarkButton from "../../../Components/Buttons/Bookmark/BookmarkButton";
+import UpvoteButton from "Components/Buttons/Upvote/UpvoteButton.jsx";
+import BookmarkButton from "Components/Buttons/Bookmark/BookmarkButton.jsx";
 import { formatDistanceToNow, format } from "date-fns";
 import SimilarProductsSection from "./Components/SimilarProductsSection.jsx";
 import CommentSection from "./Components/Comment/CommentSection.jsx"; // Make sure this path is correct
 import { FaGithub } from "react-icons/fa";
+import { useProduct } from "@/lib/contexts/product-context.jsx";
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Error caught by ErrorBoundary:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || <div>Something went wrong.</div>;
+    }
+
+    return this.props.children;
+  }
+}
 
 // --- Enhanced Storytelling Components with Consistent Theme ---
 const staggerContainer = {

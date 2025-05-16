@@ -15,8 +15,8 @@ import {
   ImageIcon
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { useProduct } from "../../../../Contexts/Product/ProductContext";
-import { useCategories } from "../../../../Contexts/Category/CategoryContext";
+import { useProduct } from "@/lib/contexts/product-context";
+import { useCategories } from "@/lib/contexts/category-context";
 import ThumbnailUploadSection from "./Components/ThumbnailUploadSection";
 import GalleryUploadSection from "./Components/GalleryUploadSection";
 import SmartDescriptionSection from "./Components/SmartDescriptionSection";

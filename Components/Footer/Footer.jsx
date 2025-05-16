@@ -1,272 +1,9 @@
 "use client"
 
 import React, { useRef } from 'react';
-import styled from 'styled-components';
 import Link from 'next/link';
 import { motion, useAnimation, useInView } from 'framer-motion';
 import { IconBrandLinkedin, IconBrandTwitter, IconBrandFacebook, IconBrandInstagram, IconSend } from '@tabler/icons-react';
-
-const FooterContainer = styled.footer`
-  background-color: #0a0a0a;
-  color: var(--light);
-  padding: 5rem 1rem;
-  font-family: 'clash', sans-serif;
-  width: 100%;
-  position: relative;
-  z-index: 10;
-  overflow: hidden;
-
-  @media (min-width: 480px) {
-    padding: 5rem 2rem;
-  }
-
-  @media (min-width: 768px) {
-    padding: 6rem 3rem;
-  }
-
-  @media (min-width: 1024px) {
-    padding: 7rem 4rem;
-  }
-`;
-
-const FooterContent = styled.div`
-  max-width: 1400px;
-  margin: 0 auto 2rem;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 3rem;
-
-  @media (min-width: 640px) {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 2rem;
-  }
-
-  @media (min-width: 1024px) {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 3rem;
-  }
-`;
-
-const FooterSection = styled.div`
-  background-color: rgba(30, 30, 30, 0.3);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  border: 1px solid rgba(90, 60, 160, 0.15);
-  padding: 1.5rem;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-
-  &:hover {
-    box-shadow: 0 8px 30px rgba(90, 60, 160, 0.2);
-    border: 1px solid rgba(139, 92, 246, 0.3);
-  }
-
-  h3 {
-    font-size: var(--nm);
-    font-weight: 600;
-    margin-bottom: 1.5rem;
-    color: var(--white);
-    text-align: center;
-    background: linear-gradient(to right, #a78bfa, #ec4899);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-
-    @media (min-width: 640px) {
-      text-align: left;
-    }
-  }
-
-  p {
-    font-size: var(--sm);
-    line-height: 1.6;
-    margin-bottom: 1rem;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.8);
-
-    @media (min-width: 640px) {
-      text-align: left;
-    }
-  }
-
-  ul {
-    list-style: none;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-
-    @media (min-width: 640px) {
-      align-items: flex-start;
-    }
-  }
-
-  li {
-    margin-bottom: 0.8rem;
-    transition: transform 0.3s ease;
-
-    &:hover {
-      transform: translateX(5px);
-    }
-  }
-
-  a {
-    color: rgba(255, 255, 255, 0.7);
-    text-decoration: none;
-    font-size: var(--sm);
-    transition: all 0.3s ease;
-    display: inline-block;
-    position: relative;
-
-    &:after {
-      content: '';
-      position: absolute;
-      width: 0;
-      height: 2px;
-      bottom: -2px;
-      left: 0;
-      background: linear-gradient(to right, #a78bfa, #ec4899);
-      transition: width 0.3s ease;
-    }
-
-    &:hover {
-      color: var(--white);
-      
-      &:after {
-        width: 100%;
-      }
-    }
-  }
-`;
-
-const SocialLinks = styled.div`
-  display: flex;
-  gap: 1.5rem;
-  margin: 1.5rem 0;
-  justify-content: center;
-
-  @media (min-width: 640px) {
-    justify-content: flex-start;
-  }
-
-  a {
-    color: var(--white);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
-    position: relative;
-    
-    svg {
-      position: relative;
-      z-index: 2;
-    }
-    
-    &::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-    
-    &:hover {
-      color: var(--white);
-      transform: translateY(-5px);
-      
-      &::before {
-        opacity: 1;
-      }
-    }
-  }
-`;
-
-const NewsletterForm = styled.form`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  width: 100%;
-  align-items: center;
-
-  @media (min-width: 640px) {
-    align-items: flex-start;
-  }
-
-  .relative {
-    position: relative;
-    width: 100%;
-  }
-
-  input {
-    width: 100%;
-    max-width: 300px;
-    padding: 0.9rem 1rem;
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    border-radius: 8px;
-    background-color: rgba(30, 30, 30, 0.5);
-    color: var(--light);
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(4px);
-    
-    &:focus {
-      outline: none;
-      border-color: #8b5cf6;
-      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
-    }
-  }
-
-  button {
-    width: 100%;
-    max-width: 300px;
-    padding: 0.9rem 1rem;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 500;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 0.5rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
-    }
-  }
-`;
-
-const Copyright = styled.div`
-  text-align: center;
-  margin-top: 3rem;
-  padding-top: 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: var(--xs);
-  color: var(--light);
-
-  p {
-    margin: 0.5rem 0;
-    line-height: 1.5;
-  }
-
-  @media (min-width: 768px) {
-    margin-top: 4rem;
-    font-size: calc(var(--xs) + 1px);
-  }
-  
-  .bg-violet-500\/70 {
-    background-color: rgba(139, 92, 246, 0.7);
-  }
-`;
 
 // Define animation variants
 const staggerContainer = {
@@ -320,7 +57,10 @@ const Footer = () => {
   }, [isInView, controls]);
 
   return (
-    <FooterContainer ref={footerRef}>
+    <footer 
+      ref={footerRef}
+      className="bg-[#0a0a0a] text-white py-12 md:py-16 lg:py-20 px-4 md:px-8 lg:px-16 w-full relative z-10 overflow-hidden font-['clash',sans-serif]"
+    >
       {/* Gradient background */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-900">
@@ -359,26 +99,26 @@ const Footer = () => {
           </motion.h2>
         </motion.div>
 
-        <FooterContent>
+        <div className="max-w-[1400px] mx-auto mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-12">
           <motion.div variants={fadeInUp}>
-            <FooterSection>
-              <h3>About Us</h3>
+            <div className="bg-transparent border-b border-violet-500/20 pb-6">
+              <h3 className="text-lg font-semibold mb-4 text-center sm:text-left bg-gradient-to-r from-violet-400 to-fuchsia-500 bg-clip-text text-transparent">About Us</h3>
               <motion.p
                 initial={{ opacity: 0, y: 10 }}
                 animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
                 transition={{ duration: 0.4, delay: 0.4 }}
+                className="text-sm leading-relaxed text-center sm:text-left text-white/80"
               >
                 Learn more about Product Bazaar and our mission to connect innovators, freelancers, startups, and users on a dynamic platform.
               </motion.p>
-            </FooterSection>
+            </div>
           </motion.div>
 
           <motion.div variants={fadeInUp}>
-            <FooterSection>
-              <h3>Quick Links</h3>
-              <ul>
+            <div className="bg-transparent border-b border-violet-500/20 pb-6">
+              <h3 className="text-lg font-semibold mb-4 text-center sm:text-left bg-gradient-to-r from-violet-400 to-fuchsia-500 bg-clip-text text-transparent">Quick Links</h3>
+              <ul className="flex flex-col items-center sm:items-start">
                 {[
-                  { href: "/products", label: "Products" },
                   { href: "/jobs", label: "Jobs" },
                   { href: "/freelance-projects", label: "Freelance Projects" },
                   { href: "/startups", label: "Startups" },
@@ -390,18 +130,24 @@ const Footer = () => {
                     initial={{ opacity: 0, x: -10 }}
                     animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -10 }}
                     transition={{ duration: 0.3, delay: 0.4 + (index * 0.1) }}
+                    className="mb-2 hover:translate-x-1 transition-transform duration-300"
                   >
-                    <Link href={link.href}>{link.label}</Link>
+                    <Link 
+                      href={link.href}
+                      className="text-white/70 hover:text-white text-sm relative after:content-[''] after:absolute after:w-0 after:h-[2px] after:bottom-[-2px] after:left-0 after:bg-gradient-to-r after:from-violet-400 after:to-fuchsia-500 after:transition-[width] after:duration-300 hover:after:w-full"
+                    >
+                      {link.label}
+                    </Link>
                   </motion.li>
                 ))}
               </ul>
-            </FooterSection>
+            </div>
           </motion.div>
 
           <motion.div variants={fadeInUp}>
-            <FooterSection>
-              <h3>Legal</h3>
-              <ul>
+            <div className="bg-transparent border-b border-violet-500/20 pb-6">
+              <h3 className="text-lg font-semibold mb-4 text-center sm:text-left bg-gradient-to-r from-violet-400 to-fuchsia-500 bg-clip-text text-transparent">Legal</h3>
+              <ul className="flex flex-col items-center sm:items-start">
                 {[
                   { href: "/terms", label: "Terms of Service" },
                   { href: "/privacy", label: "Privacy Policy" },
@@ -412,18 +158,24 @@ const Footer = () => {
                     initial={{ opacity: 0, x: -10 }}
                     animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -10 }}
                     transition={{ duration: 0.3, delay: 0.5 + (index * 0.1) }}
+                    className="mb-2 hover:translate-x-1 transition-transform duration-300"
                   >
-                    <Link href={link.href}>{link.label}</Link>
+                    <Link 
+                      href={link.href}
+                      className="text-white/70 hover:text-white text-sm relative after:content-[''] after:absolute after:w-0 after:h-[2px] after:bottom-[-2px] after:left-0 after:bg-gradient-to-r after:from-violet-400 after:to-fuchsia-500 after:transition-[width] after:duration-300 hover:after:w-full"
+                    >
+                      {link.label}
+                    </Link>
                   </motion.li>
                 ))}
               </ul>
-            </FooterSection>
+            </div>
           </motion.div>
 
           <motion.div variants={fadeInUp}>
-            <FooterSection>
-              <h3>Follow Us</h3>
-              <SocialLinks>
+            <div className="bg-transparent border-b border-violet-500/20 pb-6">
+              <h3 className="text-lg font-semibold mb-4 text-center sm:text-left bg-gradient-to-r from-violet-400 to-fuchsia-500 bg-clip-text text-transparent">Follow Us</h3>
+              <div className="flex gap-6 my-6 justify-center sm:justify-start">
                 <motion.a 
                   href="#" 
                   aria-label="LinkedIn"
@@ -433,8 +185,9 @@ const Footer = () => {
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
                   transition={{ duration: 0.3, delay: 0.5 }}
+                  className="text-white flex items-center justify-center w-10 h-10 rounded-full bg-white/10 border border-violet-500/30 relative overflow-hidden"
                 >
-                  <IconBrandLinkedin size={20} />
+                  <IconBrandLinkedin size={18} className="relative z-[2]" />
                 </motion.a>
                 <motion.a 
                   href="#" 
@@ -445,8 +198,9 @@ const Footer = () => {
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
                   transition={{ duration: 0.3, delay: 0.6 }}
+                  className="text-white flex items-center justify-center w-10 h-10 rounded-full bg-white/10 border border-violet-500/30 relative overflow-hidden"
                 >
-                  <IconBrandTwitter size={20} />
+                  <IconBrandTwitter size={18} className="relative z-[2]" />
                 </motion.a>
                 <motion.a 
                   href="#" 
@@ -457,8 +211,9 @@ const Footer = () => {
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
                   transition={{ duration: 0.3, delay: 0.7 }}
+                  className="text-white flex items-center justify-center w-10 h-10 rounded-full bg-white/10 border border-violet-500/30 relative overflow-hidden"
                 >
-                  <IconBrandFacebook size={20} />
+                  <IconBrandFacebook size={18} className="relative z-[2]" />
                 </motion.a>
                 <motion.a 
                   href="#" 
@@ -469,44 +224,46 @@ const Footer = () => {
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
                   transition={{ duration: 0.3, delay: 0.8 }}
+                  className="text-white flex items-center justify-center w-10 h-10 rounded-full bg-white/10 border border-violet-500/30 relative overflow-hidden"
                 >
-                  <IconBrandInstagram size={20} />
+                  <IconBrandInstagram size={18} className="relative z-[2]" />
                 </motion.a>
-              </SocialLinks>
+              </div>
               
-              <NewsletterForm>
+              <form className="flex flex-col gap-4 mt-6 w-full items-center sm:items-start">
                 <motion.div 
-                  className="relative w-full max-w-300px"
+                  className="relative w-full max-w-[300px]"
                   initial={{ opacity: 0, y: 10 }}
                   animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
                   transition={{ duration: 0.4, delay: 0.7 }}
                 >
                   <motion.div
-                    whileHover={{ 
-                      boxShadow: "0 0 0 2px rgba(139, 92, 246, 0.3)",
-                      y: -2
-                    }}
+                    whileHover={{ y: -2 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <input type="email" placeholder="Enter your email address" aria-label="Email for newsletter" />
+                    <input 
+                      type="email" 
+                      placeholder="Enter your email address" 
+                      aria-label="Email for newsletter" 
+                      className="w-full max-w-[300px] py-[0.9rem] px-4 border border-violet-500/30 rounded-lg bg-white/5 text-white focus:outline-none focus:border-violet-500 transition-all duration-300"
+                    />
                   </motion.div>
                   <motion.button 
                     type="submit" 
                     whileHover={{ scale: 1.03, y: -2 }}
                     whileTap={{ scale: 0.98 }}
-                    className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600"
-                    initial={{ boxShadow: "0 4px 15px rgba(0, 0, 0, 0.2)" }}
+                    className="w-full max-w-[300px] mt-2 py-[0.9rem] px-4 rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-medium flex items-center justify-center transition-all duration-300"
                   >
                     Subscribe <IconSend size={16} className="ml-2 inline" />
                   </motion.button>
                 </motion.div>
-              </NewsletterForm>
-            </FooterSection>
+              </form>
+            </div>
           </motion.div>
-        </FooterContent>
+        </div>
         
         <motion.div variants={fadeInUp}>
-          <Copyright>
+          <div className="text-center mt-12 pt-8 border-t border-white/10">
             <motion.div
               className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-6"
               initial={{ opacity: 0, y: 10 }}
@@ -514,7 +271,7 @@ const Footer = () => {
               transition={{ duration: 0.5, delay: 0.8 }}
             >
               <motion.p
-                className="text-center"
+                className="text-center text-xs md:text-sm text-white/80 hover:text-white/90 transition-colors duration-300"
                 whileHover={{ color: "rgba(255, 255, 255, 0.9)" }}
               >
                 © 2024 Product Bazaar. All rights reserved.
@@ -525,16 +282,16 @@ const Footer = () => {
                 transition={{ duration: 2, repeat: Infinity }}
               />
               <motion.p
-                className="text-center"
+                className="text-center text-xs md:text-sm text-white/80 hover:text-white/90 transition-colors duration-300"
                 whileHover={{ color: "rgba(255, 255, 255, 0.9)" }}
               >
                 All trademarks, logos, and brand names are the property of their respective owners.
               </motion.p>
             </motion.div>
-          </Copyright>
+          </div>
         </motion.div>
       </motion.div>
-    </FooterContainer>
+    </footer>
   );
 };
 

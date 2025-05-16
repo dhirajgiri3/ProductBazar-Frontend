@@ -3,7 +3,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Avatar } from "@mui/material"; // Assuming Material UI is used for Avatar
-import { FormatTimeAgo } from "../../../../../../Utils/FormatTimeAgo"; // Verify path
+import { FormatTimeAgo } from "@/lib/utils/format-time-ago"; // Verify path
 import CommentActions from "./CommentActions"; // Verify path
 import CommentForm from "./CommentForm"; // Verify path
 import { FaChevronDown, FaChevronRight, FaReply, FaUser } from "react-icons/fa";
@@ -60,7 +60,7 @@ const NestedReplies = ({ replies, parentComment, depth, ...handlers }) => {
       exit="hidden"
     >
       {/* Thin vertical line */}
-      <div className="absolute left-[18px] top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-700/60 -z-10"></div>
+      <div className="absolute left-[18px] top-0 bottom-0 w-px bg-gray-200 -z-10"></div>
       {replies.map((reply) => (
         <CommentItem
           key={reply._id}
@@ -159,7 +159,7 @@ const CommentItem = ({
   const hasNestedReplies = comment.replies && comment.replies.length > 0;
   const replyTargetName = comment.replyingToUser?.fullName || "";
   const avatarSize = 36; // Consistent size
-  const backgroundClass = "bg-white dark:bg-gray-800/50"; // Keep consistent background
+  const backgroundClass = "bg-white"; // Keep consistent background
 
   return (
     <motion.div
@@ -169,9 +169,9 @@ const CommentItem = ({
       initial="initial"
       animate="animate"
       exit="exit"
-      className={`${backgroundClass} rounded-lg p-4 transition-colors duration-200 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 relative ${
-        isEditing ? "ring-2 ring-violet-300 dark:ring-violet-600" : ""
-      } ${isReplying ? "ring-1 ring-violet-200 dark:ring-violet-700" : ""}`}
+      className={`${backgroundClass} rounded-lg p-4 transition-colors duration-200 hover:bg-gray-50/50 relative ${
+        isEditing ? "ring-2 ring-violet-300" : ""
+      } ${isReplying ? "ring-1 ring-violet-200" : ""}`}
       id={`comment-${comment._id}`}
     >
       <div className="flex gap-3">
@@ -186,12 +186,12 @@ const CommentItem = ({
               bgcolor: 'secondary.light', // Consistent bg
               fontSize: '0.875rem'
             }}
-            className={`flex-shrink-0 ${isMaker ? "ring-1 ring-offset-1 ring-violet-400 dark:ring-violet-500" : ""}`}
+            className={`flex-shrink-0 ${isMaker ? "ring-1 ring-offset-1 ring-violet-400" : ""}`}
           >
             {comment.user?.firstName?.charAt(0) || <FaUser size={16}/>}
           </Avatar>
           {(isMaker || isAdmin) && (
-             <div className="absolute -bottom-1 -right-1 bg-white dark:bg-gray-700 rounded-full p-px">
+             <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-px">
                <BadgeCheck
                  size={14}
                  className={isAdmin ? "text-blue-500" : "text-violet-500"}
@@ -205,21 +205,21 @@ const CommentItem = ({
           {/* User Info */}
           <div className="flex justify-between items-center flex-wrap gap-x-2 mb-1">
             <div className="flex items-center gap-2">
-               <h4 className="font-medium text-sm text-gray-800 dark:text-gray-100">
+               <h4 className="font-medium text-sm text-gray-800">
                  {comment.user?.fullName || "Anonymous User"}
                </h4>
                {isMaker && (
-                 <span className="text-[10px] font-medium py-0.5 px-1.5 bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300 rounded">
+                 <span className="text-[10px] font-medium py-0.5 px-1.5 bg-violet-100 text-violet-700 rounded">
                    Maker
                  </span>
                )}
                {isAdmin && !isMaker && (
-                 <span className="text-[10px] font-medium py-0.5 px-1.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded">
+                 <span className="text-[10px] font-medium py-0.5 px-1.5 bg-blue-100 text-blue-700 rounded">
                    Admin
                  </span>
                )}
             </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 whitespace-nowrap">
+            <span className="text-xs text-gray-500 flex-shrink-0 whitespace-nowrap">
               {FormatTimeAgo(comment.createdAt)}
               {comment.createdAt !== comment.updatedAt && (
                 <span className="italic ml-1.5 opacity-70">(edited)</span>
@@ -229,7 +229,7 @@ const CommentItem = ({
 
           {/* Replying To Indicator */}
           {isReply && replyTargetName && (
-             <div className="text-xs font-normal text-gray-500 dark:text-gray-400 mb-1.5 inline-flex items-center bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded">
+             <div className="text-xs font-normal text-gray-500 mb-1.5 inline-flex items-center bg-gray-100 px-1.5 py-0.5 rounded">
                <FaReply className="inline mr-1 transform scale-x-[-1]" size={9} />
                Replying to @{replyTargetName.split(" ")[0]}
              </div>
@@ -251,7 +251,7 @@ const CommentItem = ({
               />
             ) : (
               <div
-                className="prose prose-sm dark:prose-invert prose-p:my-0 max-w-none text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line break-words"
+                className="prose prose-sm prose-p:my-0 max-w-none text-gray-700 leading-relaxed whitespace-pre-line break-words"
                 // Add dangerouslySetInnerHTML={{ __html: sanitizedHtml }} here if rendering markdown safely
               >
                 {comment.content}
@@ -277,7 +277,7 @@ const CommentItem = ({
           {hasNestedReplies && !isEditing && (
             <motion.button
               onClick={handleToggleReplies}
-              className="mt-3 flex items-center gap-1 text-xs font-medium text-violet-600 dark:text-violet-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 rounded"
+              className="mt-3 flex items-center gap-1 text-xs font-medium text-violet-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 rounded"
               aria-expanded={showReplies}
               aria-controls={`replies-${comment._id}`}
             >

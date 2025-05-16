@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "../../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import { FiBriefcase, FiDollarSign, FiUsers, FiTrendingUp, FiMapPin, FiInfo, FiSettings } from "react-icons/fi";
-import api from "../../../../Utils/api";
-import logger from "../../../../Utils/logger";
+import api from "@/lib/api/api";
+import logger from "@/lib/utils/logger";
 
 const RoleSpecificSection = ({ formData, setFormData, setHasUnsavedChanges }) => {
   const { user, refreshUserData } = useAuth();

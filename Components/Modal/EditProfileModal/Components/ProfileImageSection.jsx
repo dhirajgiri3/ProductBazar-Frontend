@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { FiCamera, FiUpload, FiTrash2 } from "react-icons/fi";
-import { useAuth } from "../../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import { optimizeImage } from "../../../../Utils/Image/imageUtils";
 import toast from "react-hot-toast";
 

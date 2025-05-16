@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useAuth } from "../../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import Link from "next/link";
 import { FiAlertCircle, FiCheck, FiUser, FiPhone, FiMail, FiMapPin, FiMessageSquare } from "react-icons/fi";
 

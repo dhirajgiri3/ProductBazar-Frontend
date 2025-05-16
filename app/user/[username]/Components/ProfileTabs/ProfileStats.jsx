@@ -1,7 +1,7 @@
 // src/components/profile/ProfileStats.jsx
 import { motion } from 'framer-motion';
 import { FiPackage, FiBookmark, FiAward, FiActivity } from 'react-icons/fi';
-import { statVariants } from '../../../../../Utils/UI/animations';
+import { statVariants } from '@/lib/utils/ui/animations';
 
 export default function ProfileStats({ productsCount, bookmarks, upvotes, activities }) {
   const stats = [

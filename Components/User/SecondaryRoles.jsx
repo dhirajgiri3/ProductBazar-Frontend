@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiX, FiCheck, FiLoader, FiLock } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../Contexts/Auth/AuthContext';
-import api from '../../Utils/api';
-import logger from '../../Utils/logger';
+import { useAuth } from '@/lib/contexts/auth-context';
+import api from '@/lib/api/api';
+import logger from '@/lib/utils/logger';
 
 const SecondaryRoles = ({ profileUser, isOwnProfile = true }) => {
   const { user, refreshUserData } = useAuth();

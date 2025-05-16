@@ -1,5 +1,4 @@
-import { ProductProvider } from "../../../Contexts/Product/ProductContext";
-import "../../../app/globals.css";
+import { ProductProvider } from "@/lib/contexts/product-context";
 
 export async function generateMetadata({ params }) {
   // Fetch user data from the API

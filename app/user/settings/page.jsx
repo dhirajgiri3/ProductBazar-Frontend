@@ -17,7 +17,7 @@ import {
   FiCheck,
   FiX,
 } from "react-icons/fi";
-import { useAuth } from "../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import RoleManagement from "./Components/RoleManagement";
 import ProfileSettings from "./Components/ProfileSettings";
 import NotificationSettings from "./Components/NotificationSettings";

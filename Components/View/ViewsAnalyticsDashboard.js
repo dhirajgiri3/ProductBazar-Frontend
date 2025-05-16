@@ -20,7 +20,7 @@ import {
   AreaChart,
   ComposedChart,
 } from "recharts";
-import { useView } from "../../Contexts/View/ViewContext";
+import { useView } from "@/lib/contexts/view-context";
 
 // Icons
 import {

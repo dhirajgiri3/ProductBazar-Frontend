@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { FiEdit, FiSave, FiX, FiLoader, FiAlertTriangle } from 'react-icons/fi';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../Contexts/Auth/AuthContext';
-import api from '../../Utils/api';
-import logger from '../../Utils/logger';
+import { useAuth } from "@/lib/contexts/auth-context";
+import api from '@/lib/api/api';
+import logger from '@/lib/utils/logger';
 
 const AdminRoleManager = ({ userId, onRoleUpdated }) => {
   const { user } = useAuth();
@@ -31,11 +31,19 @@ const AdminRoleManager = ({ userId, onRoleUpdated }) => {
   // Fetch user data
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!userId || !user || user.role !== 'admin') return;
+      if (!userId || !user) return;
+
+      // Check if user has admin role either as primary or secondary role
+      const isPrimaryAdmin = user?.role === 'admin';
+      const isSecondaryAdmin = user?.secondaryRoles && user.secondaryRoles.includes('admin');
+
+      if (!isPrimaryAdmin && !isSecondaryAdmin) return;
 
       setIsLoading(true);
       try {
+        // Use makePriorityRequest instead of api.get to ensure proper error handling
         const response = await api.get(`/admin/users/${userId}`);
+
         if (response.data.status === 'success') {
           setTargetUser(response.data.data.user);
           setSelectedRole(response.data.data.user.role);
@@ -44,7 +52,15 @@ const AdminRoleManager = ({ userId, onRoleUpdated }) => {
         }
       } catch (err) {
         logger.error('Error fetching user data:', err);
-        setError(err.response?.data?.message || 'Failed to fetch user data');
+
+        // Provide more specific error messages
+        if (err.response?.status === 401) {
+          setError('Authentication error. Please log in again.');
+        } else if (err.response?.status === 403) {
+          setError('You do not have permission to manage user roles.');
+        } else {
+          setError(err.response?.data?.message || 'Failed to fetch user data');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -87,7 +103,15 @@ const AdminRoleManager = ({ userId, onRoleUpdated }) => {
       }
     } catch (err) {
       logger.error('Error updating user role:', err);
-      setError(err.response?.data?.message || 'Failed to update role');
+
+      // Provide more specific error messages
+      if (err.response?.status === 401) {
+        setError('Authentication error. Please log in again.');
+      } else if (err.response?.status === 403) {
+        setError('You do not have permission to update user roles.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to update role');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -154,7 +178,7 @@ const AdminRoleManager = ({ userId, onRoleUpdated }) => {
             <select
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+              className="w-full p-2 border border-gray-300 rounded-md text-sm bg-white text-gray-800"
               disabled={isSubmitting}
             >
               {allRoles.map(role => (

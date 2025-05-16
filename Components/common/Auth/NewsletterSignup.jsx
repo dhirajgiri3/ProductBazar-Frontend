@@ -124,7 +124,7 @@ const NewsletterSignup = ({ className = '' }) => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={status === 'loading' || status === 'success'}
-          className={`w-full px-4 py-3 pr-12 rounded-xl text-sm focus:outline-none focus:ring-2
+          className={`w-full px-4 py-3 pr-12 rounded-xl text-sm focus:outline-none focus:ring-2 text-gray-800
             ${status === 'error'
               ? 'focus:ring-red-500 border-red-300 bg-red-50'
               : 'focus:ring-violet-500 border-gray-200 bg-gray-50'}

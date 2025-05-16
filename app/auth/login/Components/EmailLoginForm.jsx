@@ -14,12 +14,12 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
   const [formErrors, setFormErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [activeField, setActiveField] = useState(null);
-  
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     // Update form data when input changes
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     // Clear error for this field when user starts typing
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
@@ -28,26 +28,26 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
 
   const validateForm = () => {
     const errors = {};
-    
+
     // Email validation
     if (!formData.email) {
       errors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Email address is invalid';
     }
-    
+
     // Password validation
     if (!formData.password) {
       errors.password = 'Password is required';
     }
-    
+
     return errors;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const errors = validateForm();
-    
+
     if (Object.keys(errors).length === 0) {
       onSubmit({
         email: formData.email,
@@ -60,7 +60,7 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
 
   // Animation variants
   const inputVariants = {
-    focused: { 
+    focused: {
       scale: 1.01,
       boxShadow: "0 0 0 2px rgba(124, 58, 237, 0.3)",
       borderColor: "rgba(124, 58, 237, 0.8)"
@@ -70,10 +70,10 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
       boxShadow: "0 0 0 2px rgba(239, 68, 68, 0.2)",
       borderColor: "rgba(239, 68, 68, 0.8)"
     },
-    normal: { 
+    normal: {
       scale: 1,
       boxShadow: "none",
-      borderColor: "rgba(229, 231, 235, 1)" 
+      borderColor: "rgba(229, 231, 235, 1)"
     }
   };
 
@@ -100,8 +100,8 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
   };
 
   return (
-    <motion.form 
-      className="space-y-5 w-full mx-auto" 
+    <motion.form
+      className="space-y-5 w-full mx-auto"
       onSubmit={handleSubmit}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -122,9 +122,9 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
             id="email"
             name="email"
             placeholder="your@email.com"
-            className={`w-full px-4 py-3 pl-11 border rounded-xl text-sm transition-all duration-300 ${
-              formErrors.email 
-                ? "border-red-300 ring-red-100 bg-red-50/30" 
+            className={`w-full px-4 py-3 pl-11 border rounded-xl text-sm text-gray-800 transition-all duration-300 ${
+              formErrors.email
+                ? "border-red-300 ring-red-100 bg-red-50/30"
                 : "border-gray-200 group-hover:border-violet-300 bg-white/60"
             }`}
             value={formData.email}
@@ -155,7 +155,7 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
           <label htmlFor="password" className="block text-sm font-medium text-gray-700">
             Password
           </label>
-          <Link 
+          <Link
             href="/auth/forgot-password"
             className="text-xs text-violet-600 hover:text-violet-800 hover:underline"
           >
@@ -168,9 +168,9 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
             id="password"
             name="password"
             placeholder="••••••••"
-            className={`w-full px-4 py-3 pl-11 pr-10 border rounded-xl text-sm transition-all duration-300 ${
-              formErrors.password 
-                ? "border-red-300 ring-red-100 bg-red-50/30" 
+            className={`w-full px-4 py-3 pl-11 pr-10 border rounded-xl text-sm text-gray-800 transition-all duration-300 ${
+              formErrors.password
+                ? "border-red-300 ring-red-100 bg-red-50/30"
                 : "border-gray-200 group-hover:border-violet-300 bg-white/60"
             }`}
             value={formData.password}
@@ -191,8 +191,8 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-violet-600 transition-colors"
           >
-            {showPassword 
-              ? <FaEyeSlash className="text-base opacity-70 hover:opacity-100" /> 
+            {showPassword
+              ? <FaEyeSlash className="text-base opacity-70 hover:opacity-100" />
               : <FaEye className="text-base opacity-70 hover:opacity-100" />
             }
           </button>

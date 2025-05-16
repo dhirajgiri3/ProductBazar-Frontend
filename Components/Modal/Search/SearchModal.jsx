@@ -5,12 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, X, Clock, Trending, Tag, User, Briefcase, Package, ChevronRight, Loader2, Folder } from "lucide-react";
-import { useDebounce } from "../../../Hooks/useDebounce";
-import { useAuth } from "../../../Contexts/Auth/AuthContext";
-import { useCategories } from "../../../Contexts/Category/CategoryContext";
-import { useOnClickOutside } from "../../../Hooks/useOnClickOutside";
-import { makePriorityRequest } from "../../../Utils/api";
-import logger from "../../../Utils/logger";
+import { useDebounce } from "@/lib/hooks/useDebounce";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useCategories } from "@/lib/contexts/category-context";
+import { useOnClickOutside } from "@/lib/hooks/useOnClickOutside";
+import { makePriorityRequest } from "@/lib/api/api";
+import logger from "@/lib/utils/logger";
 
 const SearchModal = ({ isOpen, onClose, initialQuery = "" }) => {
   const router = useRouter();
@@ -265,7 +265,7 @@ const SearchModal = ({ isOpen, onClose, initialQuery = "" }) => {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search across products, jobs, projects and more..."
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-500"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-500 text-gray-800 bg-white"
                 />
                 {query && (
                   <button

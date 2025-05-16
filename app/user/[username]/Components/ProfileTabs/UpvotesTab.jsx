@@ -2,10 +2,10 @@
 
 import { motion } from "framer-motion";
 import { useState, useEffect, useMemo } from "react";
-import { useAuth } from "../../../../../Contexts/Auth/AuthContext";
-import logger from "../../../../../Utils/logger";
+import { useAuth } from "@/lib/contexts/auth-context";
+import logger from "@/lib/utils/logger";
 import Link from "next/link";
-import { makePriorityRequest } from "../../../../../Utils/api";
+import { makePriorityRequest } from "@/lib/api/api";
 import { FiArrowUp, FiArrowDown, FiMinus, FiAward, FiTrendingUp, FiBarChart2, FiStar, FiClock, FiPackage, FiInfo } from "react-icons/fi";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 

@@ -5,7 +5,7 @@ import { motion, useInView } from "framer-motion";
 import { Users2, Rocket, BarChart3, CheckCircle } from "lucide-react";
 import { DisplayCards } from "../../UI/DisplayCards/DisplayCards";
 import GlobalButton from "../../UI/Buttons/GlobalButton";
-import { useTheme } from "../../../Contexts/Theme/ThemeContext";
+import { useTheme } from "@/lib/contexts/theme-context";
 import SectionLabel from "./Animations/SectionLabel";
 
 const EcosystemStats = () => {
@@ -74,18 +74,15 @@ const EcosystemStats = () => {
   return (
     <section
       ref={sectionRef}
-      className="relative w-full overflow-hidden bg-white dark:bg-gray-900 transition-colors duration-300 py-12 sm:py-16"
+      className="relative w-full overflow-hidden bg-white dark:bg-gray-900 transition-colors duration-300 py-12 lg:py-16"
     >
       {/* Enhanced background elements */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-[60%] -right-[5%] w-[30%] h-[40%] rounded-full bg-violet-200/40 dark:bg-violet-700/20 blur-3xl transition-colors duration-300"></div>
-        <div className="absolute top-[30%] left-[60%] w-[20%] h-[20%] rounded-full bg-violet-300/20 dark:bg-violet-600/15 blur-2xl transition-colors duration-300"></div>
-        <div className="absolute top-[10%] right-[20%] w-[10%] h-[10%] rounded-full bg-violet-400/15 dark:bg-violet-500/15 blur-xl animate-pulse-slow transition-colors duration-300"></div>
-        <div className="absolute bottom-[15%] left-[15%] w-[12%] h-[12%] rounded-full bg-violet-400/15 dark:bg-violet-500/15 blur-xl animate-pulse-slow transition-colors duration-300"></div>
+        <div className="absolute top-[60%] -right-[5%] w-[30%] h-[40%] rounded-full bg-violet-300/20 dark:bg-violet-700/20 blur-3xl transition-colors duration-300"></div>
+        <div className="absolute top-[30%] left-[60%] w-[20%] h-[20%] rounded-full bg-violet-500/20 dark:bg-violet-600/15 blur-2xl transition-colors duration-300"></div>
+        <div className="absolute top-[10%] right-[20%] w-[10%] h-[10%] rounded-full bg-violet-500/15 dark:bg-violet-500/15 blur-xl animate-pulse-slow transition-colors duration-300"></div>
+        <div className="absolute bottom-[15%] left-[15%] w-[12%] h-[12%] rounded-full bg-violet-600/15 dark:bg-violet-500/15 blur-xl animate-pulse-slow transition-colors duration-300"></div>
       </div>
-
-      {/* Grid pattern with fade effect */}
-      <div className="absolute inset-0 bg-grid-violet-100/[0.2] dark:bg-grid-violet-300/[0.1] grid-fade-mask opacity-30 dark:opacity-20 transition-all duration-300"></div>
 
       <div className="container mx-auto px-6 relative z-10">
         {/* Two-column layout with improved spacing and alignment */}
@@ -108,7 +105,9 @@ const EcosystemStats = () => {
                   text="Ecosystem Statistics"
                   size="medium"
                   alignment="center"
-                  animate={false}
+                  variant="modern"
+                  glowEffect={true}
+                  animationStyle="fade"
                 />
               </motion.div>
 

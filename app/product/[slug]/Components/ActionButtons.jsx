@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import { Menu, Transition } from "@headlessui/react";
-import { useAuth } from "../../../../Contexts/Auth/AuthContext";
-import { useProduct } from "../../../../Contexts/Product/ProductContext";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useProduct } from "@/lib/contexts/product-context";
 import { toast } from "react-hot-toast";
 import EditProductModal from "../../../../Components/Modal/Product/EditProductModal";
 import DeleteConfirmModal from "../../../../Components/Modal/Product/DeleteConfirmModal";

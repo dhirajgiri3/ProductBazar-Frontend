@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "../../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import Image from "next/image";
 import {
   FiAlertCircle,
@@ -17,11 +17,11 @@ import {
   FiShield,
 } from "react-icons/fi";
 import LoaderComponent from "../../../UI/LoaderComponent";
-import { optimizeImage } from "../../../../Utils/Image/imageUtils";
+import { optimizeImage } from "@/lib/utils/image/file-upload";
 // Import the updateProfilePicture function from the appropriate service
 // import { updateProfilePicture } from "../../../../Services/userService";
 import toast from "react-hot-toast";
-import logger from "../../../../Utils/logger";
+import logger from "@/lib/utils/logger";
 
 const ProfileBasicsSection = ({
   formData,
@@ -587,7 +587,7 @@ const ProfileBasicsSection = ({
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-lg text-gray-900 text-sm transition-all duration-200 border focus:ring-1 focus:ring-violet-400 focus:border-violet-400
+                    className={`w-full pl-10 pr-4 py-2.5 rounded-lg text-gray-900 text-sm transition-all duration-200 border focus:ring-1 focus:ring-violet-400 focus:border-violet-400 bg-white
                       ${getStatusStyles(getInputStatus("firstName"))}`}
                     maxLength={50}
                     placeholder="Your first name"
@@ -631,7 +631,7 @@ const ProfileBasicsSection = ({
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleChange}
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-lg text-gray-900 text-sm transition-all duration-200 border focus:ring-1 focus:ring-violet-400 focus:border-violet-400
+                    className={`w-full pl-10 pr-4 py-2.5 rounded-lg text-gray-900 text-sm transition-all duration-200 border focus:ring-1 focus:ring-violet-400 focus:border-violet-400 bg-white
                       ${getStatusStyles(getInputStatus("lastName"))}`}
                     maxLength={50}
                     placeholder="Your last name"
@@ -684,7 +684,7 @@ const ProfileBasicsSection = ({
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className={`w-full pl-10 pr-24 py-2.5 rounded-lg border text-gray-900 text-sm transition-colors
+                    className={`w-full pl-10 pr-24 py-2.5 rounded-lg border text-gray-900 text-sm transition-colors bg-white
                       ${getStatusStyles(getInputStatus("email"))}`}
                     placeholder="your@email.com"
                   />
@@ -781,7 +781,7 @@ const ProfileBasicsSection = ({
                             onChange={(e) =>
                               setVerificationCode(e.target.value)
                             }
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900"
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
                             placeholder="Enter 6-digit code"
                             maxLength={6}
                             disabled={verificationLoading}
@@ -862,7 +862,7 @@ const ProfileBasicsSection = ({
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    className={`w-full pl-10 pr-24 py-2.5 rounded-lg border text-gray-900 text-sm transition-colors
+                    className={`w-full pl-10 pr-24 py-2.5 rounded-lg border text-gray-900 text-sm transition-colors bg-white
                       ${getStatusStyles(getInputStatus("phone"))}`}
                     placeholder="+1 (555) 123-4567"
                   />
@@ -959,7 +959,7 @@ const ProfileBasicsSection = ({
                             onChange={(e) =>
                               setVerificationCode(e.target.value)
                             }
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900"
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
                             placeholder="Enter 6-digit code"
                             maxLength={6}
                             disabled={verificationLoading}

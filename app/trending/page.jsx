@@ -84,8 +84,8 @@ const demoStats = {
     ]
   }
 };
-import { useAuth } from "../../Contexts/Auth/AuthContext";
-import { useProduct } from "../../Contexts/Product/ProductContext";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useProduct } from "@/lib/contexts/product-context";
 
 export default function TrendingPage() {
   const [error, setError] = useState(null);

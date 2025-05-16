@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
-import { useProduct } from "../../../Contexts/Product/ProductContext";
-import logger from "../../../Utils/logger";
+import { useProduct } from "@/lib/contexts/product-context";
+import logger from "@/lib/utils/logger";
 import { FiAlertTriangle } from "react-icons/fi";
 
 export default function DeleteConfirmModal({ isOpen, onClose, product }) {

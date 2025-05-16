@@ -1,23 +1,17 @@
-"use client";
+import dynamic from "next/dynamic";
 
-import Home from "./home/Components/Home";
-import React, { useEffect } from "react";
+// Import the CSS
 import "./globals.css";
-import { runAllCleanup } from "../Utils/cleanupUtils";
-import Landing from "../Components/Landing/Landing";
 
+// Dynamically import the Landing component with no SSR
+const Landing = dynamic(() => import("../Components/Landing/Landing"), {
+  ssr: false,
+});
 
-function page() {
-  useEffect(() => {
-    // Run cleanup on component mount
-    runAllCleanup();
-  }, []);
-
+export default function Page() {
   return (
     <div>
       <Landing />
     </div>
   );
 }
-
-export default page;

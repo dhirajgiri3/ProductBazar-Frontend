@@ -1,4 +1,4 @@
-import { makePriorityRequest } from '../Utils/api';
+import { makePriorityRequest } from '../lib/api/api';
 
 /**
  * Generate a unique session ID if not exists

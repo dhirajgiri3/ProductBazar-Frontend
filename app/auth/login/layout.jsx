@@ -1,4 +1,4 @@
-import { AuthProvider } from "../../../Contexts/Auth/AuthContext.js";
+import { AuthProvider } from "@/lib/contexts/auth-context";
 
 export const metadata = {
   title: "Login - Navkar Selection",

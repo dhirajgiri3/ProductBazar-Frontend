@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../Contexts/Auth/AuthContext';
+import { useAuth } from "@/lib/contexts/auth-context";
 import { FiLoader, FiAlertTriangle } from 'react-icons/fi';
 
 export default function AdminLayout({ children }) {

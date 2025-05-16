@@ -21,7 +21,7 @@ import {
   FileText,
   Paperclip
 } from "lucide-react";
-import { useAuth } from "../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import { makePriorityRequest } from "../../../Utils/api";
 import logger from "../../../Utils/logger";
 import LoaderComponent from "../../../Components/UI/LoaderComponent";

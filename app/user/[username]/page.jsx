@@ -1,6 +1,6 @@
-import { makePriorityRequest } from '../../../Utils/api';
+import { makePriorityRequest } from '@/lib/api/api';
 import ProfilePage from './Components/ProfileTabs/ProfilePage';
-import logger from '../../../Utils/logger';
+import logger from '@/lib/utils/logger';
 // Import the notFound function
 import { notFound } from 'next/navigation';
 

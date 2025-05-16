@@ -68,7 +68,7 @@ const EmailRegistrationForm = ({ onSubmit, isLoading, onToggleMethod }) => {
   };
 
   const inputVariants = {
-    focused: { 
+    focused: {
       scale: 1.01,
       boxShadow: "0 0 0 2px rgba(124, 58, 237, 0.3)",
       borderColor: "rgba(124, 58, 237, 0.8)"
@@ -78,24 +78,24 @@ const EmailRegistrationForm = ({ onSubmit, isLoading, onToggleMethod }) => {
       boxShadow: "0 0 0 2px rgba(239, 68, 68, 0.2)",
       borderColor: "rgba(239, 68, 68, 0.8)"
     },
-    normal: { 
+    normal: {
       scale: 1,
       boxShadow: "none",
-      borderColor: "rgba(229, 231, 235, 1)" 
+      borderColor: "rgba(229, 231, 235, 1)"
     }
   };
 
   const passwordStrength = (password) => {
     if (!password) return { width: "0%", color: "bg-gray-200" };
-    
+
     const hasLower = /[a-z]/.test(password);
     const hasUpper = /[A-Z]/.test(password);
     const hasNumber = /\d/.test(password);
     const hasSpecial = /[!@#$%^&*]/.test(password);
     const isLongEnough = password.length >= 8;
-    
+
     const strength = [hasLower, hasUpper, hasNumber, hasSpecial, isLongEnough].filter(Boolean).length;
-    
+
     const strengthMap = {
       1: { width: "20%", color: "bg-red-400" },
       2: { width: "40%", color: "bg-red-300" },
@@ -103,10 +103,10 @@ const EmailRegistrationForm = ({ onSubmit, isLoading, onToggleMethod }) => {
       4: { width: "80%", color: "bg-green-300" },
       5: { width: "100%", color: "bg-green-500" },
     };
-    
+
     return strengthMap[strength] || { width: "0%", color: "bg-gray-200" };
   };
-  
+
   const strength = passwordStrength(formData.password);
 
   // Animation variants
@@ -139,7 +139,7 @@ const EmailRegistrationForm = ({ onSubmit, isLoading, onToggleMethod }) => {
       { met: /[!@#$%^&*]/.test(password), text: "One special character" },
       { met: password.length >= 8, text: "8+ characters" }
     ];
-    
+
     return (
       <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
         {requirements.map((req, i) => (
@@ -164,7 +164,7 @@ const EmailRegistrationForm = ({ onSubmit, isLoading, onToggleMethod }) => {
   };
 
   const renderRoleFields = () => (
-    <RoleFields 
+    <RoleFields
       role={formData.role}
       roleDetails={formData.roleDetails}
       updateRoleDetails={updateRoleDetails}
@@ -174,8 +174,8 @@ const EmailRegistrationForm = ({ onSubmit, isLoading, onToggleMethod }) => {
   );
 
   return (
-    <motion.form 
-      className="space-y-4 w-full mx-auto" 
+    <motion.form
+      className="space-y-4 w-full mx-auto"
       onSubmit={handleSubmit}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -196,7 +196,7 @@ const EmailRegistrationForm = ({ onSubmit, isLoading, onToggleMethod }) => {
             id="email"
             name="email"
             placeholder="your@email.com"
-            className={`w-full px-4 py-2.5 pl-10 border rounded-xl text-sm transition-all duration-300 ${
+            className={`w-full px-4 py-2.5 pl-10 border rounded-xl text-sm text-gray-800 transition-all duration-300 ${
               formErrors.email ? "border-red-300" : "border-gray-200 group-hover:border-violet-300"
             }`}
             value={formData.email}
@@ -225,7 +225,7 @@ const EmailRegistrationForm = ({ onSubmit, isLoading, onToggleMethod }) => {
           <motion.select
             id="role"
             name="role"
-            className="w-full px-4 py-2.5 pl-10 border border-gray-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all group-hover:border-violet-300"
+            className="w-full px-4 py-2.5 pl-10 border border-gray-200 rounded-xl text-sm text-gray-800 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all group-hover:border-violet-300"
             value={formData.role}
             onChange={handleChange}
             disabled={isLoading}
@@ -264,7 +264,7 @@ const EmailRegistrationForm = ({ onSubmit, isLoading, onToggleMethod }) => {
             id="password"
             name="password"
             placeholder="••••••••"
-            className={`w-full px-4 py-2.5 pl-10 pr-10 border rounded-xl text-sm transition-all duration-300 ${
+            className={`w-full px-4 py-2.5 pl-10 pr-10 border rounded-xl text-sm text-gray-800 transition-all duration-300 ${
               formErrors.password ? "border-red-300" : "border-gray-200 group-hover:border-violet-300"
             }`}
             value={formData.password}
@@ -314,7 +314,7 @@ const EmailRegistrationForm = ({ onSubmit, isLoading, onToggleMethod }) => {
             id="confirmPassword"
             name="confirmPassword"
             placeholder="••••••••"
-            className={`w-full px-4 py-2.5 pl-10 pr-10 border rounded-xl text-sm transition-all duration-300 ${
+            className={`w-full px-4 py-2.5 pl-10 pr-10 border rounded-xl text-sm text-gray-800 transition-all duration-300 ${
               formErrors.confirmPassword ? "border-red-300" : "border-gray-200 group-hover:border-violet-300"
             }`}
             value={formData.confirmPassword}

@@ -4,8 +4,8 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import api from '../../../../Utils/api.js';
-import logger from '../../../../Utils/logger.js';
+import api from '@/lib/api/api.js';
+import logger from '@/lib/utils/logger.js';
 
 function ForgotPasswordForm() {
   const router = useRouter();

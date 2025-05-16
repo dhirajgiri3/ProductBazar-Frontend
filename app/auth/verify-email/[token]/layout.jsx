@@ -1,7 +1,7 @@
 import StyledComponentsRegistry from "../../../../Lib/registry";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { AuthProvider } from "../../../../Contexts/Auth/AuthContext";
+import { AuthProvider } from "@/lib/contexts/auth-context";
 
 export const metadata = {
   title: "Verify Email - Navkar Selection",

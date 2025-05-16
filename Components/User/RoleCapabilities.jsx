@@ -10,7 +10,7 @@ import {
   FiLayers
 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../Contexts/Auth/AuthContext';
+import { useAuth } from "@/lib/contexts/auth-context";
 
 const RoleCapabilities = ({ profileUser, isOwnProfile = true }) => {
   const { user } = useAuth();

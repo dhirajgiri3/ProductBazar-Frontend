@@ -37,7 +37,7 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import Link from "next/link";
-import { useTheme } from "../../../Contexts/Theme/ThemeContext";
+import { useTheme } from "@/lib/contexts/theme-context";
 import SectionLabel from "./Animations/SectionLabel";
 
 // --- Helper: Debounce ---
@@ -250,6 +250,10 @@ const DashboardPreview = () => {
           text="Dashboard Preview"
           size="medium"
           alignment="center"
+          variant="dashboard"
+          glowEffect={true}
+          animationStyle="fade"
+          gradientText={true}
         />
       </div>
       <motion.div

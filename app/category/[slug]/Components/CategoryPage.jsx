@@ -20,13 +20,14 @@ import {
   ArrowRight,
   ArrowUp,
 } from "lucide-react";
-import { useAuth } from "../../../../Contexts/Auth/AuthContext";
-import { useCategories } from "../../../../Contexts/Category/CategoryContext";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useCategories } from "@/lib/contexts/category-context";
 import ProductCard from "../../../../Components/Product/ProductCard";
-import NumberedProductCard from "../../../home/Components/NumberedProductCard";
+import NumberedProductCard from "../../../app/Components/NumberedProductCard";
 import LoaderComponent from "../../../../Components/UI/LoaderComponent";
 import NewsletterSignup from "../../../../Components/common/Auth/NewsletterSignup";
-import logger from "../../../../Utils/logger";
+import logger from "@/lib/utils/logger";
+import QuickLinks from "../../../../Components/QuickLinks/QuickLinks";
 
 // Animation variants
 const containerVariants = {
@@ -55,8 +56,6 @@ const SectionWrapper = ({ children, delay = 0 }) => (
     {children}
   </motion.div>
 );
-
-
 
 // Client Component for Category Page
 export default function CategoryPageClient({ slug }) {
@@ -757,12 +756,6 @@ export default function CategoryPageClient({ slug }) {
                 Clear Filters
               </button>
             )}
-            <Link
-              href="/products"
-              className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
-            >
-              Browse All Products
-            </Link>
           </div>
         </div>
       );
@@ -879,116 +872,6 @@ export default function CategoryPageClient({ slug }) {
       </SectionWrapper>
     );
   };
-
-  // Render quick links with enhanced UI and animations
-  const renderQuickLinks = () => (
-    <SectionWrapper delay={0.3}>
-      <div className="bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm">
-        <div className="p-5 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-            <span className="text-violet-600 mr-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </span>
-            Quick Navigation
-          </h3>
-        </div>
-        <div className="p-4">
-          <motion.div
-            className="grid grid-cols-1 gap-3"
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-          >
-            <motion.div variants={itemVariants} whileHover={{ scale: 1.01, x: 3 }}>
-              <Link
-                href="/products"
-                className="flex items-center p-3 hover:bg-violet-50 rounded-md transition-all duration-200 group border border-transparent hover:border-violet-200"
-              >
-                <div className="w-9 h-9 rounded-md border border-gray-100 flex items-center justify-center mr-3 shadow-sm group-hover:shadow-md transition-shadow bg-violet-50">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-violet-500 group-hover:text-violet-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                  </svg>
-                </div>
-                <span className="text-gray-700 group-hover:text-violet-700 font-medium transition-colors">All Products</span>
-                <motion.div
-                  className="ml-auto text-gray-400 group-hover:text-violet-600 transition-colors"
-                  animate={{ x: [0, 5, 0] }}
-                  transition={{ repeat: Infinity, repeatType: "loop", duration: 2, repeatDelay: 2 }}
-                >
-                  <ArrowRight size={14} />
-                </motion.div>
-              </Link>
-            </motion.div>
-
-            <motion.div variants={itemVariants} whileHover={{ scale: 1.01, x: 3 }}>
-              <Link
-                href="/categories"
-                className="flex items-center p-3 hover:bg-violet-50 rounded-md transition-all duration-200 group border border-transparent hover:border-violet-200"
-              >
-                <div className="w-9 h-9 rounded-md border border-gray-100 flex items-center justify-center mr-3 shadow-sm group-hover:shadow-md transition-shadow bg-violet-50">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-violet-500 group-hover:text-violet-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                  </svg>
-                </div>
-                <span className="text-gray-700 group-hover:text-violet-700 font-medium transition-colors">Browse Categories</span>
-                <motion.div
-                  className="ml-auto text-gray-400 group-hover:text-violet-600 transition-colors"
-                  animate={{ x: [0, 5, 0] }}
-                  transition={{ repeat: Infinity, repeatType: "loop", duration: 2, repeatDelay: 2.5 }}
-                >
-                  <ArrowRight size={14} />
-                </motion.div>
-              </Link>
-            </motion.div>
-
-            <motion.div variants={itemVariants} whileHover={{ scale: 1.01, x: 3 }}>
-              <Link
-                href="/trending"
-                className="flex items-center p-3 hover:bg-violet-50 rounded-md transition-all duration-200 group border border-transparent hover:border-violet-200"
-              >
-                <div className="w-9 h-9 rounded-md border border-gray-100 flex items-center justify-center mr-3 shadow-sm group-hover:shadow-md transition-shadow bg-violet-50">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-violet-500 group-hover:text-violet-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                </div>
-                <span className="text-gray-700 group-hover:text-violet-700 font-medium transition-colors">Trending Products</span>
-                <motion.div
-                  className="ml-auto text-gray-400 group-hover:text-violet-600 transition-colors"
-                  animate={{ x: [0, 5, 0] }}
-                  transition={{ repeat: Infinity, repeatType: "loop", duration: 2, repeatDelay: 3 }}
-                >
-                  <ArrowRight size={14} />
-                </motion.div>
-              </Link>
-            </motion.div>
-
-            <motion.div variants={itemVariants} whileHover={{ scale: 1.01, x: 3 }}>
-              <Link
-                href="/new"
-                className="flex items-center p-3 hover:bg-violet-50 rounded-md transition-all duration-200 group border border-transparent hover:border-violet-200"
-              >
-                <div className="w-9 h-9 rounded-md border border-gray-100 flex items-center justify-center mr-3 shadow-sm group-hover:shadow-md transition-shadow bg-violet-50">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-violet-500 group-hover:text-violet-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                </div>
-                <span className="text-gray-700 group-hover:text-violet-700 font-medium transition-colors">New Arrivals</span>
-                <motion.div
-                  className="ml-auto text-gray-400 group-hover:text-violet-600 transition-colors"
-                  animate={{ x: [0, 5, 0] }}
-                  transition={{ repeat: Infinity, repeatType: "loop", duration: 2, repeatDelay: 3.5 }}
-                >
-                  <ArrowRight size={14} />
-                </motion.div>
-              </Link>
-            </motion.div>
-          </motion.div>
-        </div>
-      </div>
-    </SectionWrapper>
-  );
 
   // Enhanced Back to top button with improved animations
   const BackToTopButton = () => {
@@ -1152,8 +1035,7 @@ export default function CategoryPageClient({ slug }) {
               </div>
             </SectionWrapper>
 
-            {/* Quick Links */}
-            {renderQuickLinks()}
+            <QuickLinks />
           </div>
         </div>
       </div>

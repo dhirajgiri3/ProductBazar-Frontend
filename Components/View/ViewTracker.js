@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../../Contexts/Auth/AuthContext";
-import { useRecommendation } from "../../Contexts/Recommendation/RecommendationContext";
-import { useView } from "../../Contexts/View/ViewContext";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useRecommendation } from "@/lib/contexts/recommendation-context";
+import { useView } from "@/lib/contexts/view-context";
 
 const ViewTracker = ({
   productId,

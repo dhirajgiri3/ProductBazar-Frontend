@@ -14,7 +14,7 @@ import {
   HiOutlineCash,
   HiOutlineBriefcase,
 } from "react-icons/hi";
-import { useAuth } from "../../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import EmailRegistrationForm from "./EmailRegistrationForm";
 import { debounce } from "lodash";
 

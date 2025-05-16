@@ -22,13 +22,13 @@ import {
   CheckCircle
 } from "lucide-react";
 import { format } from "date-fns";
-import { useAuth } from "../../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import withAuth from "../../../auth/RouteProtector/withAuth";
 import ApplicationStatusBadge from "../components/ApplicationStatusBadge";
 import LoaderComponent from "../../../../Components/UI/LoaderComponent";
 import WithdrawModal from "../components/WithdrawModal";
 import { makePriorityRequest } from "../../../../Utils/api";
-import logger from "../../../../Utils/logger";
+import logger from "@/lib/utils/logger";
 import { toast } from "react-hot-toast";
 import { downloadFile } from "../../../../Utils/fileDownload";
 

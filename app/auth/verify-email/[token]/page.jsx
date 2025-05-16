@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
-import { useAuth } from '../../../../Contexts/Auth/AuthContext';
+import { useAuth } from "@/lib/contexts/auth-context";
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';

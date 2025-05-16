@@ -13,8 +13,9 @@ yarn-error.log
 .env.test.local
 .env.production.local
 
-# Build
-/dist
+# Next.js
+/.next/
+/out/
 /build
 
 # Coverage
@@ -52,4 +53,3 @@ Thumbs.db
 *.sublime-workspace
 .vscode/*
 
-.next

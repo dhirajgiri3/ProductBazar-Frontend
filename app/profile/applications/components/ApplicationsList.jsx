@@ -4,12 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Briefcase, 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Building, 
+import {
+  Briefcase,
+  Calendar,
+  Clock,
+  MapPin,
+  Building,
   ChevronRight,
   FileText,
   ExternalLink,
@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
-import Pagination from "../../../../Components/common/Pagination";
+import Pagination from "@/components/common/pagination";
 import WithdrawModal from "./WithdrawModal";
 
 const ApplicationsList = ({ applications, onWithdraw, pagination, onPageChange }) => {
@@ -134,7 +134,7 @@ const ApplicationsList = ({ applications, onWithdraw, pagination, onPageChange }
                   {/* Status Badge */}
                   <div className="flex flex-col items-end gap-2">
                     <ApplicationStatusBadge status={application.status} />
-                    
+
                     {application.status === "Pending" && (
                       <div className="text-xs text-gray-500 flex items-center">
                         <Clock size={12} className="mr-1" />

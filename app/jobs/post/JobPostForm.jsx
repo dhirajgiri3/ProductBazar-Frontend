@@ -26,7 +26,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import { useDropzone } from "react-dropzone";
-import { useAuth } from "../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import api from "../../../Utils/api";
 import logger from "../../../Utils/logger";
 import RichTextEditor from "./components/RichTextEditor";

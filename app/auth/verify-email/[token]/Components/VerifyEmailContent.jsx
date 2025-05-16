@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../../../../../Contexts/Auth/AuthContext';
+import { useAuth } from "@/lib/contexts/auth-context";
 import Link from 'next/link';
 
 const VerifyEmailContent = ({ token }) => {

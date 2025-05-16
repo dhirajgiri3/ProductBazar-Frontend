@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { FiBriefcase, FiAlertCircle, FiGlobe, FiUsers, FiTrendingUp } from "react-icons/fi";
-import { useAuth } from "../../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 
 const ProfessionalSection = ({ formData, setFormData, validationErrors, setValidationErrors, setHasUnsavedChanges }) => {
   const { user } = useAuth();

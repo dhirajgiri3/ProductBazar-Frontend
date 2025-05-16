@@ -21,10 +21,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
-import { makePriorityRequest } from "../../Utils/api";
-import logger from "../../Utils/logger";
-import { useAuth } from "../../Contexts/Auth/AuthContext";
-import { useCategories } from "../../Contexts/Category/CategoryContext";
+import { makePriorityRequest } from "@/lib/api/api";
+import logger from "@/lib/utils/logger";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useCategories } from "@/lib/contexts/category-context";
 
 const SearchPage = () => {
   const searchParams = useSearchParams();
@@ -356,7 +356,7 @@ const SearchPage = () => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search across products, jobs, projects and more..."
-                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-500 bg-white"
+                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-500 bg-white text-gray-800"
               />
               {query && (
                 <button

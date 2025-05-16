@@ -16,11 +16,11 @@ import {
   Users,
   MessageSquare
 } from "lucide-react";
-import { useProject } from "../../../../Contexts/Project/ProjectContext";
-import { useAuth } from "../../../../Contexts/Auth/AuthContext";
+import { useProject } from "@/lib/contexts/project-context";
+import { useAuth } from "@/lib/contexts/auth-context";
 import LoaderComponent from "../../../../Components/UI/LoaderComponent";
 import { toast } from "react-hot-toast";
-import logger from "../../../../Utils/logger";
+import logger from "@/lib/utils/logger";
 
 const ProjectAnalyticsPage = () => {
   const { slug } = useParams();

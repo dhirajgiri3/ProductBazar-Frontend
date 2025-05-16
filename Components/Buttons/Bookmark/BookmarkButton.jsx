@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useProduct } from "../../../Contexts/Product/ProductContext";
-import { useAuth } from "../../../Contexts/Auth/AuthContext";
-import { useToast } from "../../../Contexts/Toast/ToastContext";
-import { useRecommendation } from "../../../Contexts/Recommendation/RecommendationContext";
-import { addProductToMapping } from "../../../Utils/productMappingUtils";
-import eventBus, { EVENT_TYPES } from "../../../Utils/eventBus";
-import logger from "../../../Utils/logger";
+import { useProduct } from "@/lib/contexts/product-context";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useToast } from "@/lib/contexts/toast-context";
+import { useRecommendation } from "@/lib/contexts/recommendation-context";
+import { addProductToMapping } from "@/lib/utils/product/product-mapping-utils";
+import eventBus, { EVENT_TYPES } from "@/lib/utils/event-bus";
+import logger from "@/lib/utils/logger";
 
 /**
  * A bookmark icon component.

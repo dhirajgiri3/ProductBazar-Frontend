@@ -2,8 +2,7 @@
 
 import { useEffect } from 'react';
 import gsap from 'gsap';
-import { ProjectProvider } from '../../Contexts/Project/ProjectContext';
-import "../../app/globals.css";
+import { ProjectProvider } from "@/lib/contexts/project-context";
 
 export default function ProjectsLayout({ children }) {
   useEffect(() => {

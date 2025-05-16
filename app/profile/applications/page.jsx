@@ -3,14 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { useAuth } from "../../../Contexts/Auth/AuthContext";
-import withAuth from "../../auth/RouteProtector/withAuth";
+import { useAuth } from "@/lib/contexts/auth-context";
+import withAuth from "@/lib/auth/route-protector/with-auth";
 import ApplicationsList from "./components/ApplicationsList";
 import ApplicationFilters from "./components/ApplicationFilters";
-import EmptyState from "../../../Components/common/EmptyState";
-import LoaderComponent from "../../../Components/UI/LoaderComponent";
-import { makePriorityRequest } from "../../../Utils/api";
-import logger from "../../../Utils/logger";
+import EmptyState from "@/components/common/empty-state";
+import LoaderComponent from "@/components/ui/loader-component";
+import { makePriorityRequest } from "@/lib/api/api";
+import logger from "@/lib/utils/logger";
 
 const ApplicationsPage = () => {
   const { user } = useAuth();

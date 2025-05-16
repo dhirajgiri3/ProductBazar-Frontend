@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../../../Contexts/Auth/AuthContext';
+import { useAuth } from "@/lib/contexts/auth-context";
 import { validateImageFile, optimizeImage } from '../../../../Utils/authFileUpload';
 
 function Banner() {

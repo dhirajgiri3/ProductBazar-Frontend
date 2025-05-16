@@ -10,7 +10,7 @@ import {
   HiOutlineArrowLeft,
   HiOutlineLightningBolt,
 } from "react-icons/hi";
-import { useAuth } from "../../../../Contexts/Auth/AuthContext";
+import { useAuth } from "@/lib/contexts/auth-context";
 import EmailLoginForm from './EmailLoginForm';
 import { debounce } from "lodash"; // For performance optimization
 

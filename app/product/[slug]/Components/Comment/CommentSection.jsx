@@ -2,16 +2,16 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useAuth } from "../../../../../Contexts/Auth/AuthContext";
-import { useProduct } from "../../../../../Contexts/Product/ProductContext";
-import { useToast } from "../../../../../Contexts/Toast/ToastContext";
+import { useAuth } from "@/lib/contexts/auth-context";
+import { useProduct } from "@/lib/contexts/product-context";
+import { useToast } from "@/lib/contexts/toast-context";
 import DeleteCommentModal from "../../../../../Components/Modal/Comment/DeleteCommentModal";
 import LoginPrompt from "../../../../../Components/common/Auth/LoginPrompt";
 import CommentForm from "./Components/CommentForm";
 import CommentItem from "./Components/CommentItem"; // Verify path
 import { motion, AnimatePresence } from "framer-motion";
 import { FaComments, FaLightbulb, FaChevronDown } from "react-icons/fa";
-import { useRecommendation } from "../../../../../Contexts/Recommendation/RecommendationContext"; 
+import { useRecommendation } from "@/lib/contexts/recommendation-context"; 
 
 // --- Helper Components (Defined within CommentSection for encapsulation) ---
 

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiSave, FiCheck, FiX, FiCamera, FiUser, FiMail, FiPhone, FiBriefcase, FiMapPin, FiLink, FiGlobe, FiLinkedin, FiTwitter, FiGithub, FiTag, FiHeart, FiMessageSquare, FiInfo, FiAlertCircle, FiSettings } from 'react-icons/fi';
-import { useAuth } from '../../../../Contexts/Auth/AuthContext';
+import { useAuth } from "@/lib/contexts/auth-context";
 import { makePriorityRequest } from '../../../../Utils/api';
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';

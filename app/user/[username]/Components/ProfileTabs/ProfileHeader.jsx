@@ -2,7 +2,7 @@
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { FiExternalLink, FiEdit3, FiMapPin, FiMail, FiLink } from 'react-icons/fi';
-import { headerVariants } from '../../../../../Utils/UI/animations';
+import { headerVariants } from '@/lib/utils/ui/animations';
 
 export default function ProfileHeader({ user, isOwnProfile, onEdit }) {
   return (

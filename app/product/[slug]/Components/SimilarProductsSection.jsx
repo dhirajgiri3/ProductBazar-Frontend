@@ -2,9 +2,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useRecommendation } from "../../../../Contexts/Recommendation/RecommendationContext";
-import ProductCard from "../../../../Components/Product/ProductCard";
-import logger from "../../../../Utils/logger";
+import { useRecommendation } from "@/lib/contexts/recommendation-context";
+import ProductCard from "Components/Product/ProductCard";
+import logger from "@/lib/utils/logger";
 import { motion } from "framer-motion";
 import { FiArrowRight, FiArrowLeft, FiPackage } from "react-icons/fi";
 
