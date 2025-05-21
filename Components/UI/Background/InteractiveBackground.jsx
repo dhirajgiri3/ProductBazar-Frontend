@@ -1,10 +1,8 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import Particles, { initParticlesEngine } from "@tsparticles/react";
-// Remove incorrect import
-// import { loadFull } from "@tsparticles/all";
 
-// Only use the correct import
+// Import the correct loadAll function from @tsparticles/all
 import { loadAll } from "@tsparticles/all";
 
 const InteractiveBackground = () => {
@@ -17,7 +15,7 @@ const InteractiveBackground = () => {
     const initializeParticles = async () => {
       try {
         await initParticlesEngine(async (engine) => {
-          // Fix: Use the proper loading function with error handling
+          // Use the proper loading function with error handling
           try {
             await loadAll(engine);
             console.log("Particles engine loaded with loadAll");
@@ -463,8 +461,12 @@ const InteractiveBackground = () => {
   return (
     <div className="fixed inset-0 -z-10 bg-gradient-to-br from-white via-gray-50 to-white flex items-center justify-center">
       <div className="flex flex-col items-center">
-        <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="mt-4 text-lg text-purple-700">Loading colorful particles...</p>
+        <div className="relative w-20 h-20">
+          <div className="absolute inset-0 border-4 border-purple-200 rounded-full animate-pulse"></div>
+          <div className="absolute inset-2 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+          <div className="absolute inset-4 border-4 border-purple-600 border-t-transparent rounded-full animate-spin-slow"></div>
+        </div>
+        <p className="mt-6 text-sm font-medium text-purple-600 tracking-wide">Preparing your experience...</p>
       </div>
     </div>
   );

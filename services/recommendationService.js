@@ -1,4 +1,4 @@
-import { makePriorityRequest } from "../Utils/api";
+import { makePriorityRequest } from "@/lib/api/api";
 
 const recommendationService = {
   /**

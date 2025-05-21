@@ -144,6 +144,12 @@ const Header = () => {
         isActive: pathname === "/jobs/post",
         icon: <Plus size={16} />,
       });
+      items.push({
+        label: "My Jobs",
+        href: "/user/myjobs",
+        isActive: pathname === "/user/myjobs",
+        icon: <Briefcase size={16} />,
+      });
     }
     if (user.roleCapabilities.canShowcaseProjects) {
       items.push({
@@ -817,13 +823,17 @@ const Header = () => {
                         <div className="py-1">
                           {[
                             {
-                              href: `/user/${user?.username}`,
+                              href: user?.username
+                                ? `/user/${user.username}`
+                                : (user?._id ? `/user/profile/${user._id}` : '/app'),
                               label: "Your Profile",
                               icon: User,
                               delay: 0.03,
                             },
                             {
-                              href: `/user/${user?.username}/products`,
+                              href: user?.username
+                                ? `/user/${user.username}/products`
+                                : (user?._id ? `/user/profile/${user._id}/products` : '/app'),
                               label: "Your Products",
                               icon: Briefcase,
                               delay: 0.06,
@@ -845,13 +855,23 @@ const Header = () => {
                                   },
                                 ]
                               : []),
+                            ...(user?.roleCapabilities?.canPostJobs
+                              ? [
+                                  {
+                                    href: "/user/myjobs",
+                                    label: "My Jobs",
+                                    icon: Briefcase,
+                                    delay: 0.15,
+                                  },
+                                ]
+                              : []),
                             ...(user?.roleCapabilities?.canShowcaseProjects
                               ? [
                                   {
                                     href: "/projects",
                                     label: "My Projects",
                                     icon: Layers,
-                                    delay: 0.15,
+                                    delay: 0.18,
                                   },
                                 ]
                               : []),
@@ -859,7 +879,7 @@ const Header = () => {
                               href: "/user/settings",
                               label: "Settings",
                               icon: Settings,
-                              delay: 0.18,
+                              delay: 0.21,
                             },
                           ].map((item) => (
                             <motion.div
@@ -888,7 +908,7 @@ const Header = () => {
                           <motion.div
                             initial={{ opacity: 0, x: -5 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.21 }}
+                            transition={{ delay: 0.24 }}
                           >
                             <button
                               onClick={() => {

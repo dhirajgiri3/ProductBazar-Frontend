@@ -16,11 +16,11 @@ import { debounce } from "lodash"; // For performance optimization
 
 const LoginLeft = () => {
   // Auth context for login methods and state
-  const { 
-    loginWithPhone, 
-    verifyOtpForLogin, 
-    authLoading, 
-    error, 
+  const {
+    requestOtp,
+    verifyOtpForLogin,
+    authLoading,
+    error,
     loginWithEmail,
     clearError
   } = useAuth();
@@ -49,11 +49,11 @@ const LoginLeft = () => {
   // OTP countdown timer
   useEffect(() => {
     if (!isOtpSent || otpCountdown <= 0) return;
-    
+
     const timer = setInterval(() => {
       setOtpCountdown((prev) => prev - 1);
     }, 1000);
-    
+
     return () => clearInterval(timer);
   }, [isOtpSent, otpCountdown]);
 
@@ -62,19 +62,19 @@ const LoginLeft = () => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const errorMsg = params.get('error');
-      
+
       if (errorMsg) {
         const errorMessages = {
           'google_auth_failed': 'Google authentication failed. Please try again.',
           'no_user': 'Unable to retrieve user information from Google.',
           'internal_error': 'An internal error occurred. Please try again.',
         };
-        
+
         setFormErrors(prev => ({
           ...prev,
           google: errorMessages[errorMsg] || 'Authentication failed. Please try again.'
         }));
-        
+
         // Clean up URL
         window.history.replaceState({}, document.title, window.location.pathname);
       }
@@ -95,8 +95,9 @@ const LoginLeft = () => {
     }
 
     try {
-      const success = await loginWithPhone(phone);
-      if (success) {
+      // Use requestOtp with 'login' type instead of loginWithPhone
+      const success = await requestOtp(phone, 'login');
+      if (success && success.success) {
         setIsOtpSent(true);
         setOtpCountdown(120);
       }
@@ -125,8 +126,8 @@ const LoginLeft = () => {
   const resendOtp = async () => {
     try {
       if (clearError) clearError();
-      const success = await loginWithPhone(phone);
-      if (success) setOtpCountdown(120);
+      const success = await requestOtp(phone, 'login');
+      if (success && success.success) setOtpCountdown(120);
     } catch (error) {
       console.error("Resend OTP failed:", error);
     }
@@ -226,10 +227,10 @@ const LoginLeft = () => {
         {/* Decorative elements with improved blur effect */}
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-violet-100 rounded-full opacity-30 blur-3xl pointer-events-none"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-100 rounded-full opacity-30 blur-3xl pointer-events-none"></div>
-        
+
         {/* Glass card effect */}
         <div className="absolute inset-0 rounded-2xl bg-white/40 backdrop-blur-xl -z-10"></div>
-        
+
         <div className="relative z-10">
           {/* Header section with pulsing logo effect */}
           <motion.div
@@ -289,9 +290,9 @@ const LoginLeft = () => {
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                   />
                 </svg>
-                <span className="font-medium">{error}</span>
+                <span className="font-medium">{error.message}</span>
                 {error.includes("no password") && (
-                  <button 
+                  <button
                     type="button"
                     className="ml-2 text-violet-600 font-medium underline"
                     onClick={() => toggleAuthMethod("phone")}

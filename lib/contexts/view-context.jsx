@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import viewService from 'services/viewService';
+import viewService from 'services/viewService.js';
 import { useAuth } from './auth-context.jsx';
 import { useSocket } from './socket-context.jsx';
 import eventBus, { EVENT_TYPES } from '../utils/event-bus.js';

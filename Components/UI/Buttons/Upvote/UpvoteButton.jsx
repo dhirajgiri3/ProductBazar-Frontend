@@ -273,11 +273,11 @@ const UpvoteButton = ({
       return;
     }
     if (!isAuthenticated) {
-      showToast("info", "Please log in or sign up to upvote.");
+      showToast("info", "Authentication required to upvote. Please log in or create an account to show your support for this product.");
       return;
     }
     if (isOwner) {
-      showToast("info", "Creators can't upvote their own products.");
+      showToast("info", "As the creator of this product, you cannot upvote your own work. This helps maintain fair ratings.");
       return;
     }
     if (isLoading || isProcessing) {
@@ -324,7 +324,25 @@ const UpvoteButton = ({
         setIsUpvoted(previousState.isUpvoted);
         setCount(previousState.count);
       }
-      showToast("error", error.response?.data?.message || error.message || "An unexpected error occurred.");
+      // Provide more specific error message based on error type
+      let errorMessage = "We couldn't process your upvote at this time. Please try again later.";
+
+      if (error.response) {
+        // Handle specific HTTP error codes
+        if (error.response.status === 401) {
+          errorMessage = "Your session has expired. Please log in again to upvote this product.";
+        } else if (error.response.status === 403) {
+          errorMessage = "You don't have permission to upvote this product. This may be due to account restrictions.";
+        } else if (error.response.status === 429) {
+          errorMessage = "You've reached the maximum number of interactions. Please try again later.";
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      showToast("error", errorMessage);
     } finally {
       if (isMounted.current) {
         setIsLoading(false);
@@ -362,7 +380,7 @@ const UpvoteButton = ({
 
   // Tooltip text based on state
   const buttonTitle = isOwner
-    ? "You cannot upvote your own product"
+    ? "As the creator of this product, you cannot upvote your own work. This helps maintain fair ratings."
     : isDisabled && !isOwner
     ? "Upvote button is disabled"
     : isUpvoted

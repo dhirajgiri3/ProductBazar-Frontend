@@ -11,7 +11,7 @@ import CommentForm from "./Components/CommentForm";
 import CommentItem from "./Components/CommentItem"; // Verify path
 import { motion, AnimatePresence } from "framer-motion";
 import { FaComments, FaLightbulb, FaChevronDown } from "react-icons/fa";
-import { useRecommendation } from "@/lib/contexts/recommendation-context"; 
+import { useRecommendation } from "@/lib/contexts/recommendation-context";
 
 // --- Helper Components (Defined within CommentSection for encapsulation) ---
 
@@ -289,6 +289,8 @@ const CommentSection = ({ productSlug, productId, onCommentCountChange }) => {
   const requireAuth = useCallback(
     (action) => {
       if (!user) {
+        // Show a more informative toast before showing the login prompt
+        showToast("info", "Authentication required to participate in discussions. Please log in or create an account to join the conversation.");
         setShowLoginPrompt(true);
         return false;
       }
@@ -298,7 +300,22 @@ const CommentSection = ({ productSlug, productId, onCommentCountChange }) => {
         action(); // Assuming action might not always be async
       } catch (error) {
         console.error("Error executing authenticated action:", error);
-        showToast("error", "An unexpected error occurred.");
+        // Provide more specific error message
+        let errorMessage = "We couldn't complete your request. Please try again.";
+
+        if (error.response) {
+          if (error.response.status === 401) {
+            errorMessage = "Your session has expired. Please log in again to continue.";
+          } else if (error.response.status === 403) {
+            errorMessage = "You don't have permission to perform this action. This may be due to account restrictions.";
+          } else if (error.response.data?.message) {
+            errorMessage = error.response.data.message;
+          }
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        showToast("error", errorMessage);
       }
       return true;
     },

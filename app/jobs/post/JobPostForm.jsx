@@ -27,8 +27,8 @@ import {
 } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { useAuth } from "@/lib/contexts/auth-context";
-import api from "../../../Utils/api";
-import logger from "../../../Utils/logger";
+import api from "@/lib/api/api";
+import logger from "@/lib/utils/logger";
 import RichTextEditor from "./components/RichTextEditor";
 import SkillsInput from "./components/SkillsInput";
 import JobPostHeader from "./components/JobPostHeader";

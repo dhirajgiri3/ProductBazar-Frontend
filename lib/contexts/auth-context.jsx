@@ -222,12 +222,15 @@ export const AuthProvider = ({ children }) => {
 
         if (response.data.status === "success") {
           // Ensure userData and roleCapabilities are present
-          const userData = response.data.data.user;
+          const userData = response.data.data?.user || response.data.data;
           if (!userData) {
+            console.error("User data structure:", response.data);
+            logger.error("User data is missing from the response");
             throw new Error("User data is missing from the response");
+            // We must have user data to continue
           }
 
-          if (!userData.roleCapabilities) {
+          if (userData && !userData.roleCapabilities) {
             userData.roleCapabilities = {
               canUploadProducts: ['startupOwner', 'maker'].includes(userData.role),
               canInvest: userData.role === 'investor',
@@ -238,6 +241,11 @@ export const AuthProvider = ({ children }) => {
             };
           }
 
+          // If we don't have user data, we can't proceed
+          if (!userData || typeof userData !== 'object') {
+            throw new Error("Invalid user data format in response");
+          }
+
           // Ensure secondaryRoles is present
           if (!userData.secondaryRoles) {
             userData.secondaryRoles = [];
@@ -246,10 +254,11 @@ export const AuthProvider = ({ children }) => {
           // Check if the user data has changed significantly
           const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
           const hasSignificantChanges = (
+            !currentUser._id || // No previous user data
+            userData._id !== currentUser._id || // Check if user ID has changed (new login)
             userData.isEmailVerified !== currentUser.isEmailVerified ||
             userData.isPhoneVerified !== currentUser.isPhoneVerified ||
-            userData.isProfileCompleted !== currentUser.isProfileCompleted ||
-            userData._id !== currentUser._id // Check if user ID has changed (new login)
+            userData.isProfileCompleted !== currentUser.isProfileCompleted
           );
 
           // Update user state and localStorage
@@ -408,79 +417,217 @@ export const AuthProvider = ({ children }) => {
     [router, nextStep]
   );
 
+  // Define event handlers outside of useEffect to avoid React hook rules violations
+  const handleLogout = useCallback(() => {
+    // Clear auth state and redirect to login page
+    setUser(null);
+    setAccessToken("");
+    setNextStep(null);
+    setError("");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("user");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("nextStep");
+    localStorage.removeItem("skippedSteps");
+    router.push("/auth/login");
+  }, [router]);
+
+  const handleVerificationRequired = useCallback((event) => {
+    setNextStep(event.detail.nextStep);
+    localStorage.setItem("nextStep", JSON.stringify(event.detail.nextStep));
+  }, []);
+
+  const handleProfileUpdated = useCallback(() => {
+    // Refresh user data when profile is updated
+    fetchUserData(accessToken);
+  }, [fetchUserData, accessToken]);
+
+  // Empty handler for login success event - the event is primarily for other components
+  const handleLoginSuccess = useCallback(() => {}, []);
+
+  const handleUnauthorized = useCallback((event) => {
+    // Handle unauthorized errors from API interceptors
+    console.warn('AuthContext: Received unauthorized event. Assuming interceptor failed or error is not refreshable. Logging out.', event.detail?.message, event.detail?.code, event.detail?.errorCode);
+    // Dispatch a logout event, which will be handled by the handleLogout listener.
+    // This assumes that the 'auth:unauthorized' event is the final signal that auth cannot be recovered.
+    window.dispatchEvent(new CustomEvent("auth:logout"));
+  }, []);
+
+  // Define handleTokenRefreshed outside of useEffect to comply with React hook rules
+  const handleTokenRefreshed = useCallback((event) => {
+    const { accessToken: newAccessToken, user: userData } = event.detail;
+
+    // Only update if we have a valid accessToken
+    if (newAccessToken) {
+      console.log("Token refreshed - updating auth state");
+
+      // Update accessToken state
+      setAccessToken(newAccessToken);
+      localStorage.setItem("accessToken", newAccessToken);
+
+      // Update user data if provided
+      if (userData) {
+        // IMPORTANT: Ensure username is present in the userData
+        if (!userData.username && user?.username) {
+          console.log("Username missing in refresh data, preserving from current user state");
+          userData.username = user.username; // Preserve username if missing in new data
+        }
+
+        // Make sure we don't lose any existing user data that might not be in the refresh response
+        const updatedUserData = {
+          ...(user || {}),
+          ...userData
+        };
+
+        // Validate critical fields are present
+        if (!updatedUserData.username) {
+          console.error("Username missing after token refresh - fetching full user data");
+          // Trigger a full user data refresh
+          fetchUserData(newAccessToken);
+          return;
+        }
+
+        setUser(updatedUserData);
+        localStorage.setItem("user", JSON.stringify(updatedUserData));
+
+        // Update next step if needed
+        const nextStepData = determineNextStep(updatedUserData);
+        if (nextStepData) {
+          setNextStep(nextStepData);
+          localStorage.setItem("nextStep", JSON.stringify(nextStepData));
+        } else {
+          setNextStep(null);
+          localStorage.removeItem("nextStep");
+        }
+      } else if (user) {
+        // If no user data provided but we have existing user data, refresh it
+        console.log("No user data in token refresh - fetching full user data");
+        fetchUserData(newAccessToken);
+      }
+    }
+  }, [user, determineNextStep, fetchUserData]);
+
+  // User data integrity validation
+  const validateUserData = useCallback(() => {
+    if (user && !user.username && accessToken) {
+      console.log("User data integrity check failed - username missing");
+      // Fetch fresh user data
+      fetchUserData(accessToken);
+      return false;
+    }
+    return true;
+  }, [user, accessToken, fetchUserData]);
+
   // Auth event listeners
   useEffect(() => {
-    const handleLogout = () => {
-      // Clear auth state and redirect to login page
-      setUser(null);
-      setAccessToken("");
-      setNextStep(null);
-      setError("");
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("user");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("nextStep");
-      localStorage.removeItem("skippedSteps");
-      router.push("/auth/login");
-    };
-
-    const handleVerificationRequired = (event) => {
-      setNextStep(event.detail.nextStep);
-      localStorage.setItem("nextStep", JSON.stringify(event.detail.nextStep));
-    };
-
-    const handleProfileUpdated = () => {
-      // Refresh user data when profile is updated
-      fetchUserData(accessToken);
-    };
-
-    // Empty handler for login success event - the event is primarily for other components
-    const handleLoginSuccess = () => {};
-
-    const handleUnauthorized = (event) => {
-      // Handle unauthorized errors from API interceptors
-      console.warn('Auth context received unauthorized event:', event.detail?.message);
-
-      // If we have a token but got an unauthorized error, it might be expired
-      if (accessToken) {
-        // Dispatch a logout event which will be handled by the existing event listener
-        window.dispatchEvent(new CustomEvent("auth:logout"));
-      }
-    };
-
+    // Add event listeners
     window.addEventListener("auth:logout", handleLogout);
-    window.addEventListener(
-      "auth:verification-required",
-      handleVerificationRequired
-    );
+    window.addEventListener("auth:verification-required", handleVerificationRequired);
     window.addEventListener("profile:updated", handleProfileUpdated);
     window.addEventListener("auth:login-success", handleLoginSuccess);
     window.addEventListener("auth:unauthorized", handleUnauthorized);
+    window.addEventListener("auth:token-refreshed", handleTokenRefreshed);
 
+    // Log that event listeners are set up
+    console.debug('Auth context: Event listeners registered');
+
+    // Clean up event listeners
     return () => {
       window.removeEventListener("auth:logout", handleLogout);
-      window.removeEventListener(
-        "auth:verification-required",
-        handleVerificationRequired
-      );
+      window.removeEventListener("auth:verification-required", handleVerificationRequired);
       window.removeEventListener("profile:updated", handleProfileUpdated);
       window.removeEventListener("auth:login-success", handleLoginSuccess);
       window.removeEventListener("auth:unauthorized", handleUnauthorized);
+      window.removeEventListener("auth:token-refreshed", handleTokenRefreshed);
+      console.debug('Auth context: Event listeners removed');
     };
-  }, [accessToken, fetchUserData, router]);
+  }, [
+    handleLogout,
+    handleVerificationRequired,
+    handleProfileUpdated,
+    handleLoginSuccess,
+    handleUnauthorized,
+    handleTokenRefreshed
+  ]);
 
-  // Periodic refresh of user data
+  // Periodic refresh of user data and token
   useEffect(() => {
     // Only set up refresh if user is authenticated
     if (!user || !accessToken) return;
 
-    // Refresh user data every 5 minutes
+    // Function to check token expiry and refresh if needed
+    const checkAndRefreshToken = async () => {
+      if (!accessToken) return; // Double check accessToken existence
+
+      try {
+        // Decode token to check expiry
+        const tokenParts = accessToken.split('.');
+        if (tokenParts.length !== 3) {
+          console.error('AuthContext: Invalid token format in checkAndRefreshToken.');
+          return;
+        }
+
+        const payload = JSON.parse(atob(tokenParts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        const expiryTime = payload.exp * 1000; // Convert to milliseconds
+        const currentTime = Date.now();
+        const timeUntilExpiry = expiryTime - currentTime;
+
+        // If token expires in less than 5 minutes (300000 ms), refresh it
+        if (timeUntilExpiry < 300000 && timeUntilExpiry > 0) {
+          console.debug(`AuthContext: Token expires in ${Math.round(timeUntilExpiry/1000)} seconds, proactively refreshing...`);
+
+          // Call refresh token endpoint using the global api instance
+          const response = await api.post(
+            '/auth/refresh-token',
+            {},
+            { withCredentials: true }
+          );
+
+          if (response.data.success) {
+            const newToken = response.data.data.accessToken;
+            const refreshedUser = response.data.data.user; // User data from refresh response
+
+            console.debug('AuthContext: Proactive token refresh successful. Dispatching auth:token-refreshed event.');
+            // Dispatch event. AuthContext's own handleTokenRefreshed will handle state updates.
+            window.dispatchEvent(new CustomEvent("auth:token-refreshed", {
+              detail: { accessToken: newToken, user: refreshedUser },
+            }));
+          } else {
+            // Proactive refresh failed, but token might still be valid for a short while.
+            // Or it might have just expired.
+            // If the failure is due to invalid refresh token, the user will eventually be logged out
+            // when a protected API call fails and the interceptor also fails to refresh.
+            logger.warn('AuthContext: Proactive token refresh request was not successful.', response.data.message);
+          }
+        }
+      } catch (error) {
+        // Catch errors from decoding token or the API call itself
+        if (error.response && error.response.status === 401) {
+            // This means the refresh token used by /auth/refresh-token is invalid/expired.
+            // This should lead to logout.
+            logger.error('AuthContext: Proactive token refresh failed with 401. Refresh token likely invalid. Logging out.', error);
+            window.dispatchEvent(new CustomEvent("auth:logout"));
+        } else {
+            logger.error('AuthContext: Error during proactive token refresh:', error);
+        }
+      }
+    };
+
+    // Check token immediately on mount
+    checkAndRefreshToken();
+
+    // Validate user data on initial load
+    validateUserData();
+
+    // Refresh user data and check token every 2 minutes
     const refreshInterval = setInterval(() => {
       fetchUserData(accessToken);
-    }, 5 * 60 * 1000); // 5 minutes
+      checkAndRefreshToken();
+      validateUserData(); // Periodically validate user data integrity
+    }, 2 * 60 * 1000); // 2 minutes
 
     return () => clearInterval(refreshInterval);
-  }, [user, accessToken, fetchUserData]);
+  }, [user, accessToken, fetchUserData, validateUserData]);
 
   // Skip profile completion step with improved handling
   const skipProfileCompletion = useCallback(() => {
@@ -766,17 +913,16 @@ export const AuthProvider = ({ children }) => {
     [handleAuthSuccess]
   );
 
-  const loginWithPhone = useCallback(async (phone, code) => {
+  const loginWithPhone = useCallback(async (phone) => {
     setAuthLoading(true);
     setError("");
     try {
-      const response = await api.post("/auth/login/phone", {
+      // Use the correct endpoint that matches the backend route definition
+      const response = await api.post("/auth/login/request-otp", {
         phone,
-        code,
       });
 
       if (response.data.status === "success") {
-        handleAuthSuccess(response.data);
         return { success: true };
       }
       setError(response.data.message || "Phone login failed");
@@ -813,6 +959,7 @@ export const AuthProvider = ({ children }) => {
       setAuthLoading(true);
       setError("");
       try {
+        // Use the correct endpoint that matches the backend route definition
         const response = await api.post("/auth/login/verify-otp", {
           phone,
           code,
@@ -978,7 +1125,8 @@ export const AuthProvider = ({ children }) => {
       setError("");
 
       try {
-        const response = await api.post("/auth/send-otp", { phone });
+        // Use the correct endpoint that matches the backend route definition
+        const response = await api.post("/auth/send-phone-otp", { phone });
 
         // Check if the phone is already verified
         if (
@@ -1476,6 +1624,12 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const getUserByUsername = useCallback(async (username) => {
+    // Validate username parameter to prevent API calls with undefined
+    if (!username || typeof username !== 'string' || username === 'undefined') {
+      logger.warn(`Invalid username parameter: ${username}`);
+      return null;
+    }
+
     // Create an abort controller to handle request cancellation
     const controller = new AbortController();
     const signal = controller.signal;

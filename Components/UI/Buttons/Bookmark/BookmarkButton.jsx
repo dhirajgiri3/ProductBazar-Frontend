@@ -5,9 +5,9 @@ import { useProduct } from "@/lib/contexts/product-context";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { useToast } from "@/lib/contexts/toast-context";
 import { useRecommendation } from "@/lib/contexts/recommendation-context";
-import { addProductToMapping } from "../../../Utils/productMappingUtils";
+import { addProductToMapping } from "@/lib/utils/product/product-mapping-utils";
 import eventBus, { EVENT_TYPES } from "@/lib/utils/event-bus";
-import logger from "../../../Utils/logger";
+import logger from "@/lib/utils/logger";
 
 /**
  * A bookmark icon component.
@@ -336,8 +336,14 @@ const BookmarkButton = ({
        return;
      }
 
-    if (!isAuthenticated) { showToast("error", "Please log in to save products"); return; }
-    if (isOwner) { showToast("info", "You cannot bookmark your own product"); return; }
+    if (!isAuthenticated) {
+      showToast("info", "Authentication required to save products. Please log in or create an account to build your collection.");
+      return;
+    }
+    if (isOwner) {
+      showToast("info", "As the creator of this product, you cannot bookmark your own work. This helps maintain fair recommendations.");
+      return;
+    }
     if (isLoading || isProcessing) return;
 
     setIsLoading(true);
@@ -398,17 +404,26 @@ const BookmarkButton = ({
           setCount(previousCount);
       }
 
-      // Extract error message from the error object
-      let errorMessage = "An unexpected error occurred while saving.";
+      // Provide more specific error message based on error type
+      let errorMessage = "We couldn't save this product to your collection. Please try again later.";
 
-      // Check for specific error messages
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
+      if (error.response) {
+        // Handle specific HTTP error codes
+        if (error.response.status === 401) {
+          errorMessage = "Your session has expired. Please log in again to save this product.";
+        } else if (error.response.status === 403) {
+          errorMessage = "You don't have permission to save this product. This may be due to account restrictions.";
+        } else if (error.response.status === 429) {
+          errorMessage = "You've reached the maximum number of saved items. Please remove some items and try again.";
+        } else if (error.response.status === 409) {
+          errorMessage = "This product is already in your collection.";
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message;
+        }
       } else if (error.message) {
         errorMessage = error.message;
       }
 
-      // Show the error message in a toast
       showToast("error", errorMessage);
     } finally {
       if (isMounted.current) {
@@ -455,7 +470,7 @@ const BookmarkButton = ({
 
   // Tooltip text based on state
   const buttonTitle = isOwner
-    ? "You cannot bookmark your own product"
+    ? "As the creator of this product, you cannot bookmark your own work. This helps maintain fair recommendations."
     : isDisabled && !isOwner
     ? "Bookmark button is disabled"
     : isBookmarked

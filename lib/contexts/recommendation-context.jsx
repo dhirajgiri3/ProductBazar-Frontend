@@ -1313,19 +1313,29 @@ export const RecommendationProvider = ({ children }) => {
           }
         }
 
-        const response = await makePriorityRequest('POST', "/recommendations/interaction", {
-          data: {
-            productId,
-            type,
-            metadata: enrichedMetadata,
-          },
-          params: { _t: Date.now() } // Add timestamp to prevent caching
-        });
-
-        if (!response.data.success) {
-          throw new Error(
-            response.data.message || "Failed to record interaction"
-          );
+        try {
+          // Check if the server is reachable before making the request
+          const response = await makePriorityRequest('POST', "/recommendations/interaction", {
+            data: {
+              productId,
+              type,
+              metadata: enrichedMetadata,
+            },
+            params: { _t: Date.now() }, // Add timestamp to prevent caching
+            retryCount: 3, // Increase retries for better reliability
+            timeout: 10000, // Longer timeout to allow for server recovery
+            fallbackValue: { success: false, silent: true } // Provide fallback value if request fails
+          });
+  
+          if (!response.data.success) {
+            logger.warn(`Record interaction response not successful for ${productId}, type: ${type}`);
+            // Don't throw, just log and continue
+          }
+        } catch (apiError) {
+          // Log but don't throw - interactions should be best effort and not block UI
+          logger.warn(`Failed to record interaction (${type}) for ${productId}:`, apiError);
+          // Silent failure - we don't want to break the UI for tracking failures
+          return { success: false, error: apiError.message, silent: true };
         }
 
         // Mark caches as stale but don't trigger immediate refetches

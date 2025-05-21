@@ -9,11 +9,12 @@ import {
   MessageCircle,
   ChevronDown,
 } from "lucide-react";
-import UpvoteButton from "../../../Components/Buttons/Upvote/UpvoteButton";
-import BookmarkButton from "../../../Components/Buttons/Bookmark/BookmarkButton";
+import UpvoteButton from "../../../Components/UI/Buttons/Upvote/UpvoteButton";
+import BookmarkButton from "../../../Components/UI/Buttons/Bookmark/BookmarkButton";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { useRecommendation } from "@/lib/contexts/recommendation-context";
 import { useSocket } from "@/lib/contexts/socket-context";
+import logger from "@/lib/utils/logger";
 
 // This prevents duplicate subscriptions for the same product ID
 const globalSubscriptionMap = new Map();
@@ -87,13 +88,37 @@ const NumberedProductCard = React.memo(function NumberedProductCard({
     // Use requestIdleCallback or setTimeout as fallback
     const recordView = async () => {
       try {
-        await recordInteraction(product._id, "view", {
+        // Check if the API is likely to be available before making the request
+        const apiHealthCheck = sessionStorage.getItem('api_health');
+        const now = Date.now();
+        
+        // If API was recently marked as down, skip this request
+        if (apiHealthCheck && now - parseInt(apiHealthCheck) < 60000) {
+          return; // Skip if API was marked unhealthy in the last minute
+        }
+        
+        const result = await recordInteraction(product._id, "view", {
           source: recommendationType || "home",
           position,
-          timestamp: new Date().toISOString()
+          position_id: position, // Add position_id for backward compatibility
+          timestamp: new Date().toISOString(),
+          silent: true // Set silent mode to prevent errors from disrupting UX
         });
+        
+        // Silent error handling - only log if result indicates non-silent error
+        if (result && !result.success && !result.silent && !result.rateLimited) {
+          logger.debug(`View tracking failed for ${product._id}: ${result.error}`);
+        }
       } catch (error) {
-        // Reduce console noise by not logging every view error
+        // Mark API as potentially down
+        try {
+          sessionStorage.setItem('api_health', Date.now().toString());
+        } catch (e) {
+          // Ignore storage errors
+        }
+        
+        // Fail silently to ensure user experience isn't affected
+        console.debug(`View tracking suppressed error for ${product?._id || 'unknown'}`);
       }
     };
 

@@ -7,8 +7,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { motion } from "framer-motion";
 import { Rocket, ArrowRight, Sparkles } from "lucide-react";
-import InteractiveBackground from "../../../Components/UI/Background/InteractiveBackground";
-import LoaderComponent from "../../../Components/UI/LoaderComponent";
+import InteractiveBackground from "Components/UI/Background/InteractiveBackground";
+import LoaderComponent from "Components/UI/LoaderComponent";
 
 // Animation variants
 const pageVariants = {

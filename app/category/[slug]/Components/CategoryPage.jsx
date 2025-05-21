@@ -22,12 +22,12 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { useCategories } from "@/lib/contexts/category-context";
-import ProductCard from "../../../../Components/Product/ProductCard";
-import NumberedProductCard from "../../../app/Components/NumberedProductCard";
-import LoaderComponent from "../../../../Components/UI/LoaderComponent";
-import NewsletterSignup from "../../../../Components/common/Auth/NewsletterSignup";
+import ProductCard from "Components/Product/ProductCard";
+import NumberedProductCard from "@/app/app/Components/NumberedProductCard";
+import LoaderComponent from "Components/UI/LoaderComponent";
+import NewsletterSignup from "Components/common/Auth/NewsletterSignup";
 import logger from "@/lib/utils/logger";
-import QuickLinks from "../../../../Components/QuickLinks/QuickLinks";
+import QuickLinks from "Components/QuickLinks/QuickLinks";
 
 // Animation variants
 const containerVariants = {

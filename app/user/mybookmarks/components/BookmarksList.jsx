@@ -15,9 +15,9 @@ import {
   FiBookmark,
 } from "react-icons/fi";
 import { formatDistanceToNow, format } from "date-fns";
-import BookmarkButton from "../../../../Components/Buttons/Bookmark/BookmarkButton";
+import BookmarkButton from "../../../../Components/UI/Buttons/Bookmark/BookmarkButton";
 import { toast } from "react-hot-toast";
-import UpvoteButton from "../../../../Components/Buttons/Upvote/UpvoteButton";
+import UpvoteButton from "../../../../Components/UI/Buttons/Upvote/UpvoteButton";
 
 const BookmarksList = ({ bookmarks, onRefresh }) => {
   // Animation variants

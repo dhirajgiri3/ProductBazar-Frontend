@@ -36,7 +36,6 @@ const ProjectList = ({
     const controller = new AbortController();
 
     // Fetch projects with the abort signal
-    console.log("Fetching projects with filters:", { ...filters, search: searchTerm }, "page:", currentPage);
     fetchProjects({ ...filters, search: searchTerm }, currentPage, 12, controller.signal);
 
     // Clean up function to abort any pending requests when component unmounts or dependencies change
@@ -93,15 +92,6 @@ const ProjectList = ({
     // We don't need to call fetchProjects here as the useEffect will handle it
   };
 
-  // Debug logs
-  console.log("ProjectList render state:", {
-    loading,
-    error,
-    projectsLength: projects?.length,
-    projectsEmpty: !projects || projects.length === 0,
-    pagination
-  });
-
   return (
     <div className="space-y-6">
       {/* Minimalistic Header */}
@@ -123,7 +113,7 @@ const ProjectList = ({
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search projects..."
-                    className="px-3 py-2 pl-9 border-0 bg-gray-50 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-violet-500 w-full"
+                    className="px-3 py-2 pl-9 border border-gray-200 bg-gray-50 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-violet-500 w-full"
                   />
                   <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 </div>
@@ -144,7 +134,7 @@ const ProjectList = ({
                   <select
                     value={filters.ownerType || ""}
                     onChange={(e) => handleFilterChange("ownerType", e.target.value || undefined)}
-                    className="appearance-none px-3 py-2 pl-8 border-0 bg-gray-50 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 pr-8 text-sm text-gray-700"
+                    className="appearance-none px-3 py-2 pl-8 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 pr-8 text-sm text-gray-700"
                   >
                     <option value="">All Types</option>
                     <option value="jobseeker">Job Seeker</option>
@@ -159,7 +149,7 @@ const ProjectList = ({
                   <select
                     value={filters.sort || "-createdAt"}
                     onChange={(e) => handleFilterChange("sort", e.target.value)}
-                    className="appearance-none px-3 py-2 pl-8 border-0 bg-gray-50 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 pr-8 text-sm text-gray-700"
+                    className="appearance-none px-3 py-2 pl-8 border border-gray-200 bg-gray-50 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 pr-8 text-sm text-gray-700"
                   >
                     <option value="-createdAt">Newest First</option>
                     <option value="createdAt">Oldest First</option>
@@ -173,10 +163,10 @@ const ProjectList = ({
                   onClick={clearFilters}
                   whileHover={{ backgroundColor: "#f3f4f6" }}
                   whileTap={{ scale: 0.98 }}
-                  className="px-3 py-2 bg-gray-50 rounded-lg transition-colors duration-200 flex items-center gap-1.5 text-sm text-gray-700"
+                  className="px-3 py-2 bg-gray-50 rounded-lg transition-colors duration-200 flex items-center gap-1.5 text-sm text-gray-700 border border-gray-200 hover:bg-gray-100"
                 >
                   <Filter size={14} className="text-gray-500" />
-                  Clear
+                  Clear Filters
                 </motion.button>
               </div>
             )}

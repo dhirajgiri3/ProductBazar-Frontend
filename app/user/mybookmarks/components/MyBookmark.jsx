@@ -117,9 +117,10 @@ const MyBookmarksPage = () => {
           }),
         };
 
-        // Use the dedicated bookmarks endpoint
+        // Use the dedicated bookmarks endpoint with retry capability
         const response = await makePriorityRequest("GET", "/user/bookmarks", {
           params,
+          retryCount: 1 // Allow one retry for network issues or token refresh
         });
 
         if (response.data.success) {
@@ -144,7 +145,16 @@ const MyBookmarksPage = () => {
         }
       } catch (err) {
         logger.error("Error fetching bookmarks:", err);
-        setError("Something went wrong while fetching your bookmarks");
+
+        // Handle authentication errors specifically
+        if (err.message?.includes('session has expired') || err.response?.status === 401) {
+          // The auth context will handle the redirect, just show a friendly message
+          toast.error("Your session has expired. Redirecting to login...");
+          setError("Authentication required. Please log in again.");
+        } else {
+          setError("Something went wrong while fetching your bookmarks");
+        }
+
         setBookmarks([]);
         if (isRefresh) {
           toast.error("Error refreshing bookmarks", { id: "refresh-toast" });
@@ -180,8 +190,11 @@ const MyBookmarksPage = () => {
     if (isAuthenticated) {
       setSkeletonLoading(true);
       fetchBookmarks();
+    } else if (!authLoading) {
+      // If authentication check is complete and user is not authenticated
+      router.push("/auth/login?redirect=/user/mybookmarks");
     }
-  }, [isAuthenticated, fetchBookmarks]);
+  }, [isAuthenticated, authLoading, fetchBookmarks, router]);
 
   // Debounced search implementation
   useEffect(() => {

@@ -4,11 +4,11 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/lib/contexts/auth-context";
 // useRouter is not used for navigation based on original code, keeping import commented
 import { useRouter } from "next/navigation";
-import logger from "../../../Utils/logger";
+import logger from "@/lib/utils/logger";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { optimizeImage } from "@/lib/utils/image/image-utils";
-import api, { makePriorityRequest } from "../../../Utils/api";
+import api, { makePriorityRequest } from "@/lib/api/api";
 import LoaderComponent from "../../../Components/UI/LoaderComponent";
 import SuccessConfetti from "./SuccessConfetti"; // Adjust path
 

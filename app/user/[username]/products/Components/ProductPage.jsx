@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { makePriorityRequest } from '@/lib/api/api';
 import ProductCard from 'Components/Product/ProductCard';
 import { useProduct } from '@/lib/contexts/product-context';
@@ -10,7 +10,7 @@ import { FiGrid, FiList, FiPackage } from 'react-icons/fi';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import Pagination from 'Components/common/Pagination';
+import Pagination from 'components/common/Pagination';
 
 // Metadata for the page
 export const generateMetadata = async ({ params }) => {
@@ -50,6 +50,7 @@ export const generateMetadata = async ({ params }) => {
 
 function UserProductsPage() {
   const { username } = useParams();
+  const router = useRouter();
   const { user: currentUser } = useAuth();
   const { toggleUpvote, toggleBookmark } = useProduct();
 
@@ -204,10 +205,19 @@ function UserProductsPage() {
 
   // Initial data fetch
   useEffect(() => {
-    if (username) {
-      fetchProductsByUsername(1);
+    if (!username) {
+      console.error("Username parameter is undefined");
+      // Redirect to a fallback page or refresh user data
+      if (currentUser?._id) {
+        router.push(`/user/profile/${currentUser._id}`);
+      } else {
+        router.push('/app');
+      }
+      return;
     }
-  }, [username]);
+
+    fetchProductsByUsername(1);
+  }, [username, currentUser, router]);
 
   // Loading state
   if (loading && !products.length) {
