@@ -9,7 +9,7 @@ import {
   FiMail, FiPhone, FiUser, FiBriefcase, FiGlobe, FiShield
 } from 'react-icons/fi';
 
-import { makePriorityRequest } from '../../../../Utils/api';
+import { makePriorityRequest } from "@/lib/api/api";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';

@@ -45,7 +45,7 @@ const ANIMATION = {
 // Static components
 import HeroSection from './HeroSection';
 import CategoryList from './CategoryList';
-import NewsletterSignup from '@/components/common/Auth/NewsletterSignup';
+import NewsletterSignup from 'Components/common/Auth/NewsletterSignup';
 import QuickLinks from '@/components/QuickLinks/QuickLinks';
 
 // Dynamically imported components (ssr: false for client-side rendering)

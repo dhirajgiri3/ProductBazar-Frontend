@@ -6,7 +6,7 @@ import { toast } from "react-hot-toast";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/contexts/auth-context";
 import { useProject } from "@/lib/contexts/project-context";
-import ProjectForm from "../add/ProjectForm";
+import ProjectForm from "../../add/ProjectForm";
 import LoaderComponent from "Components/UI/LoaderComponent";
 
 export default function EditProjectPage() {

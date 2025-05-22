@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import ApplicationStatusBadge from "./ApplicationStatusBadge";
-import Pagination from "@/components/common/pagination";
+import Pagination from "Components/common/Pagination";
 import WithdrawModal from "./WithdrawModal";
 
 const ApplicationsList = ({ applications, onWithdraw, pagination, onPageChange }) => {

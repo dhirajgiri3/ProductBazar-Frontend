@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ForgotPasswordForm from './components/ForgotPasswordForm';
-import { useAuth } from '@lib/contexts/auth-context';
+import { useAuth } from '@/lib/contexts/auth-context';
 
 function ForgotPasswordPage() {
   const { user, isInitialized } = useAuth();

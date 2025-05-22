@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FiBriefcase, FiDollarSign, FiUsers, FiBookOpen, FiAward, FiTrendingUp, FiGlobe, FiSettings, FiInfo, FiSave } from 'react-icons/fi';
-import { makePriorityRequest } from '../../../../Utils/api';
+import { makePriorityRequest } from "@/lib/api/api";
 import { toast } from 'react-hot-toast';
 import clsx from 'clsx';
 

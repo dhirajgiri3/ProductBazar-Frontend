@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Helmet } from "react-helmet";
 import { 
   BarChart2, 
   TrendingUp, 
@@ -125,10 +124,6 @@ const ProjectAnalyticsPage = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Analytics for {currentProject.title} | Product Bazar</title>
-        <meta name="description" content={`Analytics for ${currentProject.title}`} />
-      </Helmet>
 
       <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-purple-50 py-12 px-4">
         <div className="max-w-7xl mx-auto">

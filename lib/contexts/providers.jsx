@@ -7,7 +7,7 @@ import { ProductProvider } from "../Product/ProductContext";
 import { RecommendationProvider } from "../Recommendation/RecommendationContext";
 import { ViewProvider } from "../View/ViewContext";
 import { Toaster } from "react-hot-toast";
-import StyledComponentsRegistry from "../../Lib/registry"; // Assuming you still need styled-components
+import StyledComponentsRegistry from "../registry";// Assuming you still need styled-components
 import GlobalStyleComponent from "../../public/Assets/Style/GlobalStyle"; // Assuming you still need styled-components
 
 // This component establishes the client boundary and provides context

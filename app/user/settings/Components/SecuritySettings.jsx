@@ -17,7 +17,7 @@ import {
   FiCalendar,
   FiMonitor,
 } from "react-icons/fi";
-import { makePriorityRequest } from "../../../../Utils/api";
+import { makePriorityRequest } from "@/lib/api/api";
 import { toast } from "react-hot-toast";
 
 const SecuritySettings = ({ user }) => {

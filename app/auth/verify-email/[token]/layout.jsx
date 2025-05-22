@@ -1,4 +1,4 @@
-import StyledComponentsRegistry from "../../../../Lib/registry";
+import StyledComponentsRegistry from "@/lib/registry";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthProvider } from "@/lib/contexts/auth-context";

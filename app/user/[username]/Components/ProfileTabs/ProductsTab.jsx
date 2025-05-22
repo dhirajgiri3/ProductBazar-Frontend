@@ -15,7 +15,7 @@ import { useAuth } from "@/lib/contexts/auth-context";
 import EditProductModal from "../../../../../Components/Modal/Product/EditProductModal";
 import DeleteConfirmModal from "../../../../../Components/Modal/Product/DeleteConfirmModal";
 import ProfileProductCard from "../../../../../Components/Product/ProfileProductCard";
-import Pagination from "../../../../../components/common/Pagination";
+import Pagination from "Components/common/Pagination";
 import Tabs from "../../../../../Components/common/Tabs";
 import LoaderComponent from "../../../../../Components/UI/LoaderComponent";
 

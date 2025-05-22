@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { FiSave, FiCheck, FiBell, FiMail, FiSmartphone } from "react-icons/fi";
-import { makePriorityRequest } from "../../../../Utils/api";
+import { makePriorityRequest } from "@/lib/api/api";
 import { toast } from "react-hot-toast";
 
 const NotificationSettings = ({ user }) => {
