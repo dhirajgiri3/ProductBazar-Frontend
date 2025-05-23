@@ -1,102 +1,191 @@
 {
   "Components/Landing/Components/Impact.jsx -> next/image": {
-    "id": "Components/Landing/Components/Impact.jsx -> next/image",
+    "id": 66648,
     "files": []
   },
-  "Components/UI/SplineScene.jsx -> @splinetool/react-spline": {
-    "id": "Components/UI/SplineScene.jsx -> @splinetool/react-spline",
+  "Components/Modal/Product/EditProductModal.jsx -> react-quill": {
+    "id": 98436,
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_splinetool_react-spline_dist_react-spline_js.js"
+      "static/chunks/8012d7e2.d22bf7f321a30dbf.js",
+      "static/chunks/2916-ef0116982dc12f78.js",
+      "static/chunks/548.5511edbcfa6f5585.js"
+    ]
+  },
+  "Components/UI/SplineScene.jsx -> @splinetool/react-spline": {
+    "id": 67428,
+    "files": [
+      "static/chunks/c6a54c64.0b6f17ba4197a6bd.js",
+      "static/chunks/5301-b32d90475edef100.js",
+      "static/chunks/7428.304d3b07739a71d7.js"
+    ]
+  },
+  "Components/UI/balloons.jsx -> balloons-js": {
+    "id": 48177,
+    "files": [
+      "static/chunks/8177.e624ee7764a0c582.js"
     ]
   },
   "app/app/Components/Home.jsx -> ./CommunityPicksSection": {
-    "id": "app/app/Components/Home.jsx -> ./CommunityPicksSection",
+    "id": 43760,
     "files": [
-      "static/chunks/_app-pages-browser_app_app_Components_CommunityPicksSection_jsx.js"
+      "static/chunks/6648-201b73e65b57e037.js",
+      "static/chunks/9098-1d737cb854a35943.js",
+      "static/chunks/5514-3fd071ab981a8045.js",
+      "static/chunks/7002-b71ce5ec0bc6cda1.js",
+      "static/chunks/3986-76ce0cf09259773c.js",
+      "static/chunks/6995-1310d30d89ef17fb.js",
+      "static/chunks/1614.71fe3db1ade9230e.js"
     ]
   },
   "app/app/Components/Home.jsx -> ./ForumThreadsSection": {
-    "id": "app/app/Components/Home.jsx -> ./ForumThreadsSection",
+    "id": 81171,
     "files": [
-      "static/chunks/_app-pages-browser_app_app_Components_ForumThreadsSection_jsx.js"
+      "static/chunks/1171.d42435724a1255b8.js"
     ]
   },
   "app/app/Components/Home.jsx -> ./HybridFeedSection": {
-    "id": "app/app/Components/Home.jsx -> ./HybridFeedSection",
+    "id": 24041,
     "files": [
-      "static/chunks/_app-pages-browser_app_app_Components_HybridFeedSection_jsx.js"
+      "static/chunks/6648-201b73e65b57e037.js",
+      "static/chunks/9098-1d737cb854a35943.js",
+      "static/chunks/5514-3fd071ab981a8045.js",
+      "static/chunks/7002-b71ce5ec0bc6cda1.js",
+      "static/chunks/3986-76ce0cf09259773c.js",
+      "static/chunks/6995-1310d30d89ef17fb.js",
+      "static/chunks/1723.daebf3dd67f29a86.js"
     ]
   },
   "app/app/Components/Home.jsx -> ./InterestBasedSection": {
-    "id": "app/app/Components/Home.jsx -> ./InterestBasedSection",
+    "id": 31884,
     "files": [
-      "static/chunks/_app-pages-browser_app_app_Components_InterestBasedSection_jsx.js"
+      "static/chunks/6648-201b73e65b57e037.js",
+      "static/chunks/9098-1d737cb854a35943.js",
+      "static/chunks/5514-3fd071ab981a8045.js",
+      "static/chunks/7002-b71ce5ec0bc6cda1.js",
+      "static/chunks/3986-76ce0cf09259773c.js",
+      "static/chunks/6995-1310d30d89ef17fb.js",
+      "static/chunks/3078.7b1d8479ef4c0f0e.js"
     ]
   },
   "app/app/Components/Home.jsx -> ./NewProductsSection": {
-    "id": "app/app/Components/Home.jsx -> ./NewProductsSection",
+    "id": 99203,
     "files": [
-      "static/chunks/_app-pages-browser_app_app_Components_NewProductsSection_jsx.js"
+      "static/chunks/6648-201b73e65b57e037.js",
+      "static/chunks/9098-1d737cb854a35943.js",
+      "static/chunks/5514-3fd071ab981a8045.js",
+      "static/chunks/7002-b71ce5ec0bc6cda1.js",
+      "static/chunks/3986-76ce0cf09259773c.js",
+      "static/chunks/6995-1310d30d89ef17fb.js",
+      "static/chunks/3564.30dd5f79f14fbf18.js"
     ]
   },
   "app/app/Components/Home.jsx -> ./PersonalizedSection": {
-    "id": "app/app/Components/Home.jsx -> ./PersonalizedSection",
+    "id": 93643,
     "files": [
-      "static/chunks/_app-pages-browser_app_app_Components_PersonalizedSection_jsx.js"
+      "static/chunks/6648-201b73e65b57e037.js",
+      "static/chunks/9098-1d737cb854a35943.js",
+      "static/chunks/5514-3fd071ab981a8045.js",
+      "static/chunks/7002-b71ce5ec0bc6cda1.js",
+      "static/chunks/3986-76ce0cf09259773c.js",
+      "static/chunks/6995-1310d30d89ef17fb.js",
+      "static/chunks/5774.8e142ef566f730a0.js"
     ]
   },
   "app/app/Components/Home.jsx -> ./TrendingProductSection": {
-    "id": "app/app/Components/Home.jsx -> ./TrendingProductSection",
+    "id": 95596,
     "files": [
-      "static/chunks/_app-pages-browser_app_app_Components_TrendingProductSection_jsx.js"
+      "static/chunks/6648-201b73e65b57e037.js",
+      "static/chunks/9098-1d737cb854a35943.js",
+      "static/chunks/5514-3fd071ab981a8045.js",
+      "static/chunks/7002-b71ce5ec0bc6cda1.js",
+      "static/chunks/3986-76ce0cf09259773c.js",
+      "static/chunks/6995-1310d30d89ef17fb.js",
+      "static/chunks/698.ca86a557030fb777.js"
+    ]
+  },
+  "app/auth/verify-email/[token]/page.jsx -> canvas-confetti": {
+    "id": 50965,
+    "files": [
+      "static/chunks/965-8c14a8b1a51cdad6.js"
+    ]
+  },
+  "app/jobs/post/components/RichTextEditor.jsx -> react-quill": {
+    "id": 98436,
+    "files": [
+      "static/chunks/8012d7e2.d22bf7f321a30dbf.js",
+      "static/chunks/2916-ef0116982dc12f78.js",
+      "static/chunks/8436.7ff25a750239f5f3.js"
+    ]
+  },
+  "app/user/[username]/Components/ProfileTabs/ProfileContent.jsx -> ../../../../../Components/Modal/EditProfileModal/EditProfileModal": {
+    "id": 39915,
+    "files": [
+      "static/chunks/66ec4792-ebcf89f12e0d08ec.js",
+      "static/chunks/9915.8e37cc03675c4c4f.js"
+    ]
+  },
+  "app/user/[username]/Components/ProfileTabs/ProfileContent.jsx -> ../../../../../Components/Modal/ProfileCompletionPrompt/ProfileCompletionPrompt": {
+    "id": 82855,
+    "files": [
+      "static/chunks/66ec4792-ebcf89f12e0d08ec.js",
+      "static/chunks/2855.d919336073dc1363.js"
+    ]
+  },
+  "app/user/history/page.jsx -> ../../../Components/View/UserViewHistory": {
+    "id": 62390,
+    "files": [
+      "static/chunks/6648-201b73e65b57e037.js",
+      "static/chunks/7138-a54e321bb7490bf4.js",
+      "static/chunks/3003-c06b37960c7d3368.js",
+      "static/chunks/2390-c513b7e481d75c78.js"
     ]
   },
   "node_modules/@splinetool/runtime/build/runtime.js -> ./boolean.js": {
-    "id": "node_modules/@splinetool/runtime/build/runtime.js -> ./boolean.js",
+    "id": 87944,
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_splinetool_runtime_build_boolean_js.js"
+      "static/chunks/7944.fb5358957d2e2f3a.js"
     ]
   },
   "node_modules/@splinetool/runtime/build/runtime.js -> ./gaussian-splat-compression.js": {
-    "id": "node_modules/@splinetool/runtime/build/runtime.js -> ./gaussian-splat-compression.js",
+    "id": 23534,
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_splinetool_runtime_build_gaussian-splat-compression_js.js"
+      "static/chunks/3534.cb630b4d4cbf1fc7.js"
     ]
   },
   "node_modules/@splinetool/runtime/build/runtime.js -> ./howler.js": {
-    "id": "node_modules/@splinetool/runtime/build/runtime.js -> ./howler.js",
+    "id": 23772,
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_splinetool_runtime_build_howler_js.js"
+      "static/chunks/3772.92a1b826e68a0871.js"
     ]
   },
   "node_modules/@splinetool/runtime/build/runtime.js -> ./navmesh.js": {
-    "id": "node_modules/@splinetool/runtime/build/runtime.js -> ./navmesh.js",
+    "id": 88813,
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_splinetool_runtime_build_navmesh_js.js"
+      "static/chunks/8813.f12bff97f163e352.js"
     ]
   },
   "node_modules/@splinetool/runtime/build/runtime.js -> ./opentype.js": {
-    "id": "node_modules/@splinetool/runtime/build/runtime.js -> ./opentype.js",
+    "id": 68271,
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_splinetool_runtime_build_opentype_js.js"
+      "static/chunks/a0e187c9.9e463021bcd288fc.js"
     ]
   },
   "node_modules/@splinetool/runtime/build/runtime.js -> ./physics.js": {
-    "id": "node_modules/@splinetool/runtime/build/runtime.js -> ./physics.js",
+    "id": 19699,
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_splinetool_runtime_build_physics_js.js"
+      "static/chunks/0b60df10.edf04f4d001d053a.js"
     ]
   },
   "node_modules/@splinetool/runtime/build/runtime.js -> ./process.js": {
-    "id": "node_modules/@splinetool/runtime/build/runtime.js -> ./process.js",
+    "id": 56522,
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_splinetool_runtime_build_process_js.js"
+      "static/chunks/6522.d780dbb030b343bc.js"
     ]
   },
   "node_modules/@splinetool/runtime/build/runtime.js -> ./ui.js": {
-    "id": "node_modules/@splinetool/runtime/build/runtime.js -> ./ui.js",
+    "id": 19509,
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_splinetool_runtime_build_ui_js.js"
+      "static/chunks/9509.d808d65f2befb646.js"
     ]
   }
 }

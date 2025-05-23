@@ -10,7 +10,7 @@ import { FiGrid, FiList, FiPackage } from 'react-icons/fi';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import Pagination from 'components/common/Pagination';
+import Pagination from 'Components/common/Pagination';
 
 // Metadata for the page
 export const generateMetadata = async ({ params }) => {

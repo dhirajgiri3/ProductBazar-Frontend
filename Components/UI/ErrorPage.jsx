@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Slot } from '@radix-ui/react-slot';
 import { cva } from 'class-variance-authority';
 import { motion } from 'framer-motion';
+import Flappy404Game from './Flappy404Game';
 
 // Button component - preserved from original with accessibility improvements
 const buttonVariants = cva(
@@ -413,6 +414,8 @@ function EnhancedNotFound({
 
   return (
     <div className="relative flex flex-col items-center justify-center text-center z-10 pt-16 md:pt-20">
+      {/* Flappy 404 Game above error code */}
+      <Flappy404Game />
       <div className="relative inline-block mb-8">
         <ErrorText text={errorNumber} />
       </div>
@@ -427,7 +430,7 @@ function EnhancedNotFound({
       </motion.h2>
 
       <motion.p
-        className="mt-4 text-pretty text-base md:text-lg font-normal text-gray-600 max-w-md mx-auto"
+        className="mt-4 text-pretty text-sm font-normal text-gray-600 max-w-md mx-auto"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.5 }}

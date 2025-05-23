@@ -69,7 +69,20 @@ export const ViewProvider = ({ children }) => {
 
   // Get view statistics for a product (for product owners)
   const getProductViewStats = useCallback(async (productId, days = 7) => {
-    if (!productId) return null;
+    if (!productId) {
+      setError('Missing product ID');
+      setLoading(false);
+      return { success: false, error: 'Missing product ID' };
+    }
+
+    // Check if productId is a valid MongoDB ObjectId (24 hex characters)
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(productId);
+    if (!isValidObjectId) {
+      console.error('Invalid product ID format:', productId);
+      setError('Invalid product ID format');
+      setLoading(false);
+      return { success: false, error: 'Invalid product ID format' };
+    }
 
     try {
       setLoading(true);

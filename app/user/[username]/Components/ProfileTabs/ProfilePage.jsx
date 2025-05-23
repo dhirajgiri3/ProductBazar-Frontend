@@ -4,7 +4,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from "@/lib/contexts/auth-context";
-import { useProduct } from "@/lib/contexts/product-context";
 import { useSearchParams } from 'next/navigation';
 import LoaderComponent from '../../../../../Components/UI/LoaderComponent';
 import ProfileHeader from './ProfileHeader';
@@ -14,10 +13,10 @@ import ProfileContent from './ProfileContent';
 import { pageVariants } from '@/lib/utils/ui/animations';
 import logger from '@/lib/utils/logger';
 import eventBus, { EVENT_TYPES } from '@/lib/utils/event-bus';
+import api from '@/lib/api/api';
 
 export default function ProfilePage({ initialUser, initialProducts, initialInteractionCounts, initialStatusCounts, initialTotalPages }) {
   const { user: currentUser, authLoading } = useAuth();
-  const { getUserProducts } = useProduct();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
 
@@ -41,23 +40,25 @@ export default function ProfilePage({ initialUser, initialProducts, initialInter
       try {
         if (initialUser?._id) {
           setProductsLoading(true);
-          const response = await getUserProducts(initialUser._id, {
-            page,
-            limit: productsPerPage,
-            filter,
-            bypassCache: true,
+          const response = await api.get(`/products/user/${initialUser._id}`, {
+            params: {
+              page,
+              limit: productsPerPage,
+              filter,
+              bypassCache: true,
+            }
           });
 
-          if (response?.data) {
-            setProducts(response.data);
+          if (response.data?.success) {
+            setProducts(response.data.data);
             setStatusCounts({
-              all: response.totalCount || 0,
-              published: response.statusCounts?.published || 0,
-              draft: response.statusCounts?.draft || 0,
-              archived: response.statusCounts?.archived || 0,
+              all: response.data.meta?.totalProducts || 0,
+              published: response.data.meta?.publishedProducts || 0,
+              draft: response.data.meta?.draftProducts || 0,
+              archived: response.data.meta?.archivedProducts || 0,
             });
-            setTotalPages(response.totalPages || 1);
-            logger.info(`Fetched ${response.data.length} products for user ${initialUser._id}`);
+            setTotalPages(response.data.meta?.totalPages || 1);
+            logger.info(`Fetched ${response.data.data.length} products for user ${initialUser._id}`);
           } else {
             setProducts([]);
             setStatusCounts({ all: 0, published: 0, draft: 0, archived: 0 });
@@ -65,17 +66,15 @@ export default function ProfilePage({ initialUser, initialProducts, initialInter
           }
         }
       } catch (error) {
-        if (error.name !== 'CanceledError' && error.code !== 'ERR_CANCELED') {
-          logger.error('Failed to fetch user products:', error);
-          setProducts([]);
-          setStatusCounts({ all: 0, published: 0, draft: 0, archived: 0 });
-          setTotalPages(1);
-        }
+        logger.error('Failed to fetch user products:', error);
+        setProducts([]);
+        setStatusCounts({ all: 0, published: 0, draft: 0, archived: 0 });
+        setTotalPages(1);
       } finally {
         setProductsLoading(false);
       }
     },
-    [getUserProducts, initialUser?._id, productsPerPage]
+    [initialUser?._id, productsPerPage]
   );
 
   // Handle page change

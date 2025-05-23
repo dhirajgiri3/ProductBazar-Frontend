@@ -46,7 +46,7 @@ const ANIMATION = {
 import HeroSection from './HeroSection';
 import CategoryList from './CategoryList';
 import NewsletterSignup from 'Components/common/Auth/NewsletterSignup';
-import QuickLinks from '@/components/QuickLinks/QuickLinks';
+import QuickLinks from 'Components/QuickLinks/QuickLinks';
 
 // Dynamically imported components (ssr: false for client-side rendering)
 const TrendingProductsSection = dynamic(() => import('./TrendingProductSection'), { ssr: false });
