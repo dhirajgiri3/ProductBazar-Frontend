@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { motion } from "framer-motion";
 import { Rocket, ArrowRight, Sparkles } from "lucide-react";
-import InteractiveBackground from "Components/UI/Background/InteractiveBackground";
 import LoaderComponent from "Components/UI/LoaderComponent";
 
 // Animation variants
@@ -79,7 +78,6 @@ export default function AddProductPage() {
   if (loading || authLoading || !isInitialized) {
     return (
       <div className="fixed inset-0 overflow-hidden">
-        <InteractiveBackground />
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <LoaderComponent message="Preparing Your Launch Pad..." />
         </div>
@@ -91,7 +89,6 @@ export default function AddProductPage() {
   if (!user)
     return (
       <div className="fixed inset-0 overflow-hidden">
-        <InteractiveBackground />
         <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
           <div className="bg-white/80 backdrop-blur-md p-8 rounded-2xl shadow-xl">
             <motion.div
@@ -121,7 +118,6 @@ export default function AddProductPage() {
     >
       {/* Creative background with interactive elements */}
       <div className="fixed inset-0">
-        <InteractiveBackground />
         <div className="absolute inset-0 bg-gradient-to-b from-white/0 via-white/0 to-white/70 pointer-events-none"></div>
 
         {/* Decorative elements */}
