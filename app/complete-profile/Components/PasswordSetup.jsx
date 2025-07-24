@@ -196,7 +196,7 @@ const PasswordSetup = ({
           </div>
         )}
 
-        {/* Submit Button */}
+       {/* Submit Button */}
         <motion.button
           type="submit"
           disabled={!canSubmit || isSubmitting}
