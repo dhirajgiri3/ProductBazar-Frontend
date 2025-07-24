@@ -1,0 +1,36 @@
+/* src/components/BorderBeam.module.css */
+
+.meteor {
+    /* The element is rotated, so the animation from left: 0 to left: 100% appears as right to left */
+    transform: rotate(-180deg);
+    animation: meteor-animation linear;
+    /* Use CSS variables for dynamic control from JS, with fallback values */
+    animation-delay: var(--meteor-delay, 0s);
+    animation-duration: var(--meteor-duration, 3s);
+  }
+  
+  /* The glowing tail of the beam */
+  .meteor::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: var(--meteor-width, 70px);
+    height: 1px;
+    background: linear-gradient(90deg, #6366f1, #7dd3fc, transparent);
+  }
+  
+  @keyframes meteor-animation {
+    0% {
+      left: 0;
+      opacity: 0;
+    }
+    70% {
+      opacity: 1;
+    }
+    100% {
+      /* Animate across the full width of the container */
+      left: 100%;
+      opacity: 0;
+    }
+  }
