@@ -154,7 +154,6 @@ const PasswordSetup = ({
             </div>
           </div>
 
-          {/* Flexible Requirements */}
           <div>
             <p className="text-xs text-gray-600 mb-2 font-medium">
               Choose at least 3 of the following:
