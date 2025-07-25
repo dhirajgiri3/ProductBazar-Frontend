@@ -70,20 +70,23 @@ function HeroSection({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: DESIGN_TOKENS.animations.duration.normal }}
-        className="flex justify-center"
+        className="flex justify-center px-4"
       >
-        <div className={`inline-flex items-center gap-3 px-6 py-3 ${DESIGN_TOKENS.colors.background.elevated} backdrop-blur-sm ${DESIGN_TOKENS.radius.pill} ${DESIGN_TOKENS.colors.border.secondary} ${DESIGN_TOKENS.shadows.card}`}>
+        <div className={`inline-flex items-center gap-2 sm:gap-3 px-3 sm:px-4 md:px-6 py-2 sm:py-3 ${DESIGN_TOKENS.colors.background.elevated} backdrop-blur-sm ${DESIGN_TOKENS.radius.pill} ${DESIGN_TOKENS.colors.border.secondary} ${DESIGN_TOKENS.shadows.card} max-w-full`}>
           <motion.div
-            className="w-2.5 h-2.5 bg-emerald-400 rounded-full"
+            className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-400 rounded-full flex-shrink-0"
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           />
-          <span className={`${DESIGN_TOKENS.colors.text.secondary} ${DESIGN_TOKENS.typography.caption}`}>
+          <span className={`${DESIGN_TOKENS.colors.text.secondary} text-xs sm:text-sm truncate`}>
             {formatCounter()}{' '}
-            Builders, Investors & Partners Inside.
+            <span className="hidden xs:inline">Builders, Investors & Partners Inside</span>
+            <span className="xs:hidden">Members Inside</span>
           </span>
-          <div className="w-1 h-1 bg-slate-600 rounded-full" />
-          <span className={`${DESIGN_TOKENS.colors.text.tertiary} ${DESIGN_TOKENS.typography.caption}`}>Founding Access Only</span>
+          <div className="w-1 h-1 bg-slate-600 rounded-full flex-shrink-0 hidden sm:block" />
+          <span className={`${DESIGN_TOKENS.colors.text.tertiary} text-xs sm:text-sm flex-shrink-0 hidden sm:block`}>
+            Founding Access Only
+          </span>
         </div>
       </motion.div>
 
