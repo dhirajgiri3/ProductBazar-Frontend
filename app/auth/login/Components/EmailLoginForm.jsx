@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import { HiOutlineMail, HiOutlineLockClosed, HiOutlineSparkles } from 'react-icons/hi';
+import { HiOutlineMail, HiOutlineLockClosed } from 'react-icons/hi';
 import Link from 'next/link';
 
 const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
@@ -54,29 +54,6 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
     }
   };
 
-  const inputVariants = {
-    focused: {
-      scale: 1.01,
-      boxShadow: '0 0 0 3px rgba(124, 58, 237, 0.15)',
-      borderColor: 'rgba(124, 58, 237, 0.8)',
-    },
-    error: {
-      scale: 1.01,
-      boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.15)',
-      borderColor: 'rgba(239, 68, 68, 0.8)',
-    },
-    normal: {
-      scale: 1,
-      boxShadow: 'none',
-      borderColor: 'rgba(229, 231, 235, 1)',
-    },
-  };
-
-  const formControlVariants = {
-    initial: { y: 10, opacity: 0 },
-    animate: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 400, damping: 25 } },
-  };
-
   const ErrorMessage = ({ error }) => {
     if (!error) return null;
     return (
@@ -84,67 +61,58 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
         initial={{ opacity: 0, height: 0 }}
         animate={{ opacity: 1, height: 'auto' }}
         exit={{ opacity: 0, height: 0 }}
-        className="mt-2 flex items-start gap-1.5 text-xs text-red-500"
+        className="mt-2 text-sm text-red-600"
       >
-        <span className="w-1 h-1 bg-red-500 rounded-full mt-1.5 flex-shrink-0"></span>
-        <span>{error}</span>
+        {error}
       </motion.div>
     );
   };
 
   return (
     <motion.form
-      className="space-y-5 flex flex-col"
+      className="space-y-6"
       onSubmit={handleSubmit}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <div className="flex-1 space-y-5">
-        <motion.div
-          variants={formControlVariants}
-          initial="initial"
-          animate="animate"
-          transition={{ delay: 0.1 }}
-        >
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
             Email Address
           </label>
-          <div className="relative group">
-            <motion.input
+          <div className="relative">
+            <input
               type="email"
               id="email"
               name="email"
               placeholder="your@email.com"
-              className={`w-full px-4 py-3.5 pl-12 border rounded-xl text-sm text-gray-800 transition-all duration-300 ${formErrors.email
-                  ? 'border-red-300 ring-red-100 bg-red-50/30'
-                  : 'border-gray-200 group-hover:border-violet-300 bg-white/80 backdrop-blur-sm'
-                }`}
+              className={`w-full px-4 py-3 pl-12 border rounded-xl text-sm text-gray-800 transition-all duration-200 ${
+                formErrors.email
+                  ? 'border-red-300 bg-red-50'
+                  : activeField === 'email'
+                  ? 'border-violet-500 bg-white'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
               value={formData.email}
               onChange={handleChange}
               disabled={isLoading}
-              variants={inputVariants}
-              animate={formErrors.email ? 'error' : activeField === 'email' ? 'focused' : 'normal'}
               onFocus={() => setActiveField('email')}
               onBlur={() => setActiveField(null)}
             />
             <div className="absolute left-4 top-1/2 -translate-y-1/2">
               <HiOutlineMail
-                className={`text-lg transition-colors duration-300 ${formErrors.email ? 'text-red-400' : 'text-gray-400 group-hover:text-violet-500'
-                  }`}
+                className={`text-lg transition-colors duration-200 ${
+                  formErrors.email ? 'text-red-400' : activeField === 'email' ? 'text-violet-500' : 'text-gray-400'
+                }`}
               />
             </div>
           </div>
           <ErrorMessage error={formErrors.email} />
-        </motion.div>
+        </div>
 
-        <motion.div
-          variants={formControlVariants}
-          initial="initial"
-          animate="animate"
-          transition={{ delay: 0.2 }}
-        >
-          <div className="flex justify-between items-center mb-2">
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Password
             </label>
@@ -155,30 +123,30 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
               Forgot?
             </Link>
           </div>
-          <div className="relative group">
-            <motion.input
+          <div className="relative">
+            <input
               type={showPassword ? 'text' : 'password'}
               id="password"
               name="password"
               placeholder="••••••••"
-              className={`w-full px-4 py-3.5 pl-12 pr-12 border rounded-xl text-sm text-gray-800 transition-all duration-300 ${formErrors.password
-                  ? 'border-red-300 ring-red-100 bg-red-50/30'
-                  : 'border-gray-200 group-hover:border-violet-300 bg-white/80 backdrop-blur-sm'
-                }`}
+              className={`w-full px-4 py-3 pl-12 pr-12 border rounded-xl text-sm text-gray-800 transition-all duration-200 ${
+                formErrors.password
+                  ? 'border-red-300 bg-red-50'
+                  : activeField === 'password'
+                  ? 'border-violet-500 bg-white'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
               value={formData.password}
               onChange={handleChange}
               disabled={isLoading}
-              variants={inputVariants}
-              animate={
-                formErrors.password ? 'error' : activeField === 'password' ? 'focused' : 'normal'
-              }
               onFocus={() => setActiveField('password')}
               onBlur={() => setActiveField(null)}
             />
             <div className="absolute left-4 top-1/2 -translate-y-1/2">
               <HiOutlineLockClosed
-                className={`text-lg transition-colors duration-300 ${formErrors.password ? 'text-red-400' : 'text-gray-400 group-hover:text-violet-500'
-                  }`}
+                className={`text-lg transition-colors duration-200 ${
+                  formErrors.password ? 'text-red-400' : activeField === 'password' ? 'text-violet-500' : 'text-gray-400'
+                }`}
               />
             </div>
             <button
@@ -187,26 +155,22 @@ const EmailLoginForm = ({ onSubmit, isLoading, onToggleMethod }) => {
               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-violet-600 transition-colors"
             >
               {showPassword ? (
-                <FaEyeSlash className="text-sm opacity-70 hover:opacity-100" />
+                <FaEyeSlash className="text-sm" />
               ) : (
-                <FaEye className="text-sm opacity-70 hover:opacity-100" />
+                <FaEye className="text-sm" />
               )}
             </button>
           </div>
           <ErrorMessage error={formErrors.password} />
-        </motion.div>
+        </div>
       </div>
 
       <motion.button
         type="submit"
-        className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-70 disabled:from-violet-400 disabled:to-purple-400 text-sm shadow-lg hover:shadow-xl"
+        className="w-full py-3 bg-violet-600 text-white font-medium rounded-xl hover:bg-violet-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
         disabled={isLoading}
-        whileHover={{ scale: isLoading ? 1 : 1.02 }}
-        whileTap={{ scale: isLoading ? 1 : 0.98 }}
-        variants={formControlVariants}
-        initial="initial"
-        animate="animate"
-        transition={{ delay: 0.4 }}
+        whileHover={{ scale: isLoading ? 1 : 1.01 }}
+        whileTap={{ scale: isLoading ? 1 : 0.99 }}
       >
         {isLoading ? (
           <span className="flex items-center justify-center">

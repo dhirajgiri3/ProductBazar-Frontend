@@ -1,16 +1,10 @@
 "use client";
 
 import React from 'react';
-import { motion } from 'framer-motion';
 
-const SocialDivider = ({ text = "Or continue with" }) => {
+const SocialDivider = ({ text = "or" }) => {
   return (
-    <motion.div 
-      className="relative my-6"
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3, delay: 0.2 }}
-    >
+    <div className="relative my-6">
       <div className="absolute inset-0 flex items-center">
         <div className="w-full border-t border-gray-200"></div>
       </div>
@@ -19,7 +13,7 @@ const SocialDivider = ({ text = "Or continue with" }) => {
           {text}
         </span>
       </div>
-    </motion.div>
+    </div>
   );
 };
 

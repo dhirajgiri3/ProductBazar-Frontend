@@ -32,7 +32,7 @@ const GoogleAuthButton = ({
   // Optimized size variants for cleaner design
   const sizeClasses = {
     sm: "px-4 py-2.5 text-sm h-10",
-    compact: "px-5 py-3 text-sm h-11",
+    compact: "px-5 py-3 text-sm h-12",
     default: "px-6 py-3.5 text-base h-12",
     lg: "px-8 py-4 text-lg h-14"
   };
@@ -93,12 +93,11 @@ const GoogleAuthButton = ({
         className={cn(
           // Base styles - Clean and minimal
           "w-full relative flex items-center justify-center gap-3 font-medium rounded-xl",
-          "border border-gray-200 bg-white text-gray-800 shadow-sm",
+          "border border-gray-200 bg-white text-gray-800",
           "transition-all duration-200 ease-out",
           "hover:border-gray-300 hover:bg-gray-50",
           "focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:ring-offset-2",
-          "active:scale-[0.99]",
-          "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:shadow-sm",
+          "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white",
           
           // Size classes
           sizeClasses[size],
@@ -106,7 +105,7 @@ const GoogleAuthButton = ({
           // Custom classes
           className
         )}
-        whileHover={!disabled && !isLoading ? { y: -1 } : {}}
+        whileHover={!disabled && !isLoading ? { scale: 1.01 } : {}}
         whileTap={!disabled && !isLoading ? { scale: 0.99 } : {}}
         transition={{ duration: 0.15 }}
         aria-label={`${isLogin ? 'Sign in' : 'Sign up'} with Google`}

@@ -153,69 +153,33 @@ const LoginLeft = () => {
     }
   };
 
-  // Minimal animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { duration: 0.3, staggerChildren: 0.1 },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 8 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.3, ease: "easeOut" },
-    },
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className="w-full max-h-[92vh] max-w-xl mx-auto px-4 py-7 sm:px-6 lg:px-8"
-    >
-      <div className="bg-white/90 max-h-[85vh] backdrop-blur-xl w-full rounded-lg border border-gray-200 p-4 sm:p-6 lg:p-8">
+    <div className="w-full max-w-xl mx-auto max-h-[92vh] px-10 my-12 py-4 bg-white/90 overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 backdrop-blur-xl rounded-lg border border-gray-200">
+      <div className="space-y-4 max-w-xl mx-auto max-h-[80vh]">
         {/* Header */}
-        <motion.div
-          className="text-center mb-6 sm:mb-8"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <motion.div 
-            variants={itemVariants}
-            className="flex justify-center mb-4 sm:mb-6"
-          >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl flex items-center justify-center shadow-sm">
-              <span className="text-white font-semibold text-xs sm:text-sm">PB</span>
+        <div className="text-center space-y-3">
+          <div className="flex justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-lg">PB</span>
             </div>
-          </motion.div>
+          </div>
 
-          <motion.h1
-            variants={itemVariants}
-            className="text-xl sm:text-2xl lg:text-3xl font-medium text-gray-900 mb-2"
-          >
-            Welcome back
-          </motion.h1>
-          <motion.p
-            variants={itemVariants}
-            className="text-gray-600 text-sm sm:text-base"
-          >
-            Sign in to your account
-          </motion.p>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Welcome back
+            </h1>
+            <p className="text-gray-600 text-sm">
+              Sign in to your account
+            </p>
+          </div>
 
           {/* Error Display */}
           {error && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.2 }}
-              className="p-3 mt-4 text-sm rounded border bg-red-50 text-red-700 border-red-200"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="p-4 text-sm rounded-xl border bg-red-50 text-red-700 border-red-200"
             >
               {error}
               {error.includes("no password") && (
@@ -229,96 +193,88 @@ const LoginLeft = () => {
               )}
             </motion.div>
           )}
-        </motion.div>
+        </div>
 
-        {/* Google Auth with Tooltip - Fixed to show tooltip on Google button hover */}
-        <motion.div variants={itemVariants} className="mb-4 sm:mb-6 relative">
-          <div className="relative">
-            <div
-              onMouseEnter={() => isWaitlistEnabled && setShowTooltip(true)}
-              onMouseLeave={() => setShowTooltip(false)}
-              className="relative z-10"
-            >
-              <GoogleAuthButton 
-                isLogin={true} 
-                size="compact"
-                className="h-10 sm:h-12 text-sm sm:text-base border-gray-300 w-full"
-              />
-            </div>
-            
-            {/* Tooltip for Google OAuth Restrictions */}
-            <AnimatePresence>
-              {isWaitlistEnabled && showTooltip && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-full max-w-sm z-[9999] pointer-events-none"
-                >
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 shadow-lg">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-blue-800">
-                        <p className="font-medium mb-1">Google Sign-in Restricted</p>
-                        <p className="text-blue-700">
-                          New Google registrations are temporarily disabled. Existing users can still sign in with Google. For new accounts, please join our waitlist for early access.
-                        </p>
-                      </div>
-                    </div>
-                    {/* Tooltip arrow */}
-                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-50 border-l border-t border-blue-200 rotate-45"></div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+        {/* Google Auth */}
+        <div className="relative overflow-visible">
+          <div
+            onMouseEnter={() => isWaitlistEnabled && setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+            className="relative"
+          >
+            <GoogleAuthButton
+              isLogin={true}
+              size="compact"
+              className="w-full h-12 text-sm border-gray-200 hover:border-gray-300 transition-colors"
+            />
           </div>
-        </motion.div>
+
+          {/* Tooltip for Google OAuth Restrictions */}
+          <AnimatePresence>
+            {isWaitlistEnabled && showTooltip && (
+              <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                className="absolute top-full left-0 right-0 mt-2 z-50 px-4"
+              >
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 shadow-xl relative">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle size={18} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium mb-1">Google Sign-in Restricted</p>
+                      <p className="text-blue-700 text-xs">
+                        New Google registrations are temporarily disabled. Existing users can still sign in with Google. For new accounts, please join our waitlist for early access.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-50 border-l border-t border-blue-200 rotate-45"></div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Divider */}
-        <motion.div variants={itemVariants} className="mb-4 sm:mb-6">
-          <SocialDivider text="or" />
-        </motion.div>
+        <SocialDivider text="or" />
 
         {/* Auth Method Tabs */}
-        <motion.div variants={itemVariants} className="mb-4 sm:mb-6">
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            <button
-              type="button"
-              className={`flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-3 rounded-md text-xs sm:text-sm font-medium transition-all flex-1 ${
-                authMethod === "email"
-                  ? "bg-gradient-to-r from-violet-500 to-violet-600 text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              }`}
-              onClick={() => toggleAuthMethod("email")}
-            >
-              <Mail size={14} className="sm:w-4 sm:h-4" />
-              <span className="hidden xs:inline">Email</span>
-            </button>
-            <button
-              type="button"
-              className={`flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all flex-1 ${
-                authMethod === "phone"
-                  ? "bg-gradient-to-r from-violet-500 to-violet-600 text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              }`}
-              onClick={() => toggleAuthMethod("phone")}
-            >
-              <Phone size={14} className="sm:w-4 sm:h-4" />
-              <span className="hidden xs:inline">Phone</span>
-            </button>
-          </div>
-        </motion.div>
+        <div className="flex bg-gray-50 rounded-xl p-1">
+          <button
+            type="button"
+            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all flex-1 ${
+              authMethod === "email"
+                ? "bg-white text-violet-600 shadow-sm border border-gray-200"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+            onClick={() => toggleAuthMethod("email")}
+          >
+            <Mail size={16} />
+            <span>Email</span>
+          </button>
+          <button
+            type="button"
+            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all flex-1 ${
+              authMethod === "phone"
+                ? "bg-white text-violet-600 shadow-sm border border-gray-200"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+            onClick={() => toggleAuthMethod("phone")}
+          >
+            <Phone size={16} />
+            <span>Phone</span>
+          </button>
+        </div>
 
-        {/* Form Section - Added overflow visible to prevent clipping */}
-        <div className="min-h-[140px] sm:min-h-[160px] overflow-visible">
+        {/* Form Section */}
+        <div className="min-h-[200px]">
           <AnimatePresence mode="wait">
             {authMethod === "email" ? (
               <motion.div
                 key="email"
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
                 <EmailLoginForm
@@ -330,38 +286,38 @@ const LoginLeft = () => {
             ) : !isOtpSent ? (
               <motion.form
                 key="phoneInput"
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
-                className="space-y-3 sm:space-y-4"
+                className="space-y-6"
                 onSubmit={handleRequestOtp}
               >
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="space-y-2">
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
                     Phone number
                   </label>
                   <input
                     type="tel"
                     id="phone"
                     placeholder="+1 (555) 123-4567"
-                    className={`w-full px-3 py-2.5 sm:py-3 border rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all ${
+                    className={`w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all ${
                       formErrors.phone
                         ? "border-red-300 bg-red-50"
-                        : "border-gray-300"
+                        : "border-gray-200"
                     }`}
                     value={phone}
                     onChange={handlePhoneChange}
                     disabled={authLoading}
                   />
                   {formErrors.phone && (
-                    <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>
+                    <p className="text-sm text-red-600">{formErrors.phone}</p>
                   )}
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-violet-500 to-violet-600 text-white text-sm sm:text-base font-medium rounded-lg hover:from-violet-600 hover:to-violet-700 focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 transform transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-sm"
+                  className="w-full py-3 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={authLoading}
                 >
                   {authLoading ? (
@@ -377,11 +333,11 @@ const LoginLeft = () => {
             ) : (
               <motion.form
                 key="otpInput"
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
-                className="space-y-3 sm:space-y-4"
+                className="space-y-6"
                 onSubmit={handleVerifyOtp}
               >
                 <button
@@ -389,88 +345,85 @@ const LoginLeft = () => {
                   onClick={() => setIsOtpSent(false)}
                   className="flex items-center text-sm text-gray-600 hover:text-violet-600 transition-colors"
                 >
-                  <ArrowLeft size={16} className="mr-1" />
+                  <ArrowLeft size={16} className="mr-2" />
                   Back
                 </button>
 
-                <div>
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1 sm:gap-0">
-                    <label htmlFor="otp" className="block text-sm font-medium text-gray-700">
-                      Verification code
-                    </label>
-                    <span className="text-xs text-gray-500 bg-violet-50 border border-violet-200 px-2 py-1 rounded w-fit">
-                      {phone}
-                    </span>
-                  </div>
-
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    id="otp"
-                    placeholder="000000"
-                    className={`w-full px-3 py-2.5 sm:py-3 border rounded-lg text-center tracking-widest font-mono text-lg sm:text-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all ${
-                      formErrors.otp
-                        ? "border-red-300 bg-red-50"
-                        : "border-gray-300"
-                    }`}
-                    value={otp}
-                    onChange={handleOtpChange}
-                    disabled={authLoading}
-                    maxLength={6}
-                  />
-
-                  <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center mt-2 gap-1 xs:gap-0">
-                    <div className="text-xs text-gray-500">
-                      {otpCountdown > 0 ? (
-                        `Expires in ${otpCountdown}s`
-                      ) : (
-                        <span className="text-red-600">Code expired</span>
-                      )}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label htmlFor="otp" className="block text-sm font-medium text-gray-700">
+                        Verification code
+                      </label>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                        {phone}
+                      </span>
                     </div>
 
-                    <button
-                      type="button"
-                      className={`text-xs underline w-fit transition-colors ${
-                        otpCountdown > 0 || authLoading
-                          ? "text-gray-400 cursor-not-allowed"
-                          : "text-violet-600 hover:text-violet-700"
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      id="otp"
+                      placeholder="000000"
+                      className={`w-full px-4 py-3 border rounded-xl text-center tracking-widest font-mono text-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all ${
+                        formErrors.otp
+                          ? "border-red-300 bg-red-50"
+                          : "border-gray-200"
                       }`}
-                      onClick={debouncedResendOtp}
-                      disabled={otpCountdown > 0 || authLoading}
-                    >
-                      {authLoading && otpCountdown <= 0 ? "Sending..." : "Resend"}
-                    </button>
+                      value={otp}
+                      onChange={handleOtpChange}
+                      disabled={authLoading}
+                      maxLength={6}
+                    />
+
+                    <div className="flex justify-between items-center text-xs text-gray-500">
+                      <span>
+                        {otpCountdown > 0 ? (
+                          `Expires in ${otpCountdown}s`
+                        ) : (
+                          <span className="text-red-600">Code expired</span>
+                        )}
+                      </span>
+
+                      <button
+                        type="button"
+                        className={`underline transition-colors ${
+                          otpCountdown > 0 || authLoading
+                            ? "text-gray-400 cursor-not-allowed"
+                            : "text-violet-600 hover:text-violet-700"
+                        }`}
+                        onClick={debouncedResendOtp}
+                        disabled={otpCountdown > 0 || authLoading}
+                      >
+                        {authLoading && otpCountdown <= 0 ? "Sending..." : "Resend"}
+                      </button>
+                    </div>
+
+                    {formErrors.otp && (
+                      <p className="text-sm text-red-600">{formErrors.otp}</p>
+                    )}
                   </div>
 
-                  {formErrors.otp && (
-                    <p className="mt-1 text-sm text-red-600">{formErrors.otp}</p>
-                  )}
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={authLoading}
+                  >
+                    {authLoading ? (
+                      <LoadingSpinner size="sm" color="white" text="Verifying..." inline />
+                    ) : (
+                      "Verify & sign in"
+                    )}
+                  </button>
                 </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-violet-500 to-violet-600 text-white text-sm sm:text-base font-medium rounded-lg hover:from-violet-600 hover:to-violet-700 focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 transform transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-sm"
-                  disabled={authLoading}
-                >
-                  {authLoading ? (
-                    <LoadingSpinner size="sm" color="white" text="Verifying..." inline />
-                  ) : (
-                    "Verify & sign in"
-                  )}
-                </button>
               </motion.form>
             )}
           </AnimatePresence>
         </div>
 
         {/* Footer */}
-        <motion.div
-          className="mt-6 sm:mt-8 text-center"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <motion.div variants={itemVariants} className="text-sm text-gray-600">
+        <div className="text-center space-y-4">
+          <div className="text-sm text-gray-600">
             Don't have an account?{" "}
             <Link
               href="/auth/register"
@@ -478,12 +431,9 @@ const LoginLeft = () => {
             >
               Sign up
             </Link>
-          </motion.div>
+          </div>
 
-          <motion.p
-            variants={itemVariants}
-            className="text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4 leading-relaxed px-2"
-          >
+          <p className="text-xs text-gray-500 leading-relaxed">
             By signing in, you agree to our{" "}
             <Link href="/terms" className="hover:underline hover:text-violet-600 transition-colors">
               Terms
@@ -492,10 +442,10 @@ const LoginLeft = () => {
             <Link href="/privacy" className="hover:underline hover:text-violet-600 transition-colors">
               Privacy Policy
             </Link>
-          </motion.p>
-        </motion.div>
+          </p>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
