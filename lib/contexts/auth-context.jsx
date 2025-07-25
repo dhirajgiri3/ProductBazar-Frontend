@@ -1342,7 +1342,15 @@ export const AuthProvider = ({ children }) => {
           }
 
           // Ensure at least one contact method is provided
-          if (!parsedUserData.email && !parsedUserData.phone) {
+          // Check both form data and current user's verified contact methods
+          const hasEmailInForm = parsedUserData.email && parsedUserData.email.trim();
+          const hasPhoneInForm = parsedUserData.phone && parsedUserData.phone.trim();
+          const hasVerifiedEmail = user?.isEmailVerified && user?.email;
+          const hasVerifiedPhone = user?.isPhoneVerified && user?.phone;
+          
+          const hasContactMethod = hasEmailInForm || hasPhoneInForm || hasVerifiedEmail || hasVerifiedPhone;
+          
+          if (!hasContactMethod) {
             logger.warn('No contact method provided');
             setError('Please provide at least one contact method (email or phone)');
             return {

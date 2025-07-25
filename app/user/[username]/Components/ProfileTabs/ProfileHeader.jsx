@@ -7,8 +7,7 @@ import { headerVariants } from '@/lib/utils/ui/animations';
 export default function ProfileHeader({ user, isOwnProfile, onEdit }) {
   return (
     <div>
-      {/* Banner */}
-      <motion.div
+        <motion.div
         className="relative h-48 md:h-64 overflow-hidden z-0"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -16,7 +15,7 @@ export default function ProfileHeader({ user, isOwnProfile, onEdit }) {
       >
         <div className="absolute inset-0 bg-gradient-to-r from-violet-500 via-violet-600 to-violet-700" />
         <motion.div
-          className="absolute inset-0 bg-[url('/Assets/Image/ProfileBg.png')] bg-cover bg-center opacity-80"
+          className="absolute inset-0 bg-[url('/Assets/Image/ProfileBG.png')] bg-cover bg-center opacity-80"
           initial={{ scale: 1.05 }}
           animate={{ scale: 1 }}
           transition={{ duration: 2.5 }}
