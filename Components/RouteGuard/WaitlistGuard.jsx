@@ -57,8 +57,13 @@ export default function WaitlistGuard({ children }) {
 
   const isLoadingInitialData = waitlistLoading || authLoading;
 
-  // Determine if a redirection is needed
-  const shouldRedirect = isWaitlistEnabled && !isLoadingInitialData && !user && !hasAccess && !isPublicPath(pathname);
+  // Determine if a redirection is needed **after** initial data is loaded
+  const shouldRedirect =
+    isWaitlistEnabled &&
+    !isLoadingInitialData &&
+    !user &&
+    !hasAccess &&
+    !isPublicPath(pathname);
 
   useEffect(() => {
     if (shouldRedirect && !hasShownRedirectToast.current) {
@@ -73,10 +78,10 @@ export default function WaitlistGuard({ children }) {
       // Mark that we've shown the toast to prevent duplicate messages
       hasShownRedirectToast.current = true;
       
-      // Small delay to ensure toast is visible before redirect
+      // Brief delay (200 ms) so toast appears, then redirect swiftly
       setTimeout(() => {
         router.replace('/');
-      }, 1000);
+      }, 200);
     }
   }, [shouldRedirect, router, showToast]);
 
@@ -85,8 +90,8 @@ export default function WaitlistGuard({ children }) {
     hasShownRedirectToast.current = false;
   }, [pathname]);
 
-  // If still loading initial data or should redirect, show spinner
-  if (isLoadingInitialData || shouldRedirect) {
+  // Show spinner only when navigating to protected routes while data is loading
+  if (!isPublicPath(pathname) && (isLoadingInitialData || shouldRedirect)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner size="md" text="Loading..." color="violet" />

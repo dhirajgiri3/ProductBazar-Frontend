@@ -1,17 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail,
   Phone,
   ArrowLeft,
-  Zap,
-  ShieldCheck,
+  AlertCircle,
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/auth-context";
+import { useWaitlist } from "@/lib/contexts/waitlist-context";
 import EmailLoginForm from './EmailLoginForm';
 import GoogleAuthButton from 'Components/common/Auth/GoogleAuthButton';
 import SocialDivider from 'Components/common/Auth/SocialDivider';
@@ -30,6 +29,9 @@ const LoginLeft = () => {
     clearError,
   } = useAuth();
 
+  // Waitlist context to check if waitlist is enabled
+  const { isWaitlistEnabled } = useWaitlist();
+
   // Component state
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -37,6 +39,7 @@ const LoginLeft = () => {
   const [otpCountdown, setOtpCountdown] = useState(120);
   const [formErrors, setFormErrors] = useState({});
   const [authMethod, setAuthMethod] = useState('email');
+  const [showTooltip, setShowTooltip] = useState(false);
 
   // Clear context errors when component unmounts or method changes
   useEffect(() => {
@@ -173,9 +176,9 @@ const LoginLeft = () => {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="w-full max-w-2xl mx-auto px-4 py-12 sm:px-6 lg:px-8"
+      className="w-full max-h-[92vh] max-w-xl mx-auto px-4 py-7 sm:px-6 lg:px-8"
     >
-      <div className="bg-white/90 backdrop-blur-xl w-full rounded-lg border border-gray-200 p-4 sm:p-6 lg:p-8">
+      <div className="bg-white/90 max-h-[85vh] backdrop-blur-xl w-full rounded-lg border border-gray-200 p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <motion.div
           className="text-center mb-6 sm:mb-8"
@@ -228,13 +231,48 @@ const LoginLeft = () => {
           )}
         </motion.div>
 
-        {/* Google Auth */}
-        <motion.div variants={itemVariants} className="mb-4 sm:mb-6">
-          <GoogleAuthButton 
-            isLogin={true} 
-            size="compact"
-            className="h-10 sm:h-12 text-sm sm:text-base border-gray-300 w-full"
-          />
+        {/* Google Auth with Tooltip - Fixed to show tooltip on Google button hover */}
+        <motion.div variants={itemVariants} className="mb-4 sm:mb-6 relative">
+          <div className="relative">
+            <div
+              onMouseEnter={() => isWaitlistEnabled && setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+              className="relative z-10"
+            >
+              <GoogleAuthButton 
+                isLogin={true} 
+                size="compact"
+                className="h-10 sm:h-12 text-sm sm:text-base border-gray-300 w-full"
+              />
+            </div>
+            
+            {/* Tooltip for Google OAuth Restrictions */}
+            <AnimatePresence>
+              {isWaitlistEnabled && showTooltip && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-full max-w-sm z-[9999] pointer-events-none"
+                >
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 shadow-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-blue-800">
+                        <p className="font-medium mb-1">Google Sign-in Restricted</p>
+                        <p className="text-blue-700">
+                          New Google registrations are temporarily disabled. Existing users can still sign in with Google. For new accounts, please join our waitlist for early access.
+                        </p>
+                      </div>
+                    </div>
+                    {/* Tooltip arrow */}
+                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-50 border-l border-t border-blue-200 rotate-45"></div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </motion.div>
 
         {/* Divider */}
@@ -247,7 +285,7 @@ const LoginLeft = () => {
           <div className="flex bg-gray-100 rounded-lg p-1">
             <button
               type="button"
-              className={`flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all flex-1 ${
+              className={`flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-3 rounded-md text-xs sm:text-sm font-medium transition-all flex-1 ${
                 authMethod === "email"
                   ? "bg-gradient-to-r from-violet-500 to-violet-600 text-white shadow-sm"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
@@ -272,8 +310,8 @@ const LoginLeft = () => {
           </div>
         </motion.div>
 
-        {/* Form Section */}
-        <div className="min-h-[140px] sm:min-h-[160px]">
+        {/* Form Section - Added overflow visible to prevent clipping */}
+        <div className="min-h-[140px] sm:min-h-[160px] overflow-visible">
           <AnimatePresence mode="wait">
             {authMethod === "email" ? (
               <motion.div

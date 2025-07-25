@@ -12,8 +12,10 @@ import {
   Building2,
   Wallet,
   Briefcase,
+  AlertCircle,
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/auth-context";
+import { useWaitlist } from "@/lib/contexts/waitlist-context";
 import EmailRegistrationForm from "./EmailRegistrationForm";
 import GoogleAuthButton from 'Components/common/Auth/GoogleAuthButton';
 import SocialDivider from 'Components/common/Auth/SocialDivider';
@@ -29,6 +31,9 @@ const RegisterLeft = () => {
     error,
     clearError,
   } = useAuth();
+
+  // Waitlist context to check if waitlist is enabled
+  const { isWaitlistEnabled } = useWaitlist();
 
   // State for phone registration
   const [phone, setPhone] = useState("");
@@ -348,6 +353,21 @@ const RegisterLeft = () => {
               className="h-10"
             />
           </motion.div>
+
+          {/* Google OAuth Restrictions */}
+          {isWaitlistEnabled && (
+            <motion.div variants={itemVariants} className="mb-4">
+              <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <AlertCircle size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-blue-800">
+                  <p className="font-medium mb-1">Google Registration Disabled</p>
+                  <p className="text-blue-700">
+                    New registrations via Google are currently disabled due to waitlist restrictions. Please use email or phone registration, or join our waitlist to be notified when registration opens.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           {/* Compact Divider */}
           <motion.div 

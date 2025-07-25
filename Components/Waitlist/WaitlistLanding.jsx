@@ -21,6 +21,8 @@ const ReferralDashboard = dynamic(() => import('./Components/ReferralDashboard')
 
 import HeroSection from './Components/HeroSection';
 import LoadingSpinner from '../common/LoadingSpinner';
+import GoogleOAuthNotification from './Components/GoogleOAuthNotification';
+
 const ActivationGuide = dynamic(() => import('./Components/ActivationGuide'), {
   ssr: false,
   loading: () => <div className="h-64 bg-slate-900/20 rounded-2xl animate-pulse" />
@@ -355,6 +357,9 @@ function WaitlistLanding() {
 
   return (
     <div className="min-h-screen bg-slate-950">
+      {/* Google OAuth Notification */}
+      <GoogleOAuthNotification />
+      
       {/* Hero Section - Always visible, no lazy loading */}
       <section id="hero" className="relative overflow-hidden min-h-screen">
         <OptimizedBackground />

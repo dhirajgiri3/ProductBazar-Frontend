@@ -223,6 +223,7 @@ const AuthSection = ({
   handleLogout,
   organizedUserMenus = {},
   authLoading = false,
+  isWaitlistEnabled = false,
 }) => {
   const { user, isAuthenticated, isInitialized } = useAuth();
 
@@ -501,10 +502,10 @@ const AuthSection = ({
         transition={{ duration: 0.3, delay: 0.1 }}
       >
         <Link
-          href="/auth/register"
+          href={isWaitlistEnabled ? "/" : "/auth/register"}
           className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-700 hover:via-purple-700 hover:to-indigo-700 rounded-xl transition-colors duration-150 border border-violet-500/20"
         >
-          Sign Up
+          {isWaitlistEnabled ? "Join Waitlist" : "Sign Up"}
         </Link>
       </motion.div>
     </div>
@@ -1210,6 +1211,7 @@ const Header = () => {
               handleLogout={handleLogout}
               organizedUserMenus={organizedUserMenus}
               authLoading={authLoading}
+              isWaitlistEnabled={isWaitlistEnabled}
             />
 
             <motion.button
@@ -1531,11 +1533,11 @@ const Header = () => {
                       Log In
                     </Link>
                     <Link
-                      href="/auth/register"
+                      href={isWaitlistEnabled ? "/waitlist" : "/auth/register"}
                       className="flex-1 text-center px-4 py-3 text-sm font-medium text-white bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 rounded-xl transition-colors duration-200"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
-                      Sign Up
+                      {isWaitlistEnabled ? "Join Waitlist" : "Sign Up"}
                     </Link>
                   </motion.div>
                 )}

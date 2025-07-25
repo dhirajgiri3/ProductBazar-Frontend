@@ -1009,7 +1009,7 @@ export const AuthProvider = ({ children }) => {
           if (roleDetails) payload.roleDetails = roleDetails;
         }
 
-        const response = await api.post(`/auth/${type}/send-otp`, payload);
+        const response = await api.post(`/auth/${type}/request-otp`, payload);
 
         if (response.data.status === 'success') {
           // Store phone verification step in localStorage
