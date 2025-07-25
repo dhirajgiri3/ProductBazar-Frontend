@@ -4,6 +4,7 @@ export async function generateMetadata({ params }) {
   // Fetch user data from the API
   const { username } = await params;
   let title = `${username} User Profile - Product Bazar`;
+  let description = "View and manage your profile on Product Bazar.";
 
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5004/api/v1'}/auth/user/username/${username}`);
@@ -15,7 +16,10 @@ export async function generateMetadata({ params }) {
         // Use first and last name if available, otherwise fall back to username
         if (user.firstName || user.lastName) {
           title = `${user.firstName || ''} ${user.lastName || ''} - Product Bazar`;
+        } else {
+          title = `${user.username || username} - Product Bazar`;
         }
+        description = user.bio || `${user.username || username}'s profile on Product Bazar`;
       }
     }
   } catch (error) {
@@ -25,7 +29,7 @@ export async function generateMetadata({ params }) {
 
   return {
     title: title.trim(),
-    description: "View and manage your profile on Product Bazar.",
+    description: description,
     keywords: "user profile, account, personal information",
   };
 }

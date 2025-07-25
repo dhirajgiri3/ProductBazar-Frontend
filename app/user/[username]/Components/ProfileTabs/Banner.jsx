@@ -2,7 +2,7 @@ import React from 'react';
 import Image from 'next/image';
 
 function Banner() {
-  const defaultBanner = "/Assets/Image/ProfileBg.png";
+  const defaultBanner = "/Assets/Image/ProfileBG.png";
 
   return (
     <div className="relative w-full">
