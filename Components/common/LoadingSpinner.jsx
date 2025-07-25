@@ -69,7 +69,7 @@ const LoadingSpinner = ({
 
   if (showBackground) {
     return (
-      <div className="flex items-center justify-center p-8 bg-slate-50 rounded-lg border border-slate-200">
+      <div className="flex items-center justify-center p-8 bg-slate-50">
         {content}
       </div>
     );
