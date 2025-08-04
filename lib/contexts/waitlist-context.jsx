@@ -6,6 +6,14 @@ import { debounce } from "lodash";
 import { calculatePositionImprovement } from "../utils/waitlist-position.utils.js";
 import { getAuthToken, setAuthToken, setUserData } from "../utils/auth/auth-utils.js";
 
+// WebSocket connection helper
+const getSocket = () => {
+  if (typeof window !== 'undefined' && window.socket) {
+    return window.socket;
+  }
+  return null;
+};
+
 // Create waitlist context
 const WaitlistContext = createContext();
 
@@ -109,34 +117,10 @@ export const WaitlistProvider = ({ children }) => {
     debounce(async (forceRefresh = false) => {
       try {
         setState(prev => ({ ...prev, loading: true }));
-        let waitlistStatus = null;
-        const CACHE_KEY = 'waitlist_status_cache';
-        const CACHE_TIMESTAMP_KEY = 'waitlist_status_cache_timestamp';
-
-        if (typeof window !== 'undefined' && !forceRefresh) {
-          const cachedData = sessionStorage.getItem(CACHE_KEY);
-          const cachedTimestamp = sessionStorage.getItem(CACHE_TIMESTAMP_KEY);
-
-          if (cachedData && cachedTimestamp) {
-            const now = Date.now();
-            const cacheTime = parseInt(cachedTimestamp, 10);
-            const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
-
-            if (now - cacheTime < CACHE_DURATION) {
-              waitlistStatus = JSON.parse(cachedData);
-            }
-          }
-        }
-
-        if (!waitlistStatus) {
-          const response = await apiCall("/api/v1/waitlist/status");
-          waitlistStatus = response.data;
-          
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem(CACHE_KEY, JSON.stringify(waitlistStatus));
-            sessionStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-          }
-        }
+        
+        // Always fetch fresh data from server to ensure consistency
+        const response = await apiCall("/api/v1/waitlist/status");
+        const waitlistStatus = response.data;
 
         setState(prev => ({
           ...prev,
@@ -608,13 +592,50 @@ export const WaitlistProvider = ({ children }) => {
     checkWaitlistStatus();
   }, [checkWaitlistStatus]);
 
-  // Simplified polling
+  // Real-time updates via WebSocket and fallback polling
   useEffect(() => {
     if (!state.isWaitlistEnabled) return;
 
+    // WebSocket connection for real-time updates
+    const socket = getSocket();
+    if (socket) {
+      const handleWaitlistUpdate = (data) => {
+        if (data.stats) {
+          setState(prev => ({
+            ...prev,
+            queueStats: data.stats
+          }));
+        }
+      };
+
+      const handleQueueUpdate = (data) => {
+        if (data.waiting !== undefined) {
+          setState(prev => ({
+            ...prev,
+            queueStats: {
+              ...prev.queueStats,
+              waiting: data.waiting
+            }
+          }));
+        }
+      };
+
+      socket.on('waitlist:status-update', handleWaitlistUpdate);
+      socket.on('waitlist:queue-update', handleQueueUpdate);
+
+      // Join waitlist room for updates
+      socket.emit('join-waitlist-updates');
+
+      return () => {
+        socket.off('waitlist:status-update', handleWaitlistUpdate);
+        socket.off('waitlist:queue-update', handleQueueUpdate);
+      };
+    }
+
+    // Fallback polling if WebSocket is not available
     const pollInterval = setInterval(() => {
       checkWaitlistStatus();
-    }, 120000); // 2 minutes
+    }, 30000); // 30 seconds for more responsive updates
 
     return () => clearInterval(pollInterval);
   }, [state.isWaitlistEnabled, checkWaitlistStatus]);

@@ -12,6 +12,7 @@ import {
   FiInfo,
   FiRefreshCw,
   FiX,
+  FiArrowRight,
 } from "react-icons/fi";
 import LoadingSpinner from "Components/common/LoadingSpinner";
 
@@ -121,7 +122,7 @@ const OnboardingBanner = ({ nextStep, onComplete, onSkip, onRefresh }) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.4 }}
-      className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 text-white py-4 relative overflow-hidden shadow-lg"
+      className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 text-white py-3 sm:py-4 relative overflow-hidden shadow-lg"
       role="alert"
       aria-labelledby="onboarding-banner-title"
     >
@@ -163,17 +164,18 @@ const OnboardingBanner = ({ nextStep, onComplete, onSkip, onRefresh }) => {
         </svg>
       </div>
 
-      <div className="max-w-7xl mx-auto relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
         <motion.div
-          className="flex flex-col md:flex-row md:items-center md:justify-between"
+          className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-6"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
-          <div className="flex items-center mb-3 md:mb-0">
+          {/* Main content area */}
+          <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
             {/* Icon based on verification type */}
             <motion.div
-              className="mr-3 bg-white/20 rounded-full p-2 backdrop-blur-sm"
+              className="flex-shrink-0 bg-white/20 rounded-full p-2 backdrop-blur-sm"
               whileHover={{
                 scale: 1.05,
                 backgroundColor: "rgba(255, 255, 255, 0.3)",
@@ -184,16 +186,17 @@ const OnboardingBanner = ({ nextStep, onComplete, onSkip, onRefresh }) => {
               {getStepIcon(nextStep.type)}
             </motion.div>
 
-            <div className="flex-1">
+            {/* Text content */}
+            <div className="flex-1 min-w-0">
               <motion.h3
                 id="onboarding-banner-title"
-                className="text-sm font-medium"
+                className="text-sm sm:text-base font-semibold leading-tight"
                 variants={itemVariants}
               >
                 {nextStep.title || getStepTypeLabel(nextStep.type)}
               </motion.h3>
               <motion.p
-                className="text-xs text-white/90"
+                className="text-xs sm:text-sm text-white/90 mt-1 leading-relaxed"
                 variants={itemVariants}
               >
                 {nextStep.message ||
@@ -204,9 +207,10 @@ const OnboardingBanner = ({ nextStep, onComplete, onSkip, onRefresh }) => {
               </motion.p>
             </div>
 
+            {/* Mobile expand button */}
             <motion.button
               onClick={() => setShowDetails(!showDetails)}
-              className="ml-2 p-1.5 rounded-full hover:bg-white/20 transition-colors md:hidden"
+              className="lg:hidden flex-shrink-0 p-2 rounded-full hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               animate={{ rotate: showDetails ? 180 : 0 }}
@@ -218,10 +222,11 @@ const OnboardingBanner = ({ nextStep, onComplete, onSkip, onRefresh }) => {
             </motion.button>
           </div>
 
-          <div className="flex items-center space-x-3 md:space-x-4">
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 flex-wrap">
             {/* Progress indicator (visible on desktop) */}
             <motion.div
-              className="hidden md:flex items-center space-x-2"
+              className="hidden lg:flex items-center gap-3"
               variants={itemVariants}
             >
               <div
@@ -247,17 +252,18 @@ const OnboardingBanner = ({ nextStep, onComplete, onSkip, onRefresh }) => {
             {onRefresh && (
               <motion.button
                 onClick={onRefresh}
-                className="text-white/90 hover:text-white p-1.5 rounded-full hover:bg-white/20 transition-colors"
+                className="text-white/90 hover:text-white p-2 rounded-full hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
                 title="Refresh verification status"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 variants={itemVariants}
                 aria-label="Refresh verification status"
               >
-                {isAnimating ? <LoadingSpinner size="xs" color="white" /> : <FiRefreshCw
-                  className="h-4 w-4"
-                  aria-hidden="true"
-                />}
+                {isAnimating ? (
+                  <LoadingSpinner size="xs" color="white" />
+                ) : (
+                  <FiRefreshCw className="h-4 w-4" aria-hidden="true" />
+                )}
               </motion.button>
             )}
 
@@ -265,13 +271,13 @@ const OnboardingBanner = ({ nextStep, onComplete, onSkip, onRefresh }) => {
             {nextStep.type === "profile_completion" && nextStep.skippable && (
               <motion.button
                 onClick={onSkip}
-                className="text-white hover:text-gray-100 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-white/10 rounded-full flex items-center"
+                className="text-white/90 hover:text-white px-3 py-2 text-xs sm:text-sm font-medium transition-colors hover:bg-white/10 rounded-full flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-white/50"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 variants={itemVariants}
               >
                 <span>Skip for now</span>
-                <FiX className="ml-1 h-3 w-3" aria-hidden="true" />
+                <FiX className="h-3 w-3" aria-hidden="true" />
               </motion.button>
             )}
 
@@ -284,16 +290,17 @@ const OnboardingBanner = ({ nextStep, onComplete, onSkip, onRefresh }) => {
               <Link href={getStepLink(nextStep.type)}>
                 <button
                   onClick={onComplete}
-                  className="bg-white text-violet-600 hover:bg-gray-100 px-4 py-2 rounded-full text-sm font-medium transition-colors shadow-md hover:shadow-lg flex items-center"
+                  className="bg-white text-violet-600 hover:bg-gray-50 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-violet-600"
                 >
-                  {nextStep.actionLabel || "Complete Now"}
+                  <span>{nextStep.actionLabel || "Complete Now"}</span>
+                  <FiArrowRight className="h-3 w-3" aria-hidden="true" />
                 </button>
               </Link>
             </motion.div>
           </div>
         </motion.div>
 
-        {/* Expanded details (mobile only) */}
+        {/* Expanded details (mobile and tablet) */}
         <AnimatePresence>
           {showDetails && (
             <motion.div
@@ -301,26 +308,28 @@ const OnboardingBanner = ({ nextStep, onComplete, onSkip, onRefresh }) => {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="mt-3 md:hidden overflow-hidden"
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="mt-4 lg:hidden overflow-hidden"
             >
-              {/* Progress steps */}
-              <div className="flex items-center justify-between mb-3 px-1">
-                <div
-                  className="w-full bg-white/20 rounded-full h-2 overflow-hidden"
-                  role="progressbar"
-                  aria-valuenow={percentage}
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                >
-                  <motion.div
-                    className="bg-green-400 h-full rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${percentage}%` }}
-                    transition={{ duration: 0.5 }}
-                  />
+              {/* Progress indicator for mobile */}
+              <div className="flex items-center justify-between mb-4 px-1">
+                <div className="flex-1 mr-3">
+                  <div
+                    className="w-full bg-white/20 rounded-full h-2.5 overflow-hidden"
+                    role="progressbar"
+                    aria-valuenow={percentage}
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  >
+                    <motion.div
+                      className="bg-gradient-to-r from-green-400 to-emerald-500 h-full rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${percentage}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
                 </div>
-                <span className="text-xs font-medium ml-2 whitespace-nowrap">
+                <span className="text-xs font-medium whitespace-nowrap">
                   {completedSteps} of {totalSteps}
                 </span>
               </div>
@@ -332,19 +341,19 @@ const OnboardingBanner = ({ nextStep, onComplete, onSkip, onRefresh }) => {
                     <Link
                       key={index}
                       href={getStepLink(step.type)}
-                      className={`flex items-center p-2 rounded-md ${
+                      className={`flex items-start p-3 rounded-lg transition-all duration-200 ${
                         step.completed
-                          ? "bg-white/20"
+                          ? "bg-white/20 hover:bg-white/30"
                           : step.type === nextStep.type
-                          ? "bg-white/15 ring-1 ring-white/30"
-                          : "bg-white/10"
-                      } hover:bg-white/30 transition-colors`}
+                          ? "bg-white/15 ring-1 ring-white/30 hover:bg-white/25"
+                          : "bg-white/10 hover:bg-white/20"
+                      }`}
                       aria-current={
                         step.type === nextStep.type ? "step" : undefined
                       }
                     >
                       <div
-                        className={`mr-3 ${
+                        className={`flex-shrink-0 mr-3 ${
                           step.completed
                             ? "bg-green-500/40"
                             : step.type === nextStep.type
@@ -361,11 +370,11 @@ const OnboardingBanner = ({ nextStep, onComplete, onSkip, onRefresh }) => {
                           getStepIcon(step.type)
                         )}
                       </div>
-                      <div className="flex-1">
-                        <h4 className="text-sm font-medium">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-semibold leading-tight">
                           {step.title || getStepTypeLabel(step.type)}
                         </h4>
-                        <p className="text-xs text-white/80">
+                        <p className="text-xs text-white/80 mt-1 leading-relaxed">
                           {step.message ||
                             step.description ||
                             `Complete your ${getStepTypeLabel(
@@ -373,19 +382,21 @@ const OnboardingBanner = ({ nextStep, onComplete, onSkip, onRefresh }) => {
                             ).toLowerCase()}`}
                         </p>
                       </div>
-                      {step.completed ? (
-                        <span className="text-xs bg-green-500/30 text-white px-2 py-0.5 rounded-full">
-                          Completed
-                        </span>
-                      ) : step.type === nextStep.type ? (
-                        <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">
-                          Current
-                        </span>
-                      ) : (
-                        <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full">
-                          Pending
-                        </span>
-                      )}
+                      <div className="flex-shrink-0 ml-2">
+                        {step.completed ? (
+                          <span className="text-xs bg-green-500/30 text-white px-2 py-1 rounded-full font-medium">
+                            Done
+                          </span>
+                        ) : step.type === nextStep.type ? (
+                          <span className="text-xs bg-white/20 px-2 py-1 rounded-full font-medium">
+                            Current
+                          </span>
+                        ) : (
+                          <span className="text-xs bg-white/10 px-2 py-1 rounded-full font-medium">
+                            Pending
+                          </span>
+                        )}
+                      </div>
                     </Link>
                   ))}
               </div>
