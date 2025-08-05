@@ -1,10 +1,14 @@
 "use client";
 
-import { createContext, useState, useEffect, useCallback, useContext } from 'react';
+import { createContext, useState, useEffect, useCallback, useContext, useRef } from 'react';
 import api, { makePriorityRequest } from '../api/api';
 import logger from '../utils/logger';
 
 const CategoryContext = createContext();
+
+// Request deduplication cache
+const requestCache = new Map();
+const inFlightRequests = new Map();
 
 export const CategoryProvider = ({ children }) => {
   const [categories, setCategories] = useState([]);
@@ -13,32 +17,59 @@ export const CategoryProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [productsLoading, setProductsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [lastFetchTime, setLastFetchTime] = useState(0);
 
-  // Fetch all categories
+  // Fetch all categories with improved caching and deduplication
   const fetchCategories = useCallback(async (force = false) => {
-    // If we already have categories and force is not true, don't fetch again
-    if (categories.length > 0 && !force) {
+    // Check if we have recent data and don't need to force refresh
+    const now = Date.now();
+    const cacheAge = now - lastFetchTime;
+    const cacheValid = cacheAge < 5 * 60 * 1000; // 5 minutes cache
+
+    if (categories.length > 0 && !force && cacheValid) {
+      logger.debug('Using cached categories, age:', cacheAge);
       return categories;
+    }
+
+    // Check for in-flight request
+    const requestId = 'fetch-categories';
+    if (inFlightRequests.has(requestId)) {
+      logger.debug('Categories request already in flight, waiting for result');
+      return inFlightRequests.get(requestId);
     }
 
     try {
       setLoading(true);
       setError(null);
 
-      // Use the makePriorityRequest utility with increased timeout
-      const response = await makePriorityRequest('get', '/categories', {
-        timeout: 30000, // 30 seconds timeout
-        retryCount: 2 // Retry up to 2 times
+      // Create the request promise
+      const requestPromise = makePriorityRequest('get', '/categories', {
+        timeout: 15000, // Reduced timeout
+        retryCount: 1, // Reduced retry count
+        useCache: true // Enable caching
       });
 
+      // Store the promise for deduplication
+      inFlightRequests.set(requestId, requestPromise);
+
+      const response = await requestPromise;
       const fetchedCategories = response.data.data;
+      
       setCategories(fetchedCategories);
+      setLastFetchTime(now);
       setError(null);
+      
+      // Cache the result
+      requestCache.set('categories', {
+        data: fetchedCategories,
+        timestamp: now
+      });
+
+      logger.info('Categories fetched successfully:', fetchedCategories.length);
       return fetchedCategories;
     } catch (err) {
       // Check if this is a canceled request and handle it gracefully
       if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
-        // If this was an intentional cancellation (due to deduplication), don't log a warning
         if (err.isIntentionalCancel) {
           logger.debug('Categories request was intentionally canceled (duplicate request)');
         } else {
@@ -50,41 +81,61 @@ export const CategoryProvider = ({ children }) => {
           return categories;
         }
       } else if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
-        // Handle timeout errors specifically
         logger.error('Categories request timed out:', err.message);
         setError('Request timed out. Please check your connection and try again.');
       } else {
-        // For other errors, log and set error state
         logger.error('Error fetching categories:', err);
         setError('Failed to fetch categories. Please try again.');
       }
       return categories; // Return existing categories even on error
     } finally {
       setLoading(false);
+      inFlightRequests.delete(requestId);
     }
-  }, [categories]);
+  }, [categories, lastFetchTime]);
 
-  // Fetch subcategories for a specific parent category
+  // Fetch subcategories for a specific parent category with improved caching
   const fetchSubcategories = useCallback(async (parentSlug, force = false) => {
     if (!parentSlug) return [];
 
-    try {
-      // Check if we already have these subcategories cached and not forcing refresh
-      if (!force && subcategories[parentSlug]) {
-        return subcategories[parentSlug];
-      }
+    // Check cache first
+    const cacheKey = `subcategories-${parentSlug}`;
+    const cached = requestCache.get(cacheKey);
+    const now = Date.now();
+    
+    if (!force && cached && (now - cached.timestamp) < 10 * 60 * 1000) { // 10 minutes cache
+      logger.debug('Using cached subcategories for:', parentSlug);
+      return cached.data;
+    }
 
+    // Check for in-flight request
+    const requestId = `fetch-subcategories-${parentSlug}`;
+    if (inFlightRequests.has(requestId)) {
+      logger.debug('Subcategories request already in flight for:', parentSlug);
+      return inFlightRequests.get(requestId);
+    }
+
+    try {
       setLoading(true);
       setError(null);
       
-      // Use the makePriorityRequest utility with increased timeout
-      const response = await makePriorityRequest('get', `/subcategories/parent/${parentSlug}`, {
-        timeout: 30000, // 30 seconds timeout
-        retryCount: 2 // Retry up to 2 times
+      const requestPromise = makePriorityRequest('get', `/subcategories/parent/${parentSlug}`, {
+        timeout: 15000,
+        retryCount: 1,
+        useCache: true
       });
 
-      // Cache the results
+      inFlightRequests.set(requestId, requestPromise);
+
+      const response = await requestPromise;
       const fetchedSubcategories = response.data.data;
+
+      // Cache the results
+      requestCache.set(cacheKey, {
+        data: fetchedSubcategories,
+        timestamp: now
+      });
+
       setSubcategories(prev => ({
         ...prev,
         [parentSlug]: fetchedSubcategories
@@ -94,69 +145,75 @@ export const CategoryProvider = ({ children }) => {
     } catch (err) {
       // Check if this is a canceled request and handle it gracefully
       if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
-        // If this was an intentional cancellation (due to deduplication), don't log a warning
         if (err.isIntentionalCancel) {
-          logger.debug(`Subcategories request for ${parentSlug} was intentionally canceled (duplicate request)`);
+          logger.debug(`Subcategories request for ${parentSlug} was intentionally canceled`);
         } else {
           logger.warn(`Subcategories request for ${parentSlug} was canceled`);
         }
 
-        // If we already have subcategories for this parent, just use them
         if (subcategories[parentSlug]) {
           return subcategories[parentSlug];
         }
       } else if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
-        // Handle timeout errors specifically
         logger.error(`Subcategories request for ${parentSlug} timed out:`, err.message);
         setError('Request timed out. Please check your connection and try again.');
       } else {
-        // For other errors, log and set error state
         logger.error(`Error fetching subcategories for ${parentSlug}:`, err);
         setError('Failed to fetch subcategories. Please try again.');
       }
 
-      // Return existing subcategories or empty array
       return subcategories[parentSlug] || [];
     } finally {
       setLoading(false);
+      inFlightRequests.delete(requestId);
     }
   }, [subcategories]);
 
   // Clear any cached subcategories
   const clearSubcategoryCache = useCallback(() => {
     setSubcategories({});
+    // Clear from request cache too
+    for (const key of requestCache.keys()) {
+      if (key.startsWith('subcategories-')) {
+        requestCache.delete(key);
+      }
+    }
   }, []);
 
-  // Load categories on mount
+  // Load categories on mount with reduced frequency
   useEffect(() => {
-    // Only fetch if we don't already have categories
-    if (categories.length === 0) {
-      // Add a small delay to prevent multiple simultaneous requests on initial load
+    // Only fetch if we don't already have categories or if cache is stale
+    const now = Date.now();
+    const cacheAge = now - lastFetchTime;
+    const needsRefresh = categories.length === 0 || cacheAge > 5 * 60 * 1000;
+
+    if (needsRefresh) {
+      // Add a small random delay to prevent multiple simultaneous requests
       const timer = setTimeout(() => {
         fetchCategories();
-      }, Math.random() * 500); // Random delay between 0-500ms
+      }, Math.random() * 200); // Reduced random delay
 
       return () => clearTimeout(timer);
     }
-  }, [fetchCategories, categories.length]);
+  }, [fetchCategories, categories.length, lastFetchTime]);
 
-  // Set up a refresh interval for categories
+  // Set up a refresh interval for categories with reduced frequency
   useEffect(() => {
     // Only set up refresh if we have categories already
     if (categories.length === 0) return;
 
-    // Set up a refresh interval for categories (every 5 minutes)
+    // Set up a refresh interval for categories (every 10 minutes instead of 5)
     const refreshInterval = setInterval(() => {
       // Only refresh if the user is active (not if the tab is in the background)
       if (typeof document !== 'undefined' && !document.hidden) {
         fetchCategories(true); // Force refresh
       }
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 10 * 60 * 1000); // 10 minutes
 
     return () => clearInterval(refreshInterval);
   }, [fetchCategories, categories.length]);
 
-  // Fetch products by category slug
+  // Fetch products by category slug with improved caching
   const fetchProductsByCategory = useCallback(async (slug, page = 1, limit = 12, sort = 'newest', force = false, additionalParams = {}) => {
     if (!slug) return { products: [], pagination: { total: 0 } };
 
@@ -181,12 +238,14 @@ export const CategoryProvider = ({ children }) => {
 
     // Check if we already have these products cached and not forcing refresh
     if (!force && categoryProducts[cacheKey]) {
-      logger.info(`Using cached products for ${slug} with params: ${queryParams.toString()}`);
-      return categoryProducts[cacheKey];
+      const cacheAge = Date.now() - (categoryProducts[cacheKey].timestamp || 0);
+      if (cacheAge < 5 * 60 * 1000) { // 5 minutes cache
+        logger.info(`Using cached products for ${slug} with params: ${queryParams.toString()}`);
+        return categoryProducts[cacheKey];
+      }
     }
 
     // Check if we're already loading products for this category
-    // This helps prevent duplicate requests
     if (productsLoading) {
       logger.info(`Already loading products for a category, using cached data if available`);
       if (categoryProducts[cacheKey]) {
@@ -209,18 +268,13 @@ export const CategoryProvider = ({ children }) => {
     try {
       setProductsLoading(true);
 
-      // Add a timestamp to avoid browser caching
-      const timestamp = Date.now();
-
-      // Use the makePriorityRequest utility with increased timeout
       const response = await makePriorityRequest(
         'get',
         `/products/category/${slug}?${queryParams.toString()}`,
         {
-          // Add a small random delay to prevent multiple simultaneous requests
-          delay: Math.floor(Math.random() * 100),
-          timeout: 30000, // 30 seconds timeout
-          retryCount: 2 // Retry up to 2 times
+          timeout: 15000, // Reduced timeout
+          retryCount: 1, // Reduced retry count
+          useCache: true // Enable caching
         }
       );
 
@@ -274,31 +328,27 @@ export const CategoryProvider = ({ children }) => {
       // Check if this is a canceled request and handle it gracefully
       if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
         if (err.isIntentionalCancel) {
-          logger.debug(`Products request for category ${slug} was intentionally canceled (duplicate request)`);
+          logger.debug(`Products request for category ${slug} was intentionally canceled`);
         } else {
           logger.warn(`Products request for category ${slug} was canceled`);
         }
 
-        // If we already have products for this category, just use them
         if (categoryProducts[cacheKey]) {
           return categoryProducts[cacheKey];
         }
       } else if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
-        // Handle timeout errors specifically
         logger.error(`Products request for category ${slug} timed out:`, err.message);
         setError('Request timed out. Please check your connection and try again.');
       } else {
-        // For other errors, log and set error state
         logger.error(`Error fetching products for category ${slug}:`, err);
         setError(`Failed to fetch products for category ${slug}. Please try again.`);
       }
 
-      // Return empty result on error
       return { products: [], pagination: { total: 0 } };
     } finally {
       setProductsLoading(false);
     }
-  }, [categoryProducts]);
+  }, [categoryProducts, productsLoading]);
 
   // Clear product cache for a specific category or all categories
   const clearProductCache = useCallback((slug = null) => {

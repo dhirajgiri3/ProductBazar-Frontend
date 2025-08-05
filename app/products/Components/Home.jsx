@@ -25,6 +25,8 @@ const RECOMMENDATION_TYPES = {
 
 const CACHE_DURATION = {
   SHORT: 5 * 60 * 1000, // 5 minutes
+  MEDIUM: 15 * 60 * 1000, // 15 minutes
+  LONG: 30 * 60 * 1000, // 30 minutes
 };
 
 const ANIMATION = {
@@ -167,7 +169,11 @@ const SuspenseWithErrorBoundary = memo(({
 
 SuspenseWithErrorBoundary.displayName = 'SuspenseWithErrorBoundary';
 
-// Optimized hook for fetching recommendation data
+// Request deduplication cache
+const requestCache = new Map();
+const inFlightRequests = new Map();
+
+// Optimized hook for fetching recommendation data with deduplication
 function useRecommendationData(type, options = {}) {
   const { isAuthenticated } = useAuth();
   const {
@@ -208,12 +214,16 @@ function useRecommendationData(type, options = {}) {
     (type === RECOMMENDATION_TYPES.FEED && !isAuthenticated),
   [skip, type, isAuthenticated]);
 
-  // Generate a cache key for SWR
-  const cacheKey = useMemo(() =>
-    shouldSkip ? null : `home/${type}`,
-  [shouldSkip, type]);
+  // Generate a cache key for SWR with better caching strategy
+  const cacheKey = useMemo(() => {
+    if (shouldSkip) return null;
+    
+    // Create a more specific cache key that includes all parameters
+    const params = { type, limit, days, isAuthenticated };
+    return `home/${type}/${JSON.stringify(params)}`;
+  }, [shouldSkip, type, limit, days, isAuthenticated]);
 
-  // Create a memoized fetcher function for SWR with improved error handling
+  // Create a memoized fetcher function for SWR with improved error handling and deduplication
   const fetcher = useCallback(async () => {
     if (shouldSkip) return [];
 
@@ -223,8 +233,37 @@ function useRecommendationData(type, options = {}) {
       return [];
     }
 
+    // Create a unique request ID for deduplication
+    const requestId = `${type}-${limit}-${days}-${isAuthenticated}`;
+    
+    // Check if this exact request is already in flight
+    if (inFlightRequests.has(requestId)) {
+      logger.debug(`Request already in flight for ${type}, waiting for result`);
+      return inFlightRequests.get(requestId);
+    }
+
+    // Check cache first
+    const cacheKey = `recommendation-${requestId}`;
+    const cached = requestCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION.MEDIUM) {
+      logger.debug(`Using cached data for ${type}`);
+      return cached.data;
+    }
+
     try {
-      const results = await fetchFunction(limit, 0, days, false);
+      // Create the request promise
+      const requestPromise = fetchFunction(limit, 0, days, false);
+      
+      // Store the promise for deduplication
+      inFlightRequests.set(requestId, requestPromise);
+      
+      const results = await requestPromise;
+
+      // Cache the results
+      requestCache.set(cacheKey, {
+        data: results || [],
+        timestamp: Date.now()
+      });
 
       // Log if we get empty results to help with debugging
       if (!results || results.length === 0) {
@@ -236,16 +275,19 @@ function useRecommendationData(type, options = {}) {
       logger.error(`Failed to fetch ${type} recommendations:`, error);
       // Return empty array instead of throwing to prevent component from breaking
       return [];
+    } finally {
+      // Clean up the in-flight request
+      inFlightRequests.delete(requestId);
     }
-  }, [fetchFunctionMap, type, limit, days, shouldSkip]);
+  }, [fetchFunctionMap, type, limit, days, shouldSkip, isAuthenticated]);
 
-  // SWR configuration options with improved error handling
+  // SWR configuration options with improved error handling and longer cache duration
   const swrOptions = useMemo(() => ({
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
-    dedupingInterval: CACHE_DURATION.SHORT,
-    errorRetryCount: 3, // Increase retry count
-    errorRetryInterval: 3000, // Wait 3 seconds between retries
+    dedupingInterval: CACHE_DURATION.MEDIUM, // Increased from 5 minutes to 15 minutes
+    errorRetryCount: 2, // Reduced retry count to prevent excessive retries
+    errorRetryInterval: 5000, // Increased wait time between retries
     keepPreviousData: true,
     fallbackData: [], // Provide fallback data to prevent undefined errors
     onError: (err) => {
@@ -341,6 +383,9 @@ export default function Home() {
   const router = useRouter();
   const { showToast } = useToast();
 
+  // Progressive loading state
+  const [loadedSections, setLoadedSections] = useState(new Set(['hero', 'categories']));
+
   // Fetch feed data first with optimized limit, but only if authenticated for personalized content
   const feedData = useRecommendationData(RECOMMENDATION_TYPES.FEED, {
     limit: 12,
@@ -389,6 +434,27 @@ export default function Home() {
 
   // Track page view with enhanced analytics
   useTrackPageView();
+
+  // Progressive loading effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoadedSections(prev => new Set([...prev, 'trending']));
+    }, 100);
+
+    const timer2 = setTimeout(() => {
+      setLoadedSections(prev => new Set([...prev, 'personalized']));
+    }, 200);
+
+    const timer3 = setTimeout(() => {
+      setLoadedSections(prev => new Set([...prev, 'new']));
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+    };
+  }, []);
 
   // Memoize recommendation data to prevent unnecessary re-renders
   // with improved empty data handling
@@ -459,16 +525,20 @@ export default function Home() {
     [router]
   );
 
-  // Memoized loading state calculation
-  const isMainContentLoading = useMemo(() =>
-    (isAuthenticated && feedData.isLoading) ||
-    trendingData.isLoading ||
-    (isAuthenticated && personalizedData.isLoading) ||
-    newProductsData.isLoading,
-  [
-    feedData.isLoading,
+  // Memoized loading state calculation with progressive loading
+  const isMainContentLoading = useMemo(() => {
+    // Only show loading for sections that haven't been marked as loaded yet
+    const shouldShowLoading = (section) => {
+      if (section === 'trending') return !loadedSections.has('trending') && trendingData.isLoading;
+      if (section === 'personalized') return !loadedSections.has('personalized') && personalizedData.isLoading;
+      if (section === 'new') return !loadedSections.has('new') && newProductsData.isLoading;
+      return false;
+    };
+
+    return shouldShowLoading('trending') || shouldShowLoading('personalized') || shouldShowLoading('new');
+  }, [
+    loadedSections,
     trendingData.isLoading,
-    isAuthenticated,
     personalizedData.isLoading,
     newProductsData.isLoading
   ]);
@@ -587,33 +657,35 @@ export default function Home() {
     </>
   ), []);
 
-  // Memoize the main content sections
+  // Memoize the main content sections with progressive loading
   const mainContentSections = useMemo(() => (
     <div className="lg:col-span-2 space-y-6 lg:space-y-8">
       {/* Trending Section */}
-      <SectionWrapper id="trending-section" testId="trending-section">
-        <div
-          aria-labelledby="trending-heading"
-          className="bg-white rounded-xl overflow-hidden border border-gray-100"
-        >
-          <h2 id="trending-heading" className="sr-only">
-            Trending Recommendations
-          </h2>
-          <SuspenseWithErrorBoundary
-            fallbackType="trending recommendations"
-            testId="trending-skeleton"
+      {loadedSections.has('trending') && (
+        <SectionWrapper id="trending-section" testId="trending-section">
+          <div
+            aria-labelledby="trending-heading"
+            className="bg-white rounded-xl overflow-hidden border border-gray-100"
           >
-            <TrendingProductsSection
-              products={recommendations[RECOMMENDATION_TYPES.TRENDING].data}
-              isLoading={recommendations[RECOMMENDATION_TYPES.TRENDING].isLoading}
-              error={recommendations[RECOMMENDATION_TYPES.TRENDING].error}
-            />
-          </SuspenseWithErrorBoundary>
-        </div>
-      </SectionWrapper>
+            <h2 id="trending-heading" className="sr-only">
+              Trending Recommendations
+            </h2>
+            <SuspenseWithErrorBoundary
+              fallbackType="trending recommendations"
+              testId="trending-skeleton"
+            >
+              <TrendingProductsSection
+                products={recommendations[RECOMMENDATION_TYPES.TRENDING].data}
+                isLoading={recommendations[RECOMMENDATION_TYPES.TRENDING].isLoading}
+                error={recommendations[RECOMMENDATION_TYPES.TRENDING].error}
+              />
+            </SuspenseWithErrorBoundary>
+          </div>
+        </SectionWrapper>
+      )}
 
       {/* Personalized Section - Only for authenticated users */}
-      {isAuthenticated && (
+      {isAuthenticated && loadedSections.has('personalized') && (
         <SectionWrapper
           id="personalized-section"
           delay={0.1}
@@ -643,36 +715,38 @@ export default function Home() {
       )}
 
       {/* New Arrivals Section */}
-      <SectionWrapper
-        id="new-arrivals-section"
-        delay={isAuthenticated ? 0.2 : 0.1}
-        testId="new-arrivals-section"
-      >
-        <div
-          aria-labelledby="new-arrivals-heading"
-          className="bg-white rounded-xl overflow-hidden border border-gray-100 p-6"
+      {loadedSections.has('new') && (
+        <SectionWrapper
+          id="new-arrivals-section"
+          delay={isAuthenticated ? 0.2 : 0.1}
+          testId="new-arrivals-section"
         >
-          <header className="flex-col items-center mb-4">
-            <div className="flex items-center">
-              <Clock className="w-6 h-6 text-green-600 mr-2" aria-hidden="true" />
-              <h2 id="new-arrivals-heading" className="text-2xl font-bold text-gray-900">
-                New Arrivals
-              </h2>
-            </div>
-            <p className="text-gray-600 mt-1 text-sm">Recently launched products</p>
-          </header>
-          <SuspenseWithErrorBoundary
-            fallbackType="new product recommendations"
-            testId="new-products-skeleton"
+          <div
+            aria-labelledby="new-arrivals-heading"
+            className="bg-white rounded-xl overflow-hidden border border-gray-100 p-6"
           >
-            <NewProductsSection
-              products={recommendations[RECOMMENDATION_TYPES.NEW].data}
-              isLoading={recommendations[RECOMMENDATION_TYPES.NEW].isLoading}
-              error={recommendations[RECOMMENDATION_TYPES.NEW].error}
-            />
-          </SuspenseWithErrorBoundary>
-        </div>
-      </SectionWrapper>
+            <header className="flex-col items-center mb-4">
+              <div className="flex items-center">
+                <Clock className="w-6 h-6 text-green-600 mr-2" aria-hidden="true" />
+                <h2 id="new-arrivals-heading" className="text-2xl font-bold text-gray-900">
+                  New Arrivals
+                </h2>
+              </div>
+              <p className="text-gray-600 mt-1 text-sm">Recently launched products</p>
+            </header>
+            <SuspenseWithErrorBoundary
+              fallbackType="new product recommendations"
+              testId="new-products-skeleton"
+            >
+              <NewProductsSection
+                products={recommendations[RECOMMENDATION_TYPES.NEW].data}
+                isLoading={recommendations[RECOMMENDATION_TYPES.NEW].isLoading}
+                error={recommendations[RECOMMENDATION_TYPES.NEW].error}
+              />
+            </SuspenseWithErrorBoundary>
+          </div>
+        </SectionWrapper>
+      )}
 
       {/* Community Picks - Only for authenticated users */}
       {isAuthenticated && (
@@ -792,7 +866,7 @@ export default function Home() {
         </SectionWrapper>
       )}
     </div>
-  ), [isAuthenticated, recommendations, router]);
+  ), [isAuthenticated, recommendations, router, loadedSections]);
 
   // Memoize the sidebar content
   const sidebarContent = useMemo(() => (
