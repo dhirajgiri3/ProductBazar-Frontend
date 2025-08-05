@@ -41,8 +41,8 @@ const HeaderMobile = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ 
-            duration: 0.4,
-            ease: [0.4, 0.0, 0.2, 1] // Custom easing for smoother animation
+            duration: 0.3,
+            ease: [0.25, 0.46, 0.45, 0.94] // Smooth easeOutQuart
           }}
           className="fixed inset-0 z-[99999] bg-black/40 backdrop-blur-sm md:hidden"
           style={{ 
@@ -63,16 +63,13 @@ const HeaderMobile = ({
               x: '100%', 
               opacity: 0,
               transition: {
-                duration: 0.3,
-                ease: [0.4, 0.0, 0.2, 1]
+                duration: 0.25,
+                ease: [0.55, 0.055, 0.675, 0.19] // Smooth easeInCubic
               }
             }}
             transition={{ 
-              duration: 0.5,
-              ease: [0.4, 0.0, 0.2, 1], // Custom easing for natural movement
-              type: "spring",
-              stiffness: 100,
-              damping: 20
+              duration: 0.4,
+              ease: [0.25, 0.46, 0.45, 0.94] // Smooth easeOutQuart for consistent opening
             }}
             className="absolute top-0 right-0 bottom-0 w-11/12 max-w-sm bg-white/95 backdrop-blur-md shadow-2xl border-l border-gray-200/50 flex flex-col"
             style={{ 
@@ -112,12 +109,12 @@ const HeaderMobile = ({
                   {categories.slice(0, 6).map((category, idx) => (
                     <motion.div
                       key={category._id || idx}
-                      initial={{ opacity: 0, y: 10 }}
+                      initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ 
-                        delay: 0.2 + idx * 0.08,
-                        duration: 0.4,
-                        ease: [0.4, 0.0, 0.2, 1]
+                        delay: 0.15 + idx * 0.05,
+                        duration: 0.35,
+                        ease: [0.25, 0.46, 0.45, 0.94]
                       }}
                     >
                       <Link
@@ -140,12 +137,12 @@ const HeaderMobile = ({
                     </motion.div>
                   ))}
                   <motion.div
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ 
-                      delay: 0.6,
-                      duration: 0.4,
-                      ease: [0.4, 0.0, 0.2, 1]
+                      delay: 0.45,
+                      duration: 0.35,
+                      ease: [0.25, 0.46, 0.45, 0.94]
                     }}
                   >
                     <Link
@@ -170,12 +167,12 @@ const HeaderMobile = ({
                         {primaryMenus.map((menu, idx) => (
                           <motion.div
                             key={menu.id}
-                            initial={{ opacity: 0, y: 10 }}
+                            initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ 
-                              delay: 0.7 + idx * 0.08,
-                              duration: 0.4,
-                              ease: [0.4, 0.0, 0.2, 1]
+                              delay: 0.5 + idx * 0.05,
+                              duration: 0.35,
+                              ease: [0.25, 0.46, 0.45, 0.94]
                             }}
                           >
                             <Link
@@ -212,12 +209,12 @@ const HeaderMobile = ({
                         {moreMenus.slice(0, 6).map((menu, idx) => (
                           <motion.div
                             key={menu.id}
-                            initial={{ opacity: 0, y: 10 }}
+                            initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ 
-                              delay: 0.9 + idx * 0.08,
-                              duration: 0.4,
-                              ease: [0.4, 0.0, 0.2, 1]
+                              delay: 0.65 + idx * 0.05,
+                              duration: 0.35,
+                              ease: [0.25, 0.46, 0.45, 0.94]
                             }}
                           >
                             <Link
@@ -257,12 +254,12 @@ const HeaderMobile = ({
                           menus.slice(0, 2).map((menu, idx) => (
                             <motion.div
                               key={menu.id}
-                              initial={{ opacity: 0, y: 10 }}
+                              initial={{ opacity: 0, y: 8 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ 
-                                delay: 1.1 + idx * 0.08,
-                                duration: 0.4,
-                                ease: [0.4, 0.0, 0.2, 1]
+                                delay: 0.8 + idx * 0.05,
+                                duration: 0.35,
+                                ease: [0.25, 0.46, 0.45, 0.94]
                               }}
                             >
                               <Link
@@ -302,12 +299,12 @@ const HeaderMobile = ({
                   }}
                   className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-white bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 rounded-xl mb-3 transition-all duration-200 shadow-lg"
                   whileTap={{ scale: 0.98 }}
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ 
-                    delay: 1.3,
-                    duration: 0.4,
-                    ease: [0.4, 0.0, 0.2, 1]
+                    delay: 0.95,
+                    duration: 0.35,
+                    ease: [0.25, 0.46, 0.45, 0.94]
                   }}
                 >
                   <Plus size={18} className="mr-2" />
@@ -318,12 +315,12 @@ const HeaderMobile = ({
               {/* Mobile Waitlist Management Button for Admin */}
               {(user?.role === 'admin' || user?.secondaryRoles?.includes('admin')) && (
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ 
-                    delay: 1.4,
-                    duration: 0.4,
-                    ease: [0.4, 0.0, 0.2, 1]
+                    delay: 1.0,
+                    duration: 0.35,
+                    ease: [0.25, 0.46, 0.45, 0.94]
                   }}
                   className="mb-3"
                 >
@@ -352,12 +349,12 @@ const HeaderMobile = ({
                   disabled={authLoading}
                   className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   whileTap={{ scale: 0.98 }}
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ 
-                    delay: 1.5,
-                    duration: 0.4,
-                    ease: [0.4, 0.0, 0.2, 1]
+                    delay: 1.05,
+                    duration: 0.35,
+                    ease: [0.25, 0.46, 0.45, 0.94]
                   }}
                 >
                   <LogOut size={18} className="mr-2" />
@@ -366,12 +363,12 @@ const HeaderMobile = ({
               ) : (
                 <motion.div
                   className="flex gap-3"
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ 
-                    delay: 1.5,
-                    duration: 0.4,
-                    ease: [0.4, 0.0, 0.2, 1]
+                    delay: 1.05,
+                    duration: 0.35,
+                    ease: [0.25, 0.46, 0.45, 0.94]
                   }}
                 >
                   <Link
