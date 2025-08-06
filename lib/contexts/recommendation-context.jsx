@@ -128,7 +128,28 @@ export const RecommendationProvider = ({ children }) => {
       delete inFlightRequests.current[requestId];
     }
   };
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isInitialized } = useAuth();
+
+  // Debug authentication state in recommendation context
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Recommendation context auth state:', { 
+        isAuthenticated, 
+        userId: user?._id, 
+        userRole: user?.role 
+      });
+      
+      // Also check the token directly
+      if (typeof window !== 'undefined') {
+        const token = sessionStorage.getItem('accessToken');
+        console.log('Recommendation context token check:', { 
+          hasToken: !!token, 
+          tokenLength: token?.length,
+          tokenPreview: token ? `${token.substring(0, 20)}...` : null
+        });
+      }
+    }
+  }, [isAuthenticated, user]);
   const [settings, setSettings] = useState({
     enablePersonalized: true, // Controls if personalized recommendations are allowed
     diversityLevel: "medium", // Controls diversity in feed (low, medium, high)
@@ -147,6 +168,9 @@ export const RecommendationProvider = ({ children }) => {
 
   // Load settings from localStorage on mount/auth change
   useEffect(() => {
+    // Wait for auth initialization before loading settings
+    if (!isInitialized) return;
+    
     if (isAuthenticated && user?._id) {
       try {
         const savedSettings = localStorage.getItem(
@@ -173,10 +197,13 @@ export const RecommendationProvider = ({ children }) => {
       // Optionally clear cache on logout
       setCache({ data: {}, lastUpdated: {} });
     }
-  }, [isAuthenticated, user?._id]);
+  }, [isAuthenticated, user?._id, isInitialized]);
 
   // Save settings to localStorage whenever they change
   useEffect(() => {
+    // Wait for auth initialization before saving settings
+    if (!isInitialized) return;
+    
     if (isAuthenticated && user?._id) {
       try {
         localStorage.setItem(
@@ -187,7 +214,7 @@ export const RecommendationProvider = ({ children }) => {
         logger.error("Error saving recommendation settings:", error);
       }
     }
-  }, [settings, isAuthenticated, user?._id]);
+  }, [settings, isAuthenticated, user?._id, isInitialized]);
 
   // Function to update specific settings
   const updateSettings = useCallback((newSettings) => {
@@ -285,11 +312,11 @@ export const RecommendationProvider = ({ children }) => {
       refresh = false,
       cacheTTL = 300 // Increased TTL to 5 minutes to reduce API calls
     ) => {
-      if (requiresAuth && !isAuthenticated) {
+      if (requiresAuth && (!isAuthenticated || !isInitialized)) {
         logger.warn(
-          `Attempted to fetch ${cacheType} recommendations without authentication.`
+          `Attempted to fetch ${cacheType} recommendations without authentication or before auth initialization.`
         );
-        return []; // Return empty array if auth is required but user is not logged in
+        return []; // Return empty array if auth is required but user is not logged in or auth not initialized
       }
 
       // Check if we're making too many requests in a short time
@@ -468,7 +495,7 @@ export const RecommendationProvider = ({ children }) => {
         return [];
       }
     },
-    [isAuthenticated, isCacheValid, getCachedData, cacheData, showToast]
+    [isAuthenticated, isInitialized, isCacheValid, getCachedData, cacheData, showToast]
   );
 
   // Fetch Feed (Hybrid)
@@ -1372,9 +1399,9 @@ export const RecommendationProvider = ({ children }) => {
   // Submit Recommendation Feedback (like, dislike, not_interested)
   const submitRecommendationFeedback = useCallback(
     async (productId, feedbackType, reason = "", source = "") => {
-      if (!isAuthenticated || !productId || !feedbackType) {
+      if (!isAuthenticated || !isInitialized || !productId || !feedbackType) {
         logger.warn(
-          "Feedback not submitted: Missing auth, productId, or feedbackType."
+          "Feedback not submitted: Missing auth, auth not initialized, productId, or feedbackType."
         );
         return { success: false, error: "Missing required parameters" };
       }
@@ -1419,14 +1446,14 @@ export const RecommendationProvider = ({ children }) => {
         return { success: false, error: err.message };
       }
     },
-    [isAuthenticated, clearCache]
+    [isAuthenticated, isInitialized, clearCache]
   );
 
   // Dismiss Recommendation
   const dismissRecommendation = useCallback(
     async (productId, reason = "user_dismissed", source = "") => {
-      if (!isAuthenticated || !productId) {
-        logger.warn("Dismissal not recorded: Missing auth or productId.");
+      if (!isAuthenticated || !isInitialized || !productId) {
+        logger.warn("Dismissal not recorded: Missing auth, auth not initialized, or productId.");
         return { success: false, error: "Missing required parameters" };
       }
 
@@ -1465,7 +1492,7 @@ export const RecommendationProvider = ({ children }) => {
         return { success: false, error: err.message };
       }
     },
-    [isAuthenticated, clearCache]
+    [isAuthenticated, isInitialized, clearCache]
   );
 
   // --- Context Value ---

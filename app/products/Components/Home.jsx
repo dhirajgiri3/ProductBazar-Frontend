@@ -175,7 +175,7 @@ const inFlightRequests = new Map();
 
 // Optimized hook for fetching recommendation data with deduplication
 function useRecommendationData(type, options = {}) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitialized } = useAuth();
   const {
     getTrendingRecommendations,
     getPersonalizedRecommendations,
@@ -205,23 +205,35 @@ function useRecommendationData(type, options = {}) {
   ]);
 
   // Determine if we should skip fetching based on authentication status
-  const shouldSkip = useMemo(() =>
-    skip ||
-    (type === RECOMMENDATION_TYPES.PERSONALIZED && !isAuthenticated) ||
-    (type === RECOMMENDATION_TYPES.COLLABORATIVE && !isAuthenticated) ||
-    (type === RECOMMENDATION_TYPES.INTERESTS && !isAuthenticated) ||
-    // Skip feed for unauthenticated users if it's likely to contain personalized content
-    (type === RECOMMENDATION_TYPES.FEED && !isAuthenticated),
-  [skip, type, isAuthenticated]);
+  const shouldSkip = useMemo(() => {
+    // Always skip if explicitly requested
+    if (skip) return true;
+    
+    // Wait for auth initialization before making decisions
+    if (!isInitialized) return true;
+    
+    // For personalized, collaborative, and interests - only skip if not authenticated
+    if (!isAuthenticated && (
+      type === RECOMMENDATION_TYPES.PERSONALIZED ||
+      type === RECOMMENDATION_TYPES.COLLABORATIVE ||
+      type === RECOMMENDATION_TYPES.INTERESTS
+    )) {
+      return true;
+    }
+    
+    // For feed - don't skip, let the backend handle the fallback
+    // The backend will return appropriate content based on auth status
+    return false;
+  }, [skip, type, isAuthenticated, isInitialized]);
 
   // Generate a cache key for SWR with better caching strategy
   const cacheKey = useMemo(() => {
     if (shouldSkip) return null;
     
-    // Create a more specific cache key that includes all parameters
-    const params = { type, limit, days, isAuthenticated };
+    // Create a unique cache key that includes authentication status to prevent cache conflicts
+    const params = { type, limit, days, isAuthenticated, isInitialized };
     return `home/${type}/${JSON.stringify(params)}`;
-  }, [shouldSkip, type, limit, days, isAuthenticated]);
+  }, [shouldSkip, type, limit, days, isAuthenticated, isInitialized]);
 
   // Create a memoized fetcher function for SWR with improved error handling and deduplication
   const fetcher = useCallback(async () => {
@@ -284,12 +296,18 @@ function useRecommendationData(type, options = {}) {
   // SWR configuration options with improved error handling and longer cache duration
   const swrOptions = useMemo(() => ({
     revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: CACHE_DURATION.MEDIUM, // Increased from 5 minutes to 15 minutes
-    errorRetryCount: 2, // Reduced retry count to prevent excessive retries
-    errorRetryInterval: 5000, // Increased wait time between retries
+    revalidateOnReconnect: false, // Disable revalidation on reconnect to prevent reloads
+    dedupingInterval: CACHE_DURATION.LONG, // Increased to 30 minutes to prevent excessive reloads
+    errorRetryCount: 0, // Disable retries to prevent excessive API calls
+    errorRetryInterval: 30000, // Increased wait time between retries
     keepPreviousData: true,
     fallbackData: [], // Provide fallback data to prevent undefined errors
+    refreshInterval: 0, // Disable automatic refresh
+    refreshWhenHidden: false, // Disable refresh when tab is hidden
+    refreshWhenOffline: false, // Disable refresh when offline
+    // TEMPORARILY DISABLE SWR TO STOP EXCESSIVE REQUESTS
+    revalidateIfStale: false,
+    revalidateOnMount: false,
     onError: (err) => {
       logger.error(`SWR error for ${type} recommendations:`, err);
     },
@@ -311,15 +329,15 @@ function useRecommendationData(type, options = {}) {
 
 // Enhanced track page view hook with improved retry logic
 function useTrackPageView() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isInitialized } = useAuth();
   const { recordInteraction } = useRecommendation();
   const hasTracked = useRef(false);
   const retryCount = useRef(0);
   const MAX_RETRIES = 3;
 
   useEffect(() => {
-    // Skip if already tracked or if recordInteraction is not available
-    if (hasTracked.current || !recordInteraction) return;
+    // Skip if already tracked, if recordInteraction is not available, or if auth is not initialized
+    if (hasTracked.current || !recordInteraction || !isInitialized) return;
 
     let timer = null;
     let retryTimer = null;
@@ -374,24 +392,57 @@ function useTrackPageView() {
       if (timer) clearTimeout(timer);
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [recordInteraction, isAuthenticated, user]);
+  }, [recordInteraction, isAuthenticated, user, isInitialized]);
 }
 
 // Main Home component
 export default function Home() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user, isInitialized } = useAuth();
   const router = useRouter();
   const { showToast } = useToast();
+
+  // Debug authentication state
+  useEffect(() => {
+    console.log('=== AUTH DEBUG ===');
+    console.log('Auth state:', { 
+      isAuthenticated, 
+      userId: user?._id, 
+      userRole: user?.role,
+      isInitialized 
+    });
+    
+    // Also check the token directly
+    if (typeof window !== 'undefined') {
+      const token = sessionStorage.getItem('accessToken');
+      console.log('Token check:', { 
+        hasToken: !!token, 
+        tokenLength: token?.length,
+        tokenPreview: token ? `${token.substring(0, 20)}...` : null
+      });
+      
+      // Check if token is valid
+      if (token) {
+        try {
+          const decoded = require('jwt-decode').jwtDecode(token);
+          console.log('Token decoded:', {
+            exp: decoded.exp,
+            iat: decoded.iat,
+            userId: decoded.userId || decoded.sub,
+            isExpired: decoded.exp < Date.now() / 1000
+          });
+        } catch (error) {
+          console.error('Error decoding token:', error);
+        }
+      }
+    }
+    console.log('=== END AUTH DEBUG ===');
+  }, [isAuthenticated, user, isInitialized]);
 
   // Progressive loading state
   const [loadedSections, setLoadedSections] = useState(new Set(['hero', 'categories']));
 
-  // Fetch feed data first with optimized limit, but only if authenticated for personalized content
-  const feedData = useRecommendationData(RECOMMENDATION_TYPES.FEED, {
-    limit: 12,
-    // Skip personalized feed for unauthenticated users
-    skip: !isAuthenticated && true
-  });
+  // TEMPORARILY DISABLE ALL RECOMMENDATION REQUESTS TO STOP SPAM
+  const feedData = { data: [], isLoading: false, error: null };
 
   // Extract and memoize recommendation types from feed data
   const recommendationsFromFeed = useMemo(() => {
@@ -405,37 +456,17 @@ export default function Home() {
     };
   }, [feedData.data, isAuthenticated]);
 
-  // Fetch specialized data only if feed data is insufficient (optimized fetching strategy)
-  const trendingData = useRecommendationData(RECOMMENDATION_TYPES.TRENDING, {
-    limit: 6,
-    skip: recommendationsFromFeed.trending.length >= 6,
-  });
+  // TEMPORARILY DISABLE ALL RECOMMENDATION REQUESTS TO STOP SPAM
+  const trendingData = { data: [], isLoading: false, error: null };
+  const personalizedData = { data: [], isLoading: false, error: null };
+  const newProductsData = { data: [], isLoading: false, error: null };
+  const collaborativeData = { data: [], isLoading: false, error: null };
+  const interestsData = { data: [], isLoading: false, error: null };
 
-  const personalizedData = useRecommendationData(RECOMMENDATION_TYPES.PERSONALIZED, {
-    limit: 6,
-    skip: !isAuthenticated || recommendationsFromFeed.personalized.length >= 6,
-  });
+  // TEMPORARILY DISABLE PAGE TRACKING
+  // useTrackPageView();
 
-  const newProductsData = useRecommendationData(RECOMMENDATION_TYPES.NEW, {
-    limit: 6,
-    days: 14,
-    skip: recommendationsFromFeed.new.length >= 6,
-  });
-
-  const collaborativeData = useRecommendationData(RECOMMENDATION_TYPES.COLLABORATIVE, {
-    limit: 10,
-    days: 30,
-  });
-
-  const interestsData = useRecommendationData(RECOMMENDATION_TYPES.INTERESTS, {
-    limit: 12,
-    days: 30,
-  });
-
-  // Track page view with enhanced analytics
-  useTrackPageView();
-
-  // Progressive loading effect
+  // Progressive loading effect - only run once on mount
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoadedSections(prev => new Set([...prev, 'trending']));
@@ -454,7 +485,7 @@ export default function Home() {
       clearTimeout(timer2);
       clearTimeout(timer3);
     };
-  }, []);
+  }, []); // Empty dependency array to ensure it only runs once
 
   // Memoize recommendation data to prevent unnecessary re-renders
   // with improved empty data handling
@@ -563,58 +594,36 @@ export default function Home() {
     }
   }, [feedData.error, feedData.isLoading, showToast, isAuthenticated]);
 
-  // Debug logging for recommendation data status
+  // Debug logging for recommendation data status - only in development and throttled
   useEffect(() => {
-    // Only log in development environment
+    // Only log in development environment and throttle to prevent excessive logging
     if (process.env.NODE_ENV !== 'development') return;
 
-    // Create a summary of recommendation data status
-    const recommendationStatus = {
-      trending: {
-        dataLength: recommendations[RECOMMENDATION_TYPES.TRENDING].data?.length || 0,
-        isLoading: recommendations[RECOMMENDATION_TYPES.TRENDING].isLoading,
-        hasError: !!recommendations[RECOMMENDATION_TYPES.TRENDING].error,
-        isEmpty: recommendations[RECOMMENDATION_TYPES.TRENDING].isEmpty,
-      },
-      personalized: {
-        dataLength: recommendations[RECOMMENDATION_TYPES.PERSONALIZED].data?.length || 0,
-        isLoading: recommendations[RECOMMENDATION_TYPES.PERSONALIZED].isLoading,
-        hasError: !!recommendations[RECOMMENDATION_TYPES.PERSONALIZED].error,
-        isEmpty: recommendations[RECOMMENDATION_TYPES.PERSONALIZED].isEmpty,
-      },
-      new: {
-        dataLength: recommendations[RECOMMENDATION_TYPES.NEW].data?.length || 0,
-        isLoading: recommendations[RECOMMENDATION_TYPES.NEW].isLoading,
-        hasError: !!recommendations[RECOMMENDATION_TYPES.NEW].error,
-        isEmpty: recommendations[RECOMMENDATION_TYPES.NEW].isEmpty,
-      },
-      collaborative: {
-        dataLength: recommendations[RECOMMENDATION_TYPES.COLLABORATIVE].data?.length || 0,
-        isLoading: recommendations[RECOMMENDATION_TYPES.COLLABORATIVE].isLoading,
-        hasError: !!recommendations[RECOMMENDATION_TYPES.COLLABORATIVE].error,
-        isEmpty: recommendations[RECOMMENDATION_TYPES.COLLABORATIVE].isEmpty,
-      },
-      feed: {
-        dataLength: recommendations[RECOMMENDATION_TYPES.FEED].data?.length || 0,
-        isLoading: recommendations[RECOMMENDATION_TYPES.FEED].isLoading,
-        hasError: !!recommendations[RECOMMENDATION_TYPES.FEED].error,
-        isEmpty: recommendations[RECOMMENDATION_TYPES.FEED].isEmpty,
-      },
-      interests: {
-        dataLength: recommendations[RECOMMENDATION_TYPES.INTERESTS].data?.length || 0,
-        isLoading: recommendations[RECOMMENDATION_TYPES.INTERESTS].isLoading,
-        hasError: !!recommendations[RECOMMENDATION_TYPES.INTERESTS].error,
-        isEmpty: recommendations[RECOMMENDATION_TYPES.INTERESTS].isEmpty,
-      },
-    };
-
-    // Log the status but throttle to avoid excessive logging
+    // Throttle logging to prevent performance issues
     const now = Date.now();
     const lastLogKey = 'last_recommendation_status_log';
     const lastLog = parseInt(sessionStorage.getItem(lastLogKey) || '0');
 
-    // Only log once every 10 seconds
-    if (now - lastLog > 10000) {
+    // Only log once every 30 seconds to reduce performance impact
+    if (now - lastLog > 30000) {
+      const recommendationStatus = {
+        trending: {
+          dataLength: recommendations[RECOMMENDATION_TYPES.TRENDING].data?.length || 0,
+          isLoading: recommendations[RECOMMENDATION_TYPES.TRENDING].isLoading,
+          hasError: !!recommendations[RECOMMENDATION_TYPES.TRENDING].error,
+        },
+        personalized: {
+          dataLength: recommendations[RECOMMENDATION_TYPES.PERSONALIZED].data?.length || 0,
+          isLoading: recommendations[RECOMMENDATION_TYPES.PERSONALIZED].isLoading,
+          hasError: !!recommendations[RECOMMENDATION_TYPES.PERSONALIZED].error,
+        },
+        new: {
+          dataLength: recommendations[RECOMMENDATION_TYPES.NEW].data?.length || 0,
+          isLoading: recommendations[RECOMMENDATION_TYPES.NEW].isLoading,
+          hasError: !!recommendations[RECOMMENDATION_TYPES.NEW].error,
+        },
+      };
+
       logger.debug('Recommendation sections status:', recommendationStatus);
       try {
         sessionStorage.setItem(lastLogKey, now.toString());
@@ -630,6 +639,18 @@ export default function Home() {
     animate: { opacity: 1 },
     transition: { duration: 0.5 }
   }), []);
+
+  // Show loading state while auth is initializing
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-700 mx-auto mb-4"></div>
+          <p className="text-gray-600">Initializing...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Memoize the hero section component
   const heroSectionComponent = useMemo(() => (
@@ -973,13 +994,13 @@ export default function Home() {
         {/* Main content grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {isMainContentLoading ? loadingSkeletons : (
-            <>
+            <React.Fragment key="main-content">
               {/* Main Content */}
               {mainContentSections}
 
               {/* Sidebar */}
               {sidebarContent}
-            </>
+            </React.Fragment>
           )}
         </div>
       </div>

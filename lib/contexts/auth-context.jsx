@@ -384,7 +384,7 @@ export const AuthProvider = ({ children }) => {
       lastFetchTimeRef.current = now;
 
       try {
-        const response = await makePriorityRequest('get', '/auth/me', {
+        const response = await makePriorityRequest('get', '/auth/profile', {
           headers: { Authorization: `Bearer ${token || accessToken}` },
           // Use the cache mechanism we implemented
           useCache: false, // Always fetch fresh user data
@@ -484,13 +484,17 @@ export const AuthProvider = ({ children }) => {
       const result = oauthHandler.processCallback();
       
       if (!result.success) {
+        logger.error('OAuth callback failed:', result.error);
         setError(result.error);
         setAuthLoading(false);
-        router.push('/auth/login?error=oauth_failed');
+        
+        // Redirect to login with specific error
+        const errorParam = encodeURIComponent(result.error);
+        router.push(`/auth/login?error=oauth_failed&message=${errorParam}`);
         return true;
       }
 
-      const { token, provider, type } = result;
+      const { token, provider, type, refreshToken, isNewUser } = result;
       logger.info(`Processing ${provider} OAuth ${type} with token`);
       
       // Store the access token using the new auth utilities
@@ -501,11 +505,22 @@ export const AuthProvider = ({ children }) => {
       
       setAccessToken(token);
 
+      // Store refresh token if provided
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+
       // Fetch user data immediately with the new token to ensure we have user data
       const userDataFetched = await fetchUserData(token);
       
       if (userDataFetched) {
         logger.info(`${provider} OAuth ${type} successful - user data loaded`);
+        
+        // Handle new user flow if needed
+        if (isNewUser) {
+          logger.info('New user from OAuth, may need profile completion');
+        }
+        
         setAuthLoading(false); // Clear loading state
         return true;
       } else {
@@ -1624,7 +1639,7 @@ export const AuthProvider = ({ children }) => {
     lastFetchTimeRef.current = now;
     
     try {
-      const response = await api.get('/auth/me', {
+      const response = await api.get('/auth/profile', {
         // Add cache busting param with timestamp and use cache
         params: { _t: now },
         useCache: true
